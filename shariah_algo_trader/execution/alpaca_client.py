@@ -14,10 +14,10 @@ class AlpacaClient:
         }
         self._session = session or requests.Session()
 
-    def get(self, path: str) -> list | dict:
+    def _request(self, method: str, path: str, **kwargs) -> list | dict:
         url = f"{self._base_url}/{path.lstrip('/')}"
         try:
-            response = self._session.get(url, headers=self._headers)
+            response = getattr(self._session, method)(url, headers=self._headers, **kwargs)
         except requests.RequestException as exc:
             raise AlpacaError(f"HTTP request failed: {exc}") from exc
 
@@ -28,3 +28,12 @@ class AlpacaClient:
             return response.json()
         except ValueError as exc:
             raise AlpacaError(f"malformed JSON from Alpaca: {exc}") from exc
+
+    def get(self, path: str) -> list | dict:
+        return self._request("get", path)
+
+    def post(self, path: str, body: dict) -> list | dict:
+        return self._request("post", path, json=body)
+
+    def delete(self, path: str) -> list | dict:
+        return self._request("delete", path)
