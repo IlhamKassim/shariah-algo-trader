@@ -14,10 +14,11 @@ class FMPClient:
         self._base_url = base_url.rstrip("/")
         self._session = session or requests.Session()
 
-    def get(self, path: str) -> list | dict:
+    def get(self, path: str, params: dict | None = None) -> list | dict:
         url = f"{self._base_url}/{path.lstrip('/')}"
+        query = {"apikey": self._api_key, **(params or {})}
         try:
-            response = self._session.get(url, params={"apikey": self._api_key})
+            response = self._session.get(url, params=query)
         except requests.RequestException as exc:
             raise FMPError(f"HTTP request failed: {exc}") from exc
 
