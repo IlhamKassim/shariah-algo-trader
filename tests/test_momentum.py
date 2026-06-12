@@ -1,5 +1,5 @@
 import datetime
-import warnings
+import logging
 from unittest.mock import MagicMock
 import pytest
 from shariah_algo_trader.data.fmp_client import FMPClient
@@ -86,29 +86,27 @@ class TestMomentumFactor:
 
         assert result["AAPL"] > result["MSFT"]
 
-    def test_ticker_with_insufficient_history_is_excluded_with_warning(self):
+    def test_ticker_with_insufficient_history_is_excluded_with_warning(self, caplog):
         short_prices = [100.0, 110.0, 120.0]  # far too few data points
         client = make_client({
             "AAPL": make_price_series(AAPL_PRICES),
             "TINY": make_price_series(short_prices),
         })
 
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING):
             result = compute_momentum_factor({"AAPL", "TINY"}, client)
 
         assert "TINY" not in result
-        assert any("TINY" in str(w.message) for w in caught)
+        assert "TINY" in caplog.text
 
-    def test_excluded_ticker_does_not_affect_output_keys(self):
+    def test_excluded_ticker_does_not_affect_output_keys(self, caplog):
         short_prices = [100.0, 110.0]
         client = make_client({
             "AAPL": make_price_series(AAPL_PRICES),
             "TINY": make_price_series(short_prices),
         })
 
-        with warnings.catch_warnings(record=True):
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING):
             result = compute_momentum_factor({"AAPL", "TINY"}, client)
 
         assert set(result.keys()) == {"AAPL"}

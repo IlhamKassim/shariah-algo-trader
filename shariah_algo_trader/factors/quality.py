@@ -1,10 +1,10 @@
-import warnings
-
-import numpy as np
+import logging
 
 from shariah_algo_trader.data.fmp_client import FMPClient
+from shariah_algo_trader.factors._utils import z_scores
 
-# Islamic finance hard filter: total debt / total assets must not exceed this.
+logger = logging.getLogger(__name__)
+
 DEBT_TO_ASSETS_LIMIT = 0.33
 
 
@@ -17,8 +17,9 @@ def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, fl
     Composite for survivors:
         raw_quality = 0.40 × ROE + 0.30 × net_profit_margin + 0.30 × (1 − debt_to_assets)
 
-    Returns a dict mapping ticker → z-score. Excluded tickers emit warnings.warn.
+    Returns a dict mapping ticker → z-score. Excluded tickers are logged as warnings.
     """
+    logger.info("Computing Quality Factor for %d tickers", len(tickers))
     raw_scores: dict[str, float] = {}
 
     for ticker in tickers:
@@ -28,10 +29,7 @@ def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, fl
         )
 
         if not data:
-            warnings.warn(
-                f"{ticker}: no fundamental data available, "
-                "excluding from Quality Factor computation"
-            )
+            logger.warning("%s: no fundamental data, excluding from Quality Factor", ticker)
             continue
 
         metrics = data[0]
@@ -40,17 +38,13 @@ def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, fl
         debt_to_assets = metrics.get("debtToAssets")
 
         if any(v is None for v in (roe, margin, debt_to_assets)):
-            warnings.warn(
-                f"{ticker}: incomplete fundamental data, "
-                "excluding from Quality Factor computation"
-            )
+            logger.warning("%s: incomplete fundamental data, excluding from Quality Factor", ticker)
             continue
 
         if debt_to_assets > DEBT_TO_ASSETS_LIMIT:
-            warnings.warn(
-                f"{ticker}: Total Debt / Total Assets {debt_to_assets:.4f} exceeds "
-                f"Islamic finance limit of {DEBT_TO_ASSETS_LIMIT}, "
-                "excluding from Quality Factor computation"
+            logger.warning(
+                "%s: debt/assets %.4f exceeds Islamic finance limit of %.2f, excluding from Quality Factor",
+                ticker, debt_to_assets, DEBT_TO_ASSETS_LIMIT,
             )
             continue
 
@@ -60,14 +54,5 @@ def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, fl
             + 0.30 * (1 - debt_to_assets)
         )
 
-    if not raw_scores:
-        return {}
-
-    values = np.array(list(raw_scores.values()), dtype=float)
-    std = values.std()
-
-    if std == 0:
-        return {t: 0.0 for t in raw_scores}
-
-    z_scores = (values - values.mean()) / std
-    return dict(zip(raw_scores.keys(), z_scores.tolist()))
+    logger.info("Quality Factor: %d/%d tickers scored", len(raw_scores), len(tickers))
+    return z_scores(raw_scores)
