@@ -1,4 +1,8 @@
+import logging
+
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
+
+logger = logging.getLogger(__name__)
 
 
 class OrderExecutor:
@@ -18,7 +22,9 @@ class OrderExecutor:
             "type": "market",
             "time_in_force": "day",
         })
+        logger.info("BUY %s — notional $%.2f (5%% of equity $%.2f)", ticker, notional, equity)
 
     def sell(self, ticker: str) -> None:
         """Close the full position for ticker via Alpaca's liquidation endpoint."""
         self._client.delete(f"/v2/positions/{ticker}")
+        logger.info("SELL %s — full position liquidated", ticker)

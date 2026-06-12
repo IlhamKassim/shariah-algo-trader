@@ -1,4 +1,8 @@
+import logging
+
 from shariah_algo_trader.data.fmp_client import FMPClient, FMPError
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_eligible_universe(etf_symbol: str, client: FMPClient) -> set[str]:
@@ -6,9 +10,12 @@ def fetch_eligible_universe(etf_symbol: str, client: FMPClient) -> set[str]:
 
     Raises FMPError if the ETF has no holdings or if the FMP request fails.
     """
+    logger.info("Fetching Holdings Snapshot for %s", etf_symbol)
     data = client.get(f"/etf-holder/{etf_symbol}")
 
     if not isinstance(data, list) or len(data) == 0:
         raise FMPError(f"ETF {etf_symbol!r} has no holdings in the Holdings Snapshot")
 
-    return {holding["asset"] for holding in data}
+    universe = {holding["asset"] for holding in data}
+    logger.info("Eligible Universe: %d stocks from %s", len(universe), etf_symbol)
+    return universe

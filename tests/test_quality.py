@@ -1,4 +1,4 @@
-import warnings
+import logging
 from unittest.mock import MagicMock
 import pytest
 from shariah_algo_trader.data.fmp_client import FMPClient
@@ -38,31 +38,26 @@ EDGE_FAIL = make_fundamentals(roe=0.10, net_profit_margin=0.10, debt_to_assets=0
 
 
 class TestHardFilter:
-    def test_excludes_ticker_exceeding_debt_threshold_with_warning(self):
+    def test_excludes_ticker_exceeding_debt_threshold_with_warning(self, caplog):
         client = make_client({"AAPL": AAPL, "OVER": OVER})
 
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING):
             result = compute_quality_factor({"AAPL", "OVER"}, client)
 
         assert "OVER" not in result
-        assert any("OVER" in str(w.message) for w in caught)
+        assert "OVER" in caplog.text
 
     def test_ticker_at_exactly_threshold_survives(self):
         client = make_client({"AAPL": AAPL, "EDGE": EDGE_PASS})
 
-        with warnings.catch_warnings(record=True):
-            warnings.simplefilter("always")
-            result = compute_quality_factor({"AAPL", "EDGE"}, client)
+        result = compute_quality_factor({"AAPL", "EDGE"}, client)
 
         assert "EDGE" in result
 
     def test_ticker_just_above_threshold_is_excluded(self):
         client = make_client({"AAPL": AAPL, "EDGE": EDGE_FAIL})
 
-        with warnings.catch_warnings(record=True):
-            warnings.simplefilter("always")
-            result = compute_quality_factor({"AAPL", "EDGE"}, client)
+        result = compute_quality_factor({"AAPL", "EDGE"}, client)
 
         assert "EDGE" not in result
 
@@ -101,12 +96,11 @@ class TestQualityScoreComputation:
 
 
 class TestMissingData:
-    def test_ticker_missing_fundamentals_is_excluded_with_warning(self):
+    def test_ticker_missing_fundamentals_is_excluded_with_warning(self, caplog):
         client = make_client({"AAPL": AAPL, "MISS": []})
 
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING):
             result = compute_quality_factor({"AAPL", "MISS"}, client)
 
         assert "MISS" not in result
-        assert any("MISS" in str(w.message) for w in caught)
+        assert "MISS" in caplog.text

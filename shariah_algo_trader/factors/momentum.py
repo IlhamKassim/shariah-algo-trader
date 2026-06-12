@@ -1,22 +1,22 @@
 import datetime
-import warnings
-
-import numpy as np
+import logging
 
 from shariah_algo_trader.data.fmp_client import FMPClient
+from shariah_algo_trader.factors._utils import z_scores
 
-# Minimum number of price records needed to compute a valid 12-1 month return.
-# 13 months × ~21 trading days/month, with some slack for holidays.
+logger = logging.getLogger(__name__)
+
 _MIN_PRICES = 250
-_LOOKBACK_DAYS = 390  # ~13 months of trading days requested from FMP
+_LOOKBACK_DAYS = 390
 
 
 def compute_momentum_factor(tickers: set[str], client: FMPClient) -> dict[str, float]:
     """Compute Momentum Factor z-scores for each ticker in the Eligible Universe.
 
     Returns a dict mapping ticker → z-score. Tickers with insufficient price
-    history are excluded and a warning is emitted.
+    history are excluded and logged as warnings.
     """
+    logger.info("Computing Momentum Factor for %d tickers", len(tickers))
     one_month_ago = datetime.date.today() - datetime.timedelta(days=30)
     raw_returns: dict[str, float] = {}
 
@@ -28,42 +28,27 @@ def compute_momentum_factor(tickers: set[str], client: FMPClient) -> dict[str, f
         historical = data.get("historical", [])
 
         if len(historical) < _MIN_PRICES:
-            warnings.warn(
-                f"{ticker}: insufficient price history ({len(historical)} records), "
-                "excluding from Momentum Factor computation"
+            logger.warning(
+                "%s: insufficient price history (%d records), excluding from Momentum Factor",
+                ticker, len(historical),
             )
             continue
 
-        # Sort ascending by date (FMP returns newest-first)
         prices = sorted(historical, key=lambda p: p["date"])
-
-        # 12-1 return: price at ~1 month ago ÷ oldest price − 1
         price_13m_ago = prices[0]["close"]
         price_1m_ago = _price_on_or_before(prices, one_month_ago)
 
         if price_13m_ago == 0 or price_1m_ago is None:
-            warnings.warn(f"{ticker}: invalid price data, excluding from Momentum Factor computation")
+            logger.warning("%s: invalid price data, excluding from Momentum Factor", ticker)
             continue
 
         raw_returns[ticker] = price_1m_ago / price_13m_ago - 1
 
-    if not raw_returns:
-        return {}
-
-    values = np.array(list(raw_returns.values()), dtype=float)
-    std = values.std()
-
-    if std == 0:
-        return {t: 0.0 for t in raw_returns}
-
-    z_scores = (values - values.mean()) / std
-    return dict(zip(raw_returns.keys(), z_scores.tolist()))
+    logger.info("Momentum Factor: %d/%d tickers scored", len(raw_returns), len(tickers))
+    return z_scores(raw_returns)
 
 
-def _price_on_or_before(
-    prices: list[dict], target: datetime.date
-) -> float | None:
-    """Return the closing price of the last record on or before target date."""
+def _price_on_or_before(prices: list[dict], target: datetime.date) -> float | None:
     target_str = str(target)
     result = None
     for p in prices:
