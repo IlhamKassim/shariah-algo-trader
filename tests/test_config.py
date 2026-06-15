@@ -8,7 +8,6 @@ def make_env(**overrides):
         "ALPACA_API_KEY": "test-key",
         "ALPACA_API_SECRET": "test-secret",
         "ALPACA_BASE_URL": "https://paper-api.alpaca.markets",
-        "FMP_API_KEY": "fmp-key",
         "ETF_SYMBOL": "SPUS",
         "TOP_N": "20",
     }
@@ -25,7 +24,6 @@ class TestConfigLoads:
         assert cfg.alpaca_api_key == "test-key"
         assert cfg.alpaca_api_secret == "test-secret"
         assert cfg.alpaca_base_url == "https://paper-api.alpaca.markets"
-        assert cfg.fmp_api_key == "fmp-key"
         assert cfg.etf_symbol == "SPUS"
         assert cfg.top_n == 20
 
@@ -43,7 +41,6 @@ class TestConfigMissingVars:
         "ALPACA_API_KEY",
         "ALPACA_API_SECRET",
         "ALPACA_BASE_URL",
-        "FMP_API_KEY",
         "ETF_SYMBOL",
         "TOP_N",
     ])

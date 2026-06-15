@@ -6,8 +6,10 @@ dependencies = [
     "apscheduler>=3.11.2",
     "exchange-calendars>=4.13.2",
     "numpy>=2.4.6",
+    "pandas>=2.0",
     "python-dotenv>=1.0",
     "requests>=2.34.2",
+    "yfinance>=0.2.0",
 ]
 
 [project.optional-dependencies]
