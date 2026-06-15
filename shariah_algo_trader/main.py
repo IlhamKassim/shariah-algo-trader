@@ -2,7 +2,6 @@ import logging
 import sys
 
 from shariah_algo_trader.config import Config
-from shariah_algo_trader.data.fmp_client import FMPClient
 from shariah_algo_trader.data.universe import fetch_eligible_universe
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 from shariah_algo_trader.execution.order_executor import OrderExecutor
@@ -29,7 +28,6 @@ def main() -> None:
         logger.error("Startup failed — missing configuration: %s", exc)
         sys.exit(1)
 
-    fmp = FMPClient(api_key=cfg.fmp_api_key)
     alpaca = AlpacaClient(
         api_key=cfg.alpaca_api_key,
         api_secret=cfg.alpaca_api_secret,
@@ -40,14 +38,14 @@ def main() -> None:
     def compliance_check_job() -> None:
         run_compliance_check(
             get_portfolio=lambda: get_current_portfolio(alpaca),
-            fetch_universe=lambda: fetch_eligible_universe(cfg.etf_symbol, fmp),
+            fetch_universe=lambda: fetch_eligible_universe(cfg.etf_symbol),
             executor=executor,
         )
 
     def rebalance_job() -> None:
-        universe = fetch_eligible_universe(cfg.etf_symbol, fmp)
-        momentum = compute_momentum_factor(universe, fmp)
-        quality = compute_quality_factor(universe, fmp)
+        universe = fetch_eligible_universe(cfg.etf_symbol)
+        momentum = compute_momentum_factor(universe)
+        quality = compute_quality_factor(universe)
         target = rank_by_factor_score(momentum, quality, cfg.top_n)
 
         run_rebalance(

@@ -1,6 +1,8 @@
 import logging
 
-from shariah_algo_trader.data.fmp_client import FMPClient
+import pandas as pd
+import yfinance as yf
+
 from shariah_algo_trader.factors._utils import z_scores
 
 logger = logging.getLogger(__name__)
@@ -8,7 +10,7 @@ logger = logging.getLogger(__name__)
 DEBT_TO_ASSETS_LIMIT = 0.33
 
 
-def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, float]:
+def compute_quality_factor(tickers: set[str]) -> dict[str, float]:
     """Compute Quality Factor z-scores for each ticker in the Eligible Universe.
 
     Hard filter: tickers with Total Debt / Total Assets > 0.33 are excluded before
@@ -23,23 +25,40 @@ def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, fl
     raw_scores: dict[str, float] = {}
 
     for ticker in tickers:
-        data = client.get(
-            f"/key-metrics/{ticker}",
-            params={"period": "quarter", "limit": 1},
-        )
+        try:
+            t = yf.Ticker(ticker)
+            income = t.income_stmt
+            balance = t.balance_sheet
+        except Exception as exc:
+            logger.warning(
+                "%s: failed to fetch financial data (%s), excluding from Quality Factor",
+                ticker, exc,
+            )
+            continue
 
-        if not data:
+        if income is None or income.empty or balance is None or balance.empty:
             logger.warning("%s: no fundamental data, excluding from Quality Factor", ticker)
             continue
 
-        metrics = data[0]
-        roe = metrics.get("returnOnEquity")
-        margin = metrics.get("netProfitMargin")
-        debt_to_assets = metrics.get("debtToAssets")
+        net_income = _get(income, "Net Income")
+        revenue = _get(income, "Total Revenue")
+        total_assets = _get(balance, "Total Assets")
+        total_debt = _get(balance, "Total Debt", "Long Term Debt")
+        equity = _get(balance, "Stockholders Equity", "Total Stockholders Equity", "Common Stock Equity")
 
-        if any(v is None for v in (roe, margin, debt_to_assets)):
+        if any(v is None for v in (net_income, revenue, total_assets, total_debt, equity)):
             logger.warning("%s: incomplete fundamental data, excluding from Quality Factor", ticker)
             continue
+
+        if revenue == 0 or equity == 0 or total_assets == 0:
+            logger.warning(
+                "%s: zero denominator in fundamentals, excluding from Quality Factor", ticker
+            )
+            continue
+
+        roe = net_income / equity
+        margin = net_income / revenue
+        debt_to_assets = total_debt / total_assets
 
         if debt_to_assets > DEBT_TO_ASSETS_LIMIT:
             logger.warning(
@@ -48,11 +67,17 @@ def compute_quality_factor(tickers: set[str], client: FMPClient) -> dict[str, fl
             )
             continue
 
-        raw_scores[ticker] = (
-            0.40 * roe
-            + 0.30 * margin
-            + 0.30 * (1 - debt_to_assets)
-        )
+        raw_scores[ticker] = 0.40 * roe + 0.30 * margin + 0.30 * (1 - debt_to_assets)
 
     logger.info("Quality Factor: %d/%d tickers scored", len(raw_scores), len(tickers))
     return z_scores(raw_scores)
+
+
+def _get(df: pd.DataFrame, *keys: str) -> float | None:
+    """Return the most recent value for the first matching row label."""
+    for key in keys:
+        if key in df.index:
+            val = df.loc[key].iloc[0]
+            if pd.notna(val):
+                return float(val)
+    return None
