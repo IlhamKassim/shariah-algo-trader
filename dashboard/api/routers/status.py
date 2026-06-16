@@ -1,6 +1,7 @@
 import datetime
 import os
 import re
+import subprocess
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
@@ -16,6 +17,14 @@ _LOG_PATH = os.environ.get("TRADER_LOG", "/tmp/shariah-trader.err")
 _ET = ZoneInfo("America/New_York")
 _STARTUP_RE = re.compile(r"Shariah Algo Trader starting")
 _TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
+
+
+def _is_scheduler_running() -> bool:
+    try:
+        result = subprocess.run(["pgrep", "-f", "shariah-trader"], capture_output=True)
+        return result.returncode == 0
+    except OSError:
+        return False
 
 
 def _parse_last_started(log_path: str) -> str | None:
@@ -52,7 +61,7 @@ def _next_fire_at() -> str | None:
 @router.get("/api/status", response_model=StatusResponse)
 def get_status(cfg: Config = Depends(get_config)) -> StatusResponse:
     return StatusResponse(
-        scheduler_running=True,
+        scheduler_running=_is_scheduler_running(),
         last_started_at=_parse_last_started(_LOG_PATH),
         next_fire_at=_next_fire_at(),
         etf_symbol=cfg.etf_symbol,
