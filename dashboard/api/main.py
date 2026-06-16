@@ -9,9 +9,14 @@ from dashboard.api.routers import account, activity, performance, portfolio, sta
 
 app = FastAPI(title="Shariah Algo Trader Dashboard", version="0.1.0")
 
+_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    *(os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else []),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
