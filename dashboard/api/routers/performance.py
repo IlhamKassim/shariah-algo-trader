@@ -25,6 +25,7 @@ def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceRe
         [float(e) if e is not None else float("nan") for e in equities],
         index=pd.to_datetime(dates),
     ).dropna()
+    equity_series = equity_series[equity_series > 0]
 
     if len(equity_series) < 2:
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[])
