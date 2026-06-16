@@ -7,52 +7,86 @@ interface FactorScoreTableProps {
 }
 
 export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
+  const maxScore = stocks.length > 0 ? Math.max(...stocks.map((s) => s.factor_score)) : 1;
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs text-neutral-500 uppercase tracking-wider border-b border-neutral-700">
-            <th className="pb-2 pr-3 font-medium">Rank</th>
-            <th className="pb-2 pr-3 font-medium">Symbol</th>
-            <th className="pb-2 pr-3 font-medium text-right">Momentum Z</th>
-            <th className="pb-2 pr-3 font-medium text-right">Quality Z</th>
-            <th className="pb-2 pr-3 font-medium text-right">Factor Score</th>
-            <th className="pb-2 font-medium">Status</th>
+          <tr className="text-left border-b border-divider">
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] w-10 pl-2">
+              Rank
+            </th>
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
+              Symbol
+            </th>
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              Momentum Z
+            </th>
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              Quality Z
+            </th>
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              Factor Score
+            </th>
+            <th className="pb-2.5 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
+              Status
+            </th>
           </tr>
         </thead>
         <tbody>
-          {stocks.map((s, idx) => (
-            <tr
-              key={s.symbol}
-              className={`border-b border-neutral-700/50 ${
-                s.in_top_n
-                  ? "border-l-2 border-l-emerald-500/40 bg-emerald-500/5"
-                  : idx % 2 === 0
-                  ? "bg-neutral-800/30"
-                  : ""
-              }`}
-            >
-              <td className="py-2 pr-3 text-neutral-500 text-xs">#{s.rank}</td>
-              <td className="py-2 pr-3 font-mono font-semibold text-neutral-100">
-                {s.symbol}
-              </td>
-              <td className="py-2 pr-3 text-right text-neutral-300">
-                {s.momentum_score.toFixed(3)}
-              </td>
-              <td className="py-2 pr-3 text-right text-neutral-300">
-                {s.quality_score.toFixed(3)}
-              </td>
-              <td className="py-2 pr-3 text-right font-semibold text-neutral-200">
-                {s.factor_score.toFixed(3)}
-              </td>
-              <td className="py-2">
-                <div className="flex gap-1 flex-wrap">
-                  {s.in_top_n && <Badge variant="green">Top {topN}</Badge>}
-                  {s.in_portfolio && <Badge variant="blue">Held</Badge>}
-                </div>
-              </td>
-            </tr>
-          ))}
+          {stocks.map((s) => {
+            const barPct = maxScore > 0 ? (s.factor_score / maxScore) * 100 : 0;
+            return (
+              <tr
+                key={s.symbol}
+                className={`border-b border-divider/60 last:border-0 transition-colors hover:bg-card-hover ${
+                  s.in_top_n
+                    ? "bg-[#34E3AE]/[0.03] border-l-2 border-l-brand-green"
+                    : "border-l-2 border-l-transparent"
+                }`}
+              >
+                <td className="py-2.5 pr-3 font-mono text-faint text-xs tabular-nums pl-2">
+                  #{s.rank}
+                </td>
+                <td className="py-2.5 pr-3 font-mono font-semibold text-primary">
+                  {s.symbol}
+                </td>
+                <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
+                  {s.momentum_score >= 0 ? "+" : ""}
+                  {s.momentum_score.toFixed(2)}
+                </td>
+                <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
+                  {s.quality_score >= 0 ? "+" : ""}
+                  {s.quality_score.toFixed(2)}
+                </td>
+                <td className="py-2.5 pr-3">
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="w-16 h-1.5 bg-card-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${barPct}%`,
+                          background:
+                            "linear-gradient(90deg, #34E3AE 0%, #0FA674 100%)",
+                        }}
+                      />
+                    </div>
+                    <span className="font-mono font-semibold text-primary tabular-nums w-10 text-right">
+                      {s.factor_score >= 0 ? "+" : ""}
+                      {s.factor_score.toFixed(2)}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-2.5">
+                  <div className="flex gap-1 flex-wrap">
+                    {s.in_top_n && <Badge variant="green">Top {topN}</Badge>}
+                    {s.in_portfolio && <Badge variant="blue">Held</Badge>}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

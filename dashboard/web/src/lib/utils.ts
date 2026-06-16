@@ -25,5 +25,5 @@ export function formatDateTime(iso: string): string {
 }
 
 export function plColor(value: number): string {
-  return value >= 0 ? "text-emerald-400" : "text-red-400";
+  return value >= 0 ? "text-brand-green" : "text-brand-red";
 }

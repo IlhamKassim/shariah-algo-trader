@@ -5,10 +5,11 @@ import { ActivityFeed } from "../components/ActivityFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import { Skeleton } from "../components/ui/Skeleton";
 
-const TYPES = ["all", "rebalance", "compliance", "order", "error", "system"];
+const TYPES = ["all", "rebalance", "compliance", "order", "error", "system"] as const;
+type TypeFilter = (typeof TYPES)[number];
 
 export function Activity() {
-  const [activeType, setActiveType] = useState<string>("all");
+  const [activeType, setActiveType] = useState<TypeFilter>("all");
   const [dateFilter, setDateFilter] = useState<string>("");
 
   const { data: activity, isLoading } = useQuery({
@@ -22,35 +23,36 @@ export function Activity() {
   });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-neutral-100">Activity Log</h1>
-
+    <div className="space-y-5">
+      {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 bg-neutral-800 border border-neutral-700 rounded-lg p-1">
+        <div className="flex gap-0.5 bg-card border border-card-border rounded-xl p-1">
           {TYPES.map((t) => (
             <button
               key={t}
               onClick={() => setActiveType(t)}
-              className={`px-3 py-1 text-sm rounded-md capitalize transition-colors ${
+              className={`px-3 py-1.5 text-[12px] font-medium rounded-lg capitalize transition-colors ${
                 activeType === t
-                  ? "bg-neutral-600 text-neutral-100"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  ? "bg-card-border text-primary"
+                  : "text-faint hover:text-muted"
               }`}
             >
               {t}
             </button>
           ))}
         </div>
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="bg-neutral-800 border border-neutral-700 rounded px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-emerald-500"
-        />
+        <label className="relative flex items-center">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="bg-card border border-card-border rounded-xl px-3 py-2 text-[12px] font-mono text-muted focus:outline-none focus:border-brand-green/50 transition-colors cursor-pointer"
+          />
+        </label>
         {dateFilter && (
           <button
             onClick={() => setDateFilter("")}
-            className="text-xs text-neutral-500 hover:text-neutral-300"
+            className="text-[11px] text-faint hover:text-muted transition-colors"
           >
             Clear date
           </button>

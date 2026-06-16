@@ -16,40 +16,48 @@ const TYPE_BADGE: Record<string, { label: string; variant: BadgeVariant }> = {
   system: { label: "System", variant: "neutral" },
 };
 
+function fmtTimestamp(iso: string): string {
+  const d = new Date(iso);
+  const mon = d.toLocaleDateString("en-US", { month: "short" });
+  const day = d.getDate();
+  const time = iso.slice(11, 19);
+  return `${mon} ${day} ${time}`;
+}
+
 export function ActivityFeed({ entries, compact = false }: ActivityFeedProps) {
   const rows = compact ? entries.slice(0, 5) : entries;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-0">
       {rows.map((entry, idx) => {
         const badge = TYPE_BADGE[entry.type] ?? TYPE_BADGE.system;
         return (
           <div
             key={idx}
-            className="flex gap-3 py-2 border-b border-neutral-700/50 last:border-0"
+            className="flex gap-4 py-3 border-b border-divider/60 last:border-0"
           >
-            <span className="text-xs text-neutral-500 font-mono whitespace-nowrap pt-0.5 min-w-[120px]">
-              {entry.timestamp.slice(11, 19)}
+            <span className="font-mono text-[11px] text-faint whitespace-nowrap tabular-nums pt-0.5 min-w-[112px]">
+              {fmtTimestamp(entry.timestamp)}
             </span>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                 <Badge variant={badge.variant}>{badge.label}</Badge>
                 {entry.tickers.slice(0, 3).map((t) => (
                   <span
                     key={t}
-                    className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded"
+                    className="font-mono text-[11px] text-brand-green bg-[#34E3AE]/10 border border-[#34E3AE]/20 px-1.5 py-0.5 rounded"
                   >
                     {t}
                   </span>
                 ))}
               </div>
-              <p className="text-sm text-neutral-300 truncate">{entry.message}</p>
+              <p className="text-xs text-muted leading-snug">{entry.message}</p>
             </div>
           </div>
         );
       })}
       {rows.length === 0 && (
-        <p className="text-sm text-neutral-500 py-4 text-center">No activity entries</p>
+        <p className="text-xs text-faint py-6 text-center">No activity entries</p>
       )}
     </div>
   );

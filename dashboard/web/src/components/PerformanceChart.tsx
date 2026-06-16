@@ -1,11 +1,12 @@
+import { useState } from "react";
 import {
-  LineChart,
+  ComposedChart,
+  Area,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import type { PerformanceResponse } from "../lib/api";
@@ -13,6 +14,10 @@ import type { PerformanceResponse } from "../lib/api";
 interface PerformanceChartProps {
   data: PerformanceResponse;
 }
+
+const PERIODS = ["1W", "1M", "3M", "6M"] as const;
+type Period = (typeof PERIODS)[number];
+const PERIOD_DAYS: Record<Period, number> = { "1W": 7, "1M": 30, "3M": 90, "6M": 180 };
 
 interface TooltipPayload {
   name: string;
@@ -31,10 +36,10 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-neutral-800 border border-neutral-700 rounded p-3 text-sm shadow-lg">
-      <p className="text-neutral-400 mb-2">{label}</p>
+    <div className="bg-card border border-card-border rounded-xl p-3 text-xs shadow-xl">
+      <p className="text-faint font-mono mb-1.5">{label}</p>
       {payload.map((p) => (
-        <p key={p.name} style={{ color: p.color }}>
+        <p key={p.name} className="font-mono tabular-nums" style={{ color: p.color }}>
           {p.name}: {(p.value * 100).toFixed(2)}%
         </p>
       ))}
@@ -43,50 +48,109 @@ function CustomTooltip({
 }
 
 export function PerformanceChart({ data }: PerformanceChartProps) {
-  const chartData = data.dates.map((date, i) => ({
+  const [period, setPeriod] = useState<Period>("1M");
+
+  const allPoints = data.dates.map((date, i) => ({
     date,
-    Portfolio: data.portfolio_cumulative[i],
-    Benchmark: data.benchmark_cumulative[i],
+    Strategy: data.portfolio_cumulative[i],
+    SPUS: data.benchmark_cumulative[i],
   }));
 
+  const filtered = allPoints.slice(-PERIOD_DAYS[period]);
+
+  const last = filtered.at(-1);
+  const stratVal = last?.Strategy ?? 0;
+  const spusVal = last?.SPUS ?? 0;
+  const alphaVal = stratVal - spusVal;
+  const sign = (v: number) => (v >= 0 ? "+" : "");
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
-        <XAxis
-          dataKey="date"
-          tick={{ fill: "#737373", fontSize: 11 }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => v.slice(5)}
-        />
-        <YAxis
-          tick={{ fill: "#737373", fontSize: 11 }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-        />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend
-          wrapperStyle={{ fontSize: "12px", color: "#a3a3a3" }}
-        />
-        <Line
-          type="monotone"
-          dataKey="Portfolio"
-          stroke="#10b981"
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 4 }}
-        />
-        <Line
-          type="monotone"
-          dataKey="Benchmark"
-          stroke="#737373"
-          strokeWidth={1.5}
-          dot={false}
-          activeDot={{ r: 4 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div>
+      {/* Stats + period toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-5 text-[11px]">
+          <span className="flex items-center gap-1.5">
+            <span className="w-4 h-0.5 bg-brand-green inline-block rounded" />
+            <span className="text-muted">Strategy</span>
+            <span className="font-mono font-semibold text-brand-green tabular-nums">
+              {sign(stratVal)}{(stratVal * 100).toFixed(2)}%
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-4 h-0.5 bg-faint inline-block rounded border-dashed" style={{ borderTop: "2px dashed #5B6675", background: "transparent" }} />
+            <span className="text-muted">SPUS</span>
+            <span className="font-mono font-semibold text-muted tabular-nums">
+              {sign(spusVal)}{(spusVal * 100).toFixed(2)}%
+            </span>
+          </span>
+          <span className="text-muted">
+            Alpha{" "}
+            <span className={`font-mono font-semibold tabular-nums ${alphaVal >= 0 ? "text-brand-green" : "text-brand-red"}`}>
+              {sign(alphaVal)}{(alphaVal * 100).toFixed(2)} pts
+            </span>
+          </span>
+        </div>
+        <div className="flex gap-0.5 bg-card-hover rounded-lg p-0.5">
+          {PERIODS.map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                period === p
+                  ? "bg-card-border text-primary"
+                  : "text-faint hover:text-muted"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ResponsiveContainer width="100%" height={230}>
+        <ComposedChart data={filtered} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="stratGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#34E3AE" stopOpacity={0.18} />
+              <stop offset="95%" stopColor="#34E3AE" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#161D26" vertical={false} />
+          <XAxis
+            dataKey="date"
+            tick={{ fill: "#5B6675", fontSize: 10, fontFamily: "IBM Plex Mono" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v) => v.slice(5)}
+          />
+          <YAxis
+            tick={{ fill: "#5B6675", fontSize: 10, fontFamily: "IBM Plex Mono" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+            width={36}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="Strategy"
+            stroke="#34E3AE"
+            strokeWidth={2}
+            fill="url(#stratGrad)"
+            dot={false}
+            activeDot={{ r: 4, fill: "#34E3AE", strokeWidth: 0 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="SPUS"
+            stroke="#5B6675"
+            strokeWidth={1.5}
+            strokeDasharray="5 4"
+            dot={false}
+            activeDot={{ r: 3, fill: "#5B6675", strokeWidth: 0 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

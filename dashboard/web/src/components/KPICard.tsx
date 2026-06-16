@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Card, CardContent } from "./ui/Card";
+import { Card } from "./ui/Card";
 import { Skeleton } from "./ui/Skeleton";
 
 interface KPICardProps {
@@ -12,23 +12,22 @@ interface KPICardProps {
 export function KPICard({ label, value, sub, loading = false }: KPICardProps) {
   return (
     <Card className="p-5">
-      <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
+      <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-3">
         {label}
       </p>
       {loading ? (
         <>
-          <Skeleton className="h-7 w-32 mb-1" />
-          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-8 w-36 mb-2" />
+          <Skeleton className="h-4 w-24" />
         </>
       ) : (
         <>
-          <p className="text-2xl font-semibold text-neutral-100">{value}</p>
-          {sub && <p className="text-sm mt-0.5 text-neutral-400">{sub}</p>}
+          <div className="font-mono text-2xl font-semibold text-primary tabular-nums leading-tight">
+            {value}
+          </div>
+          {sub && <div className="mt-1.5 text-xs text-muted">{sub}</div>}
         </>
       )}
     </Card>
   );
 }
-
-// Re-export CardContent for convenience
-export { CardContent };
