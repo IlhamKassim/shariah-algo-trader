@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -53,6 +54,25 @@ async def _refresh_background(cache: UniverseCache, etf_symbol: str, top_n: int,
                                portfolio: set[str]) -> None:
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _run_refresh, cache, etf_symbol, top_n, portfolio)
+
+
+def schedule_startup_refresh(cache: UniverseCache, etf_symbol: str, top_n: int,
+                              client: AlpacaClient) -> None:
+    """Kick off a factor score computation in a daemon thread on server startup."""
+    if cache.computing:
+        return
+    cache.computing = True
+    try:
+        positions = client.get("/v2/positions")
+        portfolio = {pos["symbol"] for pos in positions}
+    except Exception:
+        portfolio = set()
+    thread = threading.Thread(
+        target=_run_refresh,
+        args=(cache, etf_symbol, top_n, portfolio),
+        daemon=True,
+    )
+    thread.start()
 
 
 @router.get("/api/universe", response_model=UniverseResponse)

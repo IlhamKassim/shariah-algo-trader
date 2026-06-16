@@ -30,7 +30,6 @@ All runtime configuration is read from environment variables. Copy `.env.example
 | `ALPACA_API_KEY` | Alpaca API key |
 | `ALPACA_API_SECRET` | Alpaca API secret |
 | `ALPACA_BASE_URL` | `https://paper-api.alpaca.markets` (paper) or `https://api.alpaca.markets` (live) |
-| `FMP_API_KEY` | Financial Modeling Prep API key |
 | `ETF_SYMBOL` | ETF whose holdings define the Eligible Universe (e.g. `SPUS`) |
 | `TOP_N` | Number of top-ranked stocks to hold in the Portfolio (default `20`) |
 
@@ -112,15 +111,43 @@ Then: `sudo systemctl enable --now shariah-trader`
 nohup uv run shariah-trader > shariah-trader.log 2>&1 &
 ```
 
+## Dashboard
+
+A local web dashboard provides real-time visibility into the bot's activity without reading log files.
+
+**Start the dashboard:**
+```bash
+uv run uvicorn dashboard.api.main:app --host 0.0.0.0 --port 8000
+```
+Then open **http://localhost:8000** in your browser.
+
+**Pages:**
+
+| Page | What it shows |
+|---|---|
+| Overview | Portfolio value, daily P&L, compliance status, performance chart vs SPUS benchmark, recent activity |
+| Portfolio | Full holdings table with entry price, current price, and unrealised P&L per position |
+| Universe | Every stock in the Eligible Universe ranked by Factor Score — Momentum z-score, Quality z-score, composite score, and whether it is currently held |
+| Activity | Filterable audit log of every Compliance Check, Rebalance, and order submitted |
+
+Factor scores are computed automatically when the dashboard server starts (takes 2–4 minutes on first load) and can be refreshed manually from the Universe page.
+
+**Deploy to Render (permanent public URL):**
+
+A `render.yaml` is included. Create a free account at [render.com](https://render.com), connect this repo, and set the five environment variables above. Render will build and serve the dashboard automatically.
+
 ## Project layout
 
 ```
 shariah_algo_trader/
     config.py       — env-var config loading
     main.py         — wiring entrypoint (constructs clients, starts Scheduler)
-    data/           — Holdings Snapshot fetching, price history (FMP)
+    data/           — Holdings Snapshot fetching (SP Funds ETF CSV)
     factors/        — Momentum Factor, Quality Factor, and Factor Scorer
     jobs/           — Compliance Check and Rebalance jobs
     execution/      — Alpaca order submission
     scheduling/     — Scheduler and NYSE trading-day calendar
+dashboard/
+    api/            — FastAPI backend (routers, models, cache)
+    web/            — React + TypeScript frontend source
 ```
