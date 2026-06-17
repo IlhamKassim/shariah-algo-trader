@@ -10,22 +10,68 @@ def run_compliance_check(
     get_portfolio: Callable[[], set[str]],
     fetch_universe: Callable[[], set[str]],
     executor: OrderExecutor,
+    get_position_weights: Callable[[], dict[str, float]] | None = None,
+    drift_threshold: float = 0.03,
+    top_n: int = 20,
+    trigger_rebalance: Callable[[], None] | None = None,
 ) -> None:
-    """Trigger a Compliance Exit for every Portfolio stock absent from the Eligible Universe.
+    """Run compliance exits and drift-based rebalance detection.
 
-    Reads Portfolio State and the current Holdings Snapshot at call time. Sells
-    non-compliant stocks immediately. Never buys. Leaves vacated slots empty.
+    Compliance: immediately sells any holding absent from the Eligible Universe.
+
+    Drift: if any position's weight deviates more than `drift_threshold` from
+    equal weight (1/top_n), calls `trigger_rebalance` to force an early rebalance.
+    Drift detection is skipped when `get_position_weights` or `trigger_rebalance`
+    are not provided.
     """
     logger.info("Compliance Check starting")
     portfolio = get_portfolio()
     eligible_universe = fetch_universe()
 
     non_compliant = portfolio - eligible_universe
-    if not non_compliant:
-        logger.info("Compliance Check complete — Portfolio fully compliant, no exits required")
+    if non_compliant:
+        logger.warning(
+            "Compliance Exit triggered for %d stock(s): %s",
+            len(non_compliant), sorted(non_compliant),
+        )
+        for ticker in non_compliant:
+            executor.sell(ticker)
+        logger.info("Compliance Check — %d Compliance Exit(s) submitted", len(non_compliant))
+    else:
+        logger.info("Compliance Check — Portfolio fully compliant, no exits required")
+
+    # Drift detection
+    if get_position_weights is None or trigger_rebalance is None:
         return
 
-    logger.warning("Compliance Exit triggered for %d stock(s): %s", len(non_compliant), sorted(non_compliant))
-    for ticker in non_compliant:
-        executor.sell(ticker)
-    logger.info("Compliance Check complete — %d Compliance Exit(s) submitted", len(non_compliant))
+    try:
+        weights = get_position_weights()
+    except Exception as exc:
+        logger.warning("Drift check: failed to fetch position weights (%s), skipping", exc)
+        return
+
+    if not weights:
+        return
+
+    equal_weight = 1.0 / top_n
+    drifted = {
+        ticker: weight
+        for ticker, weight in weights.items()
+        if abs(weight - equal_weight) > drift_threshold
+    }
+
+    if drifted:
+        logger.warning(
+            "Drift detected in %d position(s): %s — triggering early rebalance",
+            len(drifted),
+            {t: f"{w:.1%}" for t, w in sorted(drifted.items(), key=lambda x: -abs(x[1] - equal_weight))},
+        )
+        try:
+            trigger_rebalance()
+        except Exception as exc:
+            logger.error("Drift-triggered rebalance failed: %s", exc, exc_info=True)
+    else:
+        logger.info(
+            "Drift check — all %d positions within %.1f%% of equal weight (%.1f%%)",
+            len(weights), drift_threshold * 100, equal_weight * 100,
+        )

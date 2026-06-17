@@ -6,6 +6,10 @@ interface FactorScoreTableProps {
   topN: number;
 }
 
+function fmt(n: number) {
+  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}`;
+}
+
 export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
   const maxScore = stocks.length > 0 ? Math.max(...stocks.map((s) => s.factor_score)) : 1;
 
@@ -25,6 +29,12 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
             </th>
             <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
               Quality Z
+            </th>
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              Low-Vol Z
+            </th>
+            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              Value Z
             </th>
             <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
               Factor Score
@@ -53,12 +63,16 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                   {s.symbol}
                 </td>
                 <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
-                  {s.momentum_score >= 0 ? "+" : ""}
-                  {s.momentum_score.toFixed(2)}
+                  {fmt(s.momentum_score)}
                 </td>
                 <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
-                  {s.quality_score >= 0 ? "+" : ""}
-                  {s.quality_score.toFixed(2)}
+                  {fmt(s.quality_score)}
+                </td>
+                <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
+                  {fmt(s.volatility_score)}
+                </td>
+                <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
+                  {fmt(s.value_score)}
                 </td>
                 <td className="py-2.5 pr-3">
                   <div className="flex items-center justify-end gap-2">
@@ -73,8 +87,7 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                       />
                     </div>
                     <span className="font-mono font-semibold text-primary tabular-nums w-10 text-right">
-                      {s.factor_score >= 0 ? "+" : ""}
-                      {s.factor_score.toFixed(2)}
+                      {fmt(s.factor_score)}
                     </span>
                   </div>
                 </td>

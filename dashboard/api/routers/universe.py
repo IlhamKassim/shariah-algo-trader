@@ -8,26 +8,42 @@ from dashboard.api.cache import UniverseCache, get_universe_cache
 from dashboard.api.deps import get_alpaca, get_config
 from dashboard.api.models import StockScore, UniverseResponse
 from shariah_algo_trader.config import Config
-from shariah_algo_trader.data.universe import fetch_eligible_universe
+from shariah_algo_trader.data.universe import fetch_combined_universe
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 from shariah_algo_trader.factors.momentum import compute_momentum_factor
 from shariah_algo_trader.factors.quality import compute_quality_factor
 from shariah_algo_trader.factors.scorer import rank_by_factor_score
+from shariah_algo_trader.factors.value import compute_value_factor
+from shariah_algo_trader.factors.volatility import compute_raw_volatility, compute_volatility_factor
 
 router = APIRouter()
 
 
-def _run_refresh(cache: UniverseCache, etf_symbol: str, top_n: int, portfolio: set[str]) -> None:
+def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None:
     try:
-        universe = fetch_eligible_universe(etf_symbol)
+        universe = fetch_combined_universe(cfg.etf_symbols)
         momentum = compute_momentum_factor(universe)
         quality = compute_quality_factor(universe)
-        ranked = rank_by_factor_score(momentum, quality, top_n)
+        raw_vols = compute_raw_volatility(universe)
+        vol_scores = compute_volatility_factor(raw_vols)
+        value = compute_value_factor(universe)
+
+        ranked = rank_by_factor_score(
+            momentum, quality, vol_scores, value,
+            top_n=cfg.top_n,
+            sector_cap=cfg.sector_cap,
+        )
         top_n_set = set(ranked)
 
+        # Build composite scores for all tickers that have at least momentum+quality
         common = momentum.keys() & quality.keys()
         all_scores = {
-            t: 0.5 * momentum[t] + 0.5 * quality[t]
+            t: (
+                0.25 * momentum[t]
+                + 0.25 * quality[t]
+                + 0.25 * vol_scores.get(t, 0.0)
+                + 0.25 * value.get(t, 0.0)
+            )
             for t in common
         }
         all_ranked = sorted(all_scores, key=lambda t: all_scores[t], reverse=True)
@@ -37,6 +53,8 @@ def _run_refresh(cache: UniverseCache, etf_symbol: str, top_n: int, portfolio: s
                 "symbol": ticker,
                 "momentum_score": round(momentum.get(ticker, 0.0), 4),
                 "quality_score": round(quality.get(ticker, 0.0), 4),
+                "volatility_score": round(vol_scores.get(ticker, 0.0), 4),
+                "value_score": round(value.get(ticker, 0.0), 4),
                 "factor_score": round(all_scores[ticker], 4),
                 "rank": idx + 1,
                 "in_portfolio": ticker in portfolio,
@@ -50,14 +68,12 @@ def _run_refresh(cache: UniverseCache, etf_symbol: str, top_n: int, portfolio: s
         cache.computing = False
 
 
-async def _refresh_background(cache: UniverseCache, etf_symbol: str, top_n: int,
-                               portfolio: set[str]) -> None:
+async def _refresh_background(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None:
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _run_refresh, cache, etf_symbol, top_n, portfolio)
+    await loop.run_in_executor(None, _run_refresh, cache, cfg, portfolio)
 
 
-def schedule_startup_refresh(cache: UniverseCache, etf_symbol: str, top_n: int,
-                              client: AlpacaClient) -> None:
+def schedule_startup_refresh(cache: UniverseCache, cfg: Config, client: AlpacaClient) -> None:
     """Kick off a factor score computation in a daemon thread on server startup."""
     if cache.computing:
         return
@@ -69,7 +85,7 @@ def schedule_startup_refresh(cache: UniverseCache, etf_symbol: str, top_n: int,
         portfolio = set()
     thread = threading.Thread(
         target=_run_refresh,
-        args=(cache, etf_symbol, top_n, portfolio),
+        args=(cache, cfg, portfolio),
         daemon=True,
     )
     thread.start()
@@ -96,7 +112,5 @@ def refresh_universe(
     cache.computing = True
     positions = client.get("/v2/positions")
     portfolio = {pos["symbol"] for pos in positions}
-    background_tasks.add_task(
-        _refresh_background, cache, cfg.etf_symbol, cfg.top_n, portfolio
-    )
+    background_tasks.add_task(_refresh_background, cache, cfg, portfolio)
     return {"status": "computing"}

@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     cfg = get_config()
     client = get_alpaca()
     cache = get_universe_cache()
-    schedule_startup_refresh(cache, cfg.etf_symbol, cfg.top_n, client)
+    schedule_startup_refresh(cache, cfg, client)
     yield
 
 

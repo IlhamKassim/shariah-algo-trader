@@ -36,6 +36,8 @@ class StockScore(BaseModel):
     symbol: str
     momentum_score: float
     quality_score: float
+    volatility_score: float
+    value_score: float
     factor_score: float
     rank: int
     in_portfolio: bool

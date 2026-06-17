@@ -30,6 +30,8 @@ export interface StockScore {
   symbol: string;
   momentum_score: number;
   quality_score: number;
+  volatility_score: number;
+  value_score: number;
   factor_score: number;
   rank: number;
   in_portfolio: boolean;
