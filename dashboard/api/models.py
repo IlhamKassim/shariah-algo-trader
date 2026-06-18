@@ -66,3 +66,21 @@ class PerformanceResponse(BaseModel):
     dates: list[str]
     portfolio_cumulative: list[float]
     benchmark_cumulative: list[float]
+
+
+class StrategyMetrics(BaseModel):
+    name: str
+    total_return_pct: float
+    sharpe_ratio: float
+    max_drawdown_pct: float
+    current_equity: float
+    win_rate_pct: float
+
+
+class CompareResponse(BaseModel):
+    dates: list[str]
+    shariah_equity: list[float]
+    daytrader_equity: list[float]
+    shariah: StrategyMetrics
+    daytrader: StrategyMetrics
+    daytrader_available: bool

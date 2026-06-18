@@ -16,3 +16,53 @@ services:
         sync: false
       - key: TOP_N
         sync: false
+      - key: DAY_ALPACA_API_KEY
+        sync: false
+      - key: DAY_ALPACA_API_SECRET
+        sync: false
+      - key: DAY_ALPACA_BASE_URL
+        sync: false
+
+  - type: worker
+    name: shariah-algo-trader-bot
+    runtime: python
+    pythonVersion: "3.11"
+    buildCommand: pip install uv && uv sync --no-dev
+    startCommand: uv run shariah-trader
+    envVars:
+      - key: ALPACA_API_KEY
+        sync: false
+      - key: ALPACA_API_SECRET
+        sync: false
+      - key: ALPACA_BASE_URL
+        sync: false
+      - key: ETF_SYMBOL
+        sync: false
+      - key: TOP_N
+        sync: false
+
+  - type: worker
+    name: day-trader-bot
+    runtime: python
+    pythonVersion: "3.11"
+    buildCommand: pip install uv && uv sync --no-dev
+    startCommand: uv run day-trader
+    envVars:
+      - key: DAY_ALPACA_API_KEY
+        sync: false
+      - key: DAY_ALPACA_API_SECRET
+        sync: false
+      - key: DAY_ALPACA_BASE_URL
+        sync: false
+      - key: DAY_ALPACA_DATA_URL
+        sync: false
+      - key: DAY_MAX_POSITIONS
+        value: "5"
+      - key: DAY_POSITION_SIZE_PCT
+        value: "0.10"
+      - key: DAY_STOP_LOSS_PCT
+        value: "0.02"
+      - key: DAY_TRAILING_STOP_PCT
+        value: "0.015"
+      - key: DAY_ORB_MINUTES
+        value: "30"

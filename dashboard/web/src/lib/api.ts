@@ -62,6 +62,24 @@ export interface PerformanceResponse {
   benchmark_cumulative: number[];
 }
 
+export interface StrategyMetrics {
+  name: string;
+  total_return_pct: number;
+  sharpe_ratio: number;
+  max_drawdown_pct: number;
+  current_equity: number;
+  win_rate_pct: number;
+}
+
+export interface CompareResponse {
+  dates: string[];
+  shariah_equity: number[];
+  daytrader_equity: number[];
+  shariah: StrategyMetrics;
+  daytrader: StrategyMetrics;
+  daytrader_available: boolean;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
@@ -83,4 +101,5 @@ export const api = {
     return apiFetch<ActivityResponse>(`/api/activity${qs ? `?${qs}` : ""}`);
   },
   performance: () => apiFetch<PerformanceResponse>("/api/performance"),
+  compare: () => apiFetch<CompareResponse>("/api/compare"),
 };

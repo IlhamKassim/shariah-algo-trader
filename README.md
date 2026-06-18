@@ -1,4 +1,4 @@
-# Shariah Algo Trader
+c# Shariah Algo Trader
 
 An algorithmic trading bot that operates exclusively within a Shariah-compliant equity universe, taking long-only spot positions with no leverage, margin, derivatives, or options.
 

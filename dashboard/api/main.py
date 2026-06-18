@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from dashboard.api.cache import get_universe_cache
 from dashboard.api.deps import get_alpaca, get_config
-from dashboard.api.routers import account, activity, performance, portfolio, status, universe
+from dashboard.api.routers import account, activity, compare, performance, portfolio, status, universe
 from dashboard.api.routers.universe import schedule_startup_refresh
 
 
@@ -41,6 +41,7 @@ app.include_router(portfolio.router)
 app.include_router(universe.router)
 app.include_router(activity.router)
 app.include_router(performance.router)
+app.include_router(compare.router)
 
 _STATIC = Path(__file__).parent / "static"
 if _STATIC.exists():

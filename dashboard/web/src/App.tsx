@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { BarChart2, Layers, Clock, LayoutDashboard, TrendingUp } from "lucide-react";
+import { BarChart2, Layers, Clock, LayoutDashboard, TrendingUp, GitCompare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Overview } from "./pages/Overview";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
+import { Compare } from "./pages/Compare";
 import { api } from "./lib/api";
 
 const NAV = [
@@ -13,6 +14,7 @@ const NAV = [
   { to: "/portfolio", label: "Portfolio", icon: BarChart2, end: false },
   { to: "/universe", label: "Universe", icon: Layers, end: false },
   { to: "/activity", label: "Activity", icon: Clock, end: false },
+  { to: "/compare", label: "Compare", icon: GitCompare, end: false },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -31,6 +33,10 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/activity": {
     title: "Activity Log",
     sub: "Audit trail of compliance checks, rebalances and orders",
+  },
+  "/compare": {
+    title: "Strategy Comparison",
+    sub: "Shariah Algo vs Day Trader — risk-adjusted performance side by side",
   },
 };
 
@@ -218,6 +224,7 @@ export default function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/universe" element={<Universe />} />
             <Route path="/activity" element={<Activity />} />
+            <Route path="/compare" element={<Compare />} />
           </Routes>
         </main>
       </div>
