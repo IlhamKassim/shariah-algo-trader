@@ -49,7 +49,7 @@ def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceRe
         bench_close = bench_raw["Close"]
         if isinstance(bench_close, pd.DataFrame):
             bench_close = bench_close.iloc[:, 0]
-        bench_close = bench_close.reindex(equity_series.index, method="ffill").dropna()
+        bench_close = bench_close.reindex(equity_series.index).ffill().dropna()
         bench_returns = bench_close.pct_change().fillna(0)
         bench_cumulative = ((1 + bench_returns).cumprod() - 1).round(6).tolist()
 

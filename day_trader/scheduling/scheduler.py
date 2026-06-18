@@ -37,13 +37,23 @@ def start_scheduler(
         trigger=CronTrigger(day_of_week="mon-fri", hour=10, minute=0, timezone=_TIMEZONE),
     )
 
-    # Every minute 10:01 AM – 3:54 PM (hour 10–15 covers 10:00 AM – 3:59 PM)
+    # 10:01–10:59 AM — avoid firing at the same instant as market scan at 10:00
     scheduler.add_job(
         func=_safe(run_intraday_monitor, "IntradayMonitor"),
         trigger=CronTrigger(
             day_of_week="mon-fri",
-            hour="10-15",
-            minute="*",
+            hour=10,
+            minute="1-59",
+            timezone=_TIMEZONE,
+        ),
+    )
+    # 11:00 AM – 3:54 PM (intraday_monitor guards against new entries after 15:00)
+    scheduler.add_job(
+        func=_safe(run_intraday_monitor, "IntradayMonitor"),
+        trigger=CronTrigger(
+            day_of_week="mon-fri",
+            hour="11-15",
+            minute="0-54",
             timezone=_TIMEZONE,
         ),
     )

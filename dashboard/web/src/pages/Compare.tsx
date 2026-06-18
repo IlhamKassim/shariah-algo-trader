@@ -146,8 +146,8 @@ export function Compare() {
             <Tooltip
               contentStyle={{ background: "#0d1117", border: "1px solid #1e2530", borderRadius: 8 }}
               labelStyle={{ color: "#9ca3af", fontSize: 11 }}
-              formatter={(value: number, name: string) => [
-                `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
+              formatter={(value, name) => [
+                `$${Number(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
                 name === "shariah" ? "Shariah Algo" : "Day Trader",
               ]}
             />

@@ -29,8 +29,8 @@ def run_market_scan(
 
     logger.info("Market scan starting — %d watchlist stocks", len(watchlist))
 
-    # Fetch opening range bars (9:30–10:00 AM)
-    all_bars = fetch_opening_range_bars(trading_client, watchlist, cfg.orb_minutes)
+    # Fetch opening range bars (9:30–10:00 AM) — must use data_client, not trading_client
+    all_bars = fetch_opening_range_bars(data_client, watchlist, cfg.orb_minutes)
 
     # Compute ORB for each symbol
     for symbol in watchlist:
