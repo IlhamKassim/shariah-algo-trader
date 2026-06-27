@@ -2,7 +2,8 @@ import logging
 import sys
 
 from day_trader.config import DayTraderConfig
-from day_trader.data.watchlist import fetch_avg_daily_volume, get_watchlist
+from day_trader.data.alpaca_data import fetch_avg_daily_volume
+from day_trader.data.watchlist import get_watchlist
 from day_trader.execution.order_executor import DayOrderExecutor
 from day_trader.jobs.eod_liquidation import run_eod_liquidation
 from day_trader.jobs.intraday_monitor import run_intraday_monitor
@@ -31,7 +32,7 @@ def main() -> None:
 
     watchlist = get_watchlist()
     logger.info("Watchlist: %d symbols — fetching average daily volumes...", len(watchlist))
-    avg_volumes = fetch_avg_daily_volume(watchlist)
+    avg_volumes = fetch_avg_daily_volume(data_client, watchlist)
 
     def market_scan_job() -> None:
         run_market_scan(

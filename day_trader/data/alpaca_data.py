@@ -63,6 +63,43 @@ def fetch_latest_prices(
         return {}
 
 
+def fetch_avg_daily_volume(
+    client: AlpacaClient,
+    symbols: list[str],
+    lookback_days: int = 30,
+) -> dict[str, float]:
+    """Fetch 30-day average daily volume for each symbol using Alpaca daily bars.
+
+    Returns {symbol: avg_volume}. Symbols with no data are excluded.
+    """
+    end = datetime.date.today() - datetime.timedelta(days=1)
+    start = end - datetime.timedelta(days=lookback_days + 7)  # extra buffer for non-trading days
+
+    params = (
+        f"symbols={','.join(symbols)}"
+        f"&timeframe=1Day"
+        f"&start={start.isoformat()}"
+        f"&end={end.isoformat()}"
+        f"&limit=10000"
+        f"&feed={_FEED}"
+    )
+
+    try:
+        response = client.get(f"/v2/stocks/bars?{params}")
+        bars_by_symbol = response.get("bars", {})
+    except Exception as exc:
+        logger.error("Failed to fetch daily bars for ADV: %s", exc)
+        return {}
+
+    result: dict[str, float] = {}
+    for symbol, bars in bars_by_symbol.items():
+        if bars:
+            result[symbol] = sum(b["v"] for b in bars) / len(bars)
+
+    logger.info("Average daily volume fetched for %d/%d symbols", len(result), len(symbols))
+    return result
+
+
 def fetch_current_day_volume(
     client: AlpacaClient,
     symbols: list[str],
