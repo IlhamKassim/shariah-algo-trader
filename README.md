@@ -1,4 +1,4 @@
-c# Shariah Algo Trader
+# Shariah Algo Trader
 
 An algorithmic trading bot that operates exclusively within a Shariah-compliant equity universe, taking long-only spot positions with no leverage, margin, derivatives, or options.
 
@@ -131,6 +131,8 @@ Then open **http://localhost:8000** in your browser.
 | Activity | Filterable audit log of every Compliance Check, Rebalance, and order submitted |
 
 Factor scores are computed automatically when the dashboard server starts (takes 2–4 minutes on first load) and can be refreshed manually from the Universe page.
+
+**Live dashboard:** https://shariah-algo-trader.onrender.com
 
 **Deploy to Render (permanent public URL):**
 
