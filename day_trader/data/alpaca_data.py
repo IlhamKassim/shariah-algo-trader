@@ -100,24 +100,3 @@ def fetch_avg_daily_volume(
     return result
 
 
-def fetch_current_day_volume(
-    client: AlpacaClient,
-    symbols: list[str],
-) -> dict[str, int]:
-    """Fetch total volume traded so far today for each symbol.
-
-    Returns {symbol: volume}.
-    """
-    params = f"symbols={','.join(symbols)}&feed={_FEED}"
-    try:
-        response = client.get(f"/v2/stocks/snapshots?{params}")
-        snapshots = response.get("snapshots", response)
-        result: dict[str, int] = {}
-        for sym, snap in snapshots.items():
-            daily = snap.get("dailyBar") or {}
-            v = daily.get("v", 0)
-            result[sym] = int(v)
-        return result
-    except Exception as exc:
-        logger.error("Failed to fetch day volumes: %s", exc)
-        return {}

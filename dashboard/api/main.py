@@ -25,7 +25,7 @@ app = FastAPI(title="Shariah Algo Trader Dashboard", version="0.1.0", lifespan=l
 
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    *(os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else []),
+    *[o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()],
 ]
 
 app.add_middleware(

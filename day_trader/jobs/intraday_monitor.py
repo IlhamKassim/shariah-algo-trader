@@ -35,6 +35,10 @@ def run_intraday_monitor(
 
     prices = fetch_latest_prices(data_client, list(symbols_to_watch))
 
+    if not prices and state.positions:
+        logger.warning("Price fetch returned empty — skipping stop checks for %d position(s)", len(state.positions))
+        return
+
     # 1. Manage existing positions (stops)
     to_exit: list[str] = []
     for symbol, pos in state.positions.items():
@@ -62,9 +66,13 @@ def run_intraday_monitor(
         pos = state.positions.pop(symbol, None)
         if pos is None:
             continue
-        executor.sell(symbol, reason=f"stop at {prices.get(symbol, 0):.2f}")
-        pnl_pct = (prices.get(symbol, pos.entry_price) / pos.entry_price - 1) * 100
-        logger.info("%s closed — P&L %.2f%%", symbol, pnl_pct)
+        exit_price = prices.get(symbol)
+        executor.sell(symbol, reason=f"stop at {exit_price or 0:.2f}")
+        if exit_price is not None:
+            pnl_pct = (exit_price / pos.entry_price - 1) * 100
+            logger.info("%s closed — P&L %.2f%%", symbol, pnl_pct)
+        else:
+            logger.warning("%s closed — exit price unavailable, P&L unknown", symbol)
 
     # 2. Scan for late breakouts — stop entering new positions after 3:00 PM to avoid
     #    entering a trade that gets immediately liquidated by the 3:55 PM EOD job
