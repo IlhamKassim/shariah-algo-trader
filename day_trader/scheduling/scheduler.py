@@ -17,9 +17,9 @@ def start_scheduler(
     """Start the day-trading scheduler.
 
     Schedule (all times ET, Mon–Fri only):
-    - 10:00 AM — market scan (compute ORB, enter initial breakouts)
-    - 10:01 AM – 3:54 PM — intraday monitor every minute (stops + late entries)
-    - 3:55 PM — EOD liquidation (close all, no overnight holds)
+    - 9:31 AM  — Gap and Go open scan (enter gapping stocks right at open)
+    - 9:32 AM – 3:54 PM — intraday monitor every minute (stops + profit targets)
+    - 3:55 PM  — EOD liquidation (close all, no overnight holds)
     """
     scheduler = BlockingScheduler(timezone=_TIMEZONE)
 
@@ -31,28 +31,28 @@ def start_scheduler(
                 logger.error("%s failed: %s", name, exc, exc_info=True)
         return wrapper
 
-    # 10:00 AM — ORB scan
+    # 9:31 AM — Gap and Go open scan
     scheduler.add_job(
-        func=_safe(run_market_scan, "MarketScan"),
-        trigger=CronTrigger(day_of_week="mon-fri", hour=10, minute=0, timezone=_TIMEZONE),
+        func=_safe(run_market_scan, "MarketOpenScan"),
+        trigger=CronTrigger(day_of_week="mon-fri", hour=9, minute=31, timezone=_TIMEZONE),
     )
 
-    # 10:01–10:59 AM — avoid firing at the same instant as market scan at 10:00
+    # 9:32–9:59 AM
     scheduler.add_job(
         func=_safe(run_intraday_monitor, "IntradayMonitor"),
         trigger=CronTrigger(
             day_of_week="mon-fri",
-            hour=10,
-            minute="1-59",
+            hour=9,
+            minute="32-59",
             timezone=_TIMEZONE,
         ),
     )
-    # 11:00 AM – 3:54 PM (intraday_monitor guards against new entries after 15:00)
+    # 10:00 AM – 3:54 PM
     scheduler.add_job(
         func=_safe(run_intraday_monitor, "IntradayMonitor"),
         trigger=CronTrigger(
             day_of_week="mon-fri",
-            hour="11-15",
+            hour="10-15",
             minute="0-54",
             timezone=_TIMEZONE,
         ),
@@ -65,6 +65,6 @@ def start_scheduler(
     )
 
     logger.info(
-        "Day-trader scheduler started — scan 10:00, monitor 10:01–15:54, EOD 15:55 ET (Mon–Fri)"
+        "Day-trader scheduler started — scan 9:31, monitor 9:32–15:54, EOD 15:55 ET (Mon–Fri)"
     )
     scheduler.start()

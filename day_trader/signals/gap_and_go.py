@@ -1,6 +1,6 @@
 import logging
 
-from benchmark_trader.state import GapData
+from day_trader.state import GapData
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ def compute_gap(
 ) -> GapData | None:
     """Compute gap metrics from the first price print after open.
 
-    Returns None if prev_close is missing or the stock opened flat.
+    Returns None if prev_close is missing or prices are invalid.
     """
     if prev_close <= 0 or open_price <= 0:
         return None
@@ -22,7 +22,7 @@ def compute_gap(
     gap_pct = (open_price - prev_close) / prev_close
     gap_amount = open_price - prev_close
 
-    # RVOL: first minute volume vs the historical 1-minute rate (ADV / 390 minutes)
+    # RVOL: first-minute volume vs historical 1-minute rate (ADV / 390 minutes)
     expected_1min = avg_daily_volume / 390
     rvol = first_min_volume / max(expected_1min, 1)
 
@@ -43,8 +43,8 @@ def is_valid_gap_entry(
     """Return True if this gap qualifies for a Gap and Go entry.
 
     Conditions:
-    1. Gap is at least gap_threshold above prior close (overnight catalyst).
-    2. First-minute RVOL >= rvol_threshold (real participation at open, not thin).
+    1. Gap >= gap_threshold above prior close (overnight catalyst required).
+    2. First-minute RVOL >= rvol_threshold (real participation at open, not thin volume).
     """
     if gap.gap_pct < gap_threshold:
         logger.info(

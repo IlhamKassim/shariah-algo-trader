@@ -23,16 +23,13 @@ class DayTraderConfig:
             "DAY_ALPACA_DATA_URL", "https://data.alpaca.markets"
         )
 
-        # Strategy parameters
         self.max_positions: int = int(os.environ.get("DAY_MAX_POSITIONS", "5"))
         self.position_size_pct: float = float(os.environ.get("DAY_POSITION_SIZE_PCT", "0.10"))
         self.stop_loss_pct: float = float(os.environ.get("DAY_STOP_LOSS_PCT", "0.02"))
         self.trailing_stop_pct: float = float(os.environ.get("DAY_TRAILING_STOP_PCT", "0.015"))
-        self.orb_minutes: int = int(os.environ.get("DAY_ORB_MINUTES", "30"))
-        # Minimum RVOL (opening pace / historical opening pace) to confirm a signal.
-        # 1.5 means the opening must trade at 1.5× the typical rate for that time of day.
+        # Minimum overnight gap (fraction) required to enter — e.g. 0.03 = 3%
+        self.gap_threshold: float = float(os.environ.get("DAY_GAP_PCT", "0.03"))
+        # Minimum first-minute RVOL to confirm real participation at open
         self.rvol_threshold: float = float(os.environ.get("DAY_RVOL_THRESHOLD", "1.5"))
-        # Minimum gap from prior close (as a fraction) required before entering any trade.
-        self.gap_pct: float = float(os.environ.get("DAY_GAP_PCT", "0.02"))
-        # Profit target = entry + profit_target_multiplier × (ORB high − ORB low).
-        self.profit_target_multiplier: float = float(os.environ.get("DAY_PROFIT_TARGET_MULT", "1.5"))
+        # Profit target = entry + mult × gap_amount
+        self.profit_target_mult: float = float(os.environ.get("DAY_PROFIT_TARGET_MULT", "2.0"))

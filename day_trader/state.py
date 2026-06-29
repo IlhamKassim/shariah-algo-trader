@@ -6,14 +6,11 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ORBData:
-    high: float
-    low: float
-    open_volume: int          # total volume in the opening range window
-    avg_daily_volume: float   # 30-day average daily volume
-    rvol: float = 0.0         # open_volume / (adv * orb_minutes/390)
-    vwap: float = 0.0         # VWAP of the opening range window
-    gap_pct: float = 0.0      # (today_open - prev_close) / prev_close
+class GapData:
+    prev_close: float
+    gap_pct: float    # (open_price - prev_close) / prev_close
+    gap_amount: float # open_price - prev_close in dollars
+    rvol: float       # first-minute volume / (ADV / 390)
 
 
 @dataclass
@@ -23,6 +20,7 @@ class ActivePosition:
     stop_loss: float       # hard floor — sell immediately if breached
     highest_price: float   # tracks peak for trailing stop
     qty: float
+    gap_amount: float      # used to compute profit target
 
 
 @dataclass
@@ -30,15 +28,15 @@ class DayTraderState:
     """In-memory state for a single trading day. Resets at each market open."""
 
     date: datetime.date = field(default_factory=datetime.date.today)
-    orb: dict[str, ORBData] = field(default_factory=dict)
+    gaps: dict[str, GapData] = field(default_factory=dict)
     positions: dict[str, ActivePosition] = field(default_factory=dict)
-    traded_today: set[str] = field(default_factory=set)   # symbols already entered today
+    traded_today: set[str] = field(default_factory=set)
 
     def reset(self) -> None:
         new_date = datetime.date.today()
         logger.info("DayTraderState reset for %s (was %s)", new_date, self.date)
         self.date = new_date
-        self.orb.clear()
+        self.gaps.clear()
         self.positions.clear()
         self.traded_today.clear()
 
