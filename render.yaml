@@ -38,6 +38,8 @@ services:
         sync: false
       - key: ETF_SYMBOL
         sync: false
+      - key: ETF_SYMBOLS
+        value: "SPUS"
       - key: TOP_N
         sync: false
 

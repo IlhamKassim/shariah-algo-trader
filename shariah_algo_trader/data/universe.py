@@ -86,13 +86,17 @@ def fetch_combined_universe(etf_symbols: list[str]) -> set[str]:
         try:
             holdings = _fetch_etf_holdings(symbol)
             if not holdings:
-                logger.warning("%s: empty holdings snapshot, skipping", symbol)
+                logger.error("%s: empty holdings snapshot, skipping", symbol)
                 failed.append(symbol)
                 continue
             logger.info("%s: %d holdings added to universe", symbol, len(holdings))
             combined |= holdings
         except Exception as exc:
-            logger.warning("Failed to fetch %s holdings (%s), skipping", symbol, exc)
+            logger.error(
+                "Failed to fetch %s holdings (%s), skipping — "
+                "universe will be built without this ETF",
+                symbol, exc,
+            )
             failed.append(symbol)
 
     if not combined:
