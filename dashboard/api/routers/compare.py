@@ -51,7 +51,7 @@ def _compute_metrics(name: str, equity: list[float]) -> StrategyMetrics:
 
     daily_rf = _RISK_FREE_RATE / 252
     excess = daily_returns - daily_rf
-    sharpe = float((excess.mean() / excess.std()) * np.sqrt(252)) if excess.std() > 0 else 0.0
+    sharpe = float((excess.mean() / excess.std()) * np.sqrt(252)) if excess.std() > 1e-8 else 0.0
 
     peaks = np.maximum.accumulate(arr)
     drawdowns = (arr - peaks) / peaks
