@@ -23,6 +23,7 @@ dev = [
 [project.scripts]
 shariah-trader = "shariah_algo_trader.main:main"
 day-trader = "day_trader.main:main"
+benchmark-trader = "benchmark_trader.main:main"
 
 [build-system]
 requires = ["hatchling"]

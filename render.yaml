@@ -74,3 +74,33 @@ services:
         value: "0.02"
       - key: DAY_PROFIT_TARGET_MULT
         value: "1.5"
+
+  - type: worker
+    name: benchmark-trader-bot
+    runtime: python
+    pythonVersion: "3.11"
+    buildCommand: pip install uv && uv sync --no-dev
+    startCommand: uv run benchmark-trader
+    envVars:
+      - key: BENCH_ALPACA_API_KEY
+        sync: false
+      - key: BENCH_ALPACA_API_SECRET
+        sync: false
+      - key: BENCH_ALPACA_BASE_URL
+        sync: false
+      - key: BENCH_ALPACA_DATA_URL
+        sync: false
+      - key: BENCH_MAX_POSITIONS
+        value: "5"
+      - key: BENCH_POSITION_SIZE_PCT
+        value: "0.10"
+      - key: BENCH_STOP_LOSS_PCT
+        value: "0.02"
+      - key: BENCH_TRAILING_STOP_PCT
+        value: "0.015"
+      - key: BENCH_GAP_PCT
+        value: "0.03"
+      - key: BENCH_RVOL_THRESHOLD
+        value: "1.5"
+      - key: BENCH_PROFIT_TARGET_MULT
+        value: "2.0"
