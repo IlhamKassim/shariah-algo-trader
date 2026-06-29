@@ -1,17 +1,17 @@
-# 50 high-volume, liquid US stocks — mix of tech, finance, energy, travel, consumer
+# Shariah-compliant high-volume US stocks for intraday ORB trading.
+# Excluded: banks/financials (interest-based), airlines (excessive leverage),
+# crypto miners (MARA, RIOT), and other non-compliant sectors.
 _DEFAULT_WATCHLIST: list[str] = [
-    # Mega-cap tech
+    # Mega-cap tech (SPUS core holdings)
     "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META", "GOOGL", "AMD", "INTC", "MU",
-    # Finance
-    "BAC", "JPM", "WFC", "C", "GS", "MS", "SOFI", "HOOD", "COIN", "SQ",
-    # Energy
+    # Energy (asset-backed, generally Shariah-compliant)
     "XOM", "CVX", "OXY", "SLB", "HAL",
-    # Consumer / travel
-    "F", "GM", "CCL", "AAL", "DAL", "UBER", "LYFT", "ABNB", "DASH", "NFLX",
-    # Growth / tech
-    "PLTR", "SHOP", "SNAP", "RBLX", "PINS", "DKNG", "PYPL", "DIS", "T", "PFE",
-    # EV / speculative
-    "NIO", "RIVN", "LCID", "MARA", "RIOT",
+    # Consumer / marketplace tech
+    "UBER", "ABNB", "DASH", "NFLX", "DIS",
+    # Growth tech / software
+    "PLTR", "SHOP", "SNAP", "RBLX", "PINS", "PYPL",
+    # EV / clean energy
+    "NIO", "RIVN",
 ]
 
 

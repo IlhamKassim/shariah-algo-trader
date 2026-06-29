@@ -9,6 +9,9 @@ def compute_orb(
     symbol: str,
     bars: list[dict],
     avg_daily_volume: float,
+    *,
+    orb_minutes: int = 30,
+    prev_close: float = 0.0,
 ) -> ORBData | None:
     """Compute the Opening Range Breakout data from 1-minute bars.
 
@@ -20,13 +23,32 @@ def compute_orb(
 
     highs = [float(b["h"]) for b in bars]
     lows = [float(b["l"]) for b in bars]
+    closes = [float(b["c"]) for b in bars]
     volumes = [int(b["v"]) for b in bars]
+
+    open_volume = sum(volumes)
+
+    # RVOL: how much faster today's opening traded vs the historical daily average.
+    # Normalise by the fraction of the day the opening window covers (orb_minutes/390).
+    expected_opening_vol = avg_daily_volume * (orb_minutes / 390)
+    rvol = open_volume / max(expected_opening_vol, 1)
+
+    # Opening range VWAP (typical price × volume weighted average)
+    cum_tp_vol = sum((h + l + c) / 3 * v for h, l, c, v in zip(highs, lows, closes, volumes))
+    vwap = cum_tp_vol / max(open_volume, 1)
+
+    # Gap: today's open vs yesterday's close
+    today_open = float(bars[0]["o"]) if bars else 0.0
+    gap_pct = (today_open - prev_close) / prev_close if prev_close > 0 else 0.0
 
     return ORBData(
         high=max(highs),
         low=min(lows),
-        open_volume=sum(volumes),
+        open_volume=open_volume,
         avg_daily_volume=avg_daily_volume,
+        rvol=rvol,
+        vwap=vwap,
+        gap_pct=gap_pct,
     )
 
 
@@ -34,34 +56,28 @@ def is_breakout(
     symbol: str,
     current_price: float,
     orb: ORBData,
-    volume_confirm_pct: float = 0.20,
+    rvol_threshold: float = 1.5,
 ) -> bool:
     """Return True if the current price constitutes a valid ORB breakout.
 
     Conditions:
-    1. Price is above the opening range high.
-    2. Opening range volume is at least volume_confirm_pct × avg daily volume
-       (confirms that today's session has meaningful participation).
+    1. Price is strictly above the opening range high.
+    2. RVOL >= rvol_threshold (opening pace is at least 1.5× the historical norm
+       for this time of day — ensures real participation, not a thin drift).
     """
     if current_price <= orb.high:
         return False
 
-    if orb.avg_daily_volume > 0:
-        vol_ratio = orb.open_volume / orb.avg_daily_volume
-        if vol_ratio < volume_confirm_pct:
-            logger.info(
-                "%s: price breakout (%.2f > %.2f) but volume too low "
-                "(%.1f%% of ADV, need %.0f%%)",
-                symbol, current_price, orb.high,
-                vol_ratio * 100, volume_confirm_pct * 100,
-            )
-            return False
+    if orb.avg_daily_volume > 0 and orb.rvol < rvol_threshold:
+        logger.info(
+            "%s: price breakout (%.2f > %.2f) but RVOL too low (%.2f, need %.1f)",
+            symbol, current_price, orb.high, orb.rvol, rvol_threshold,
+        )
+        return False
 
     logger.info(
-        "%s: ORB breakout confirmed — price %.2f > high %.2f, "
-        "open vol %d (%.1f%% ADV)",
-        symbol, current_price, orb.high,
-        orb.open_volume, (orb.open_volume / max(orb.avg_daily_volume, 1)) * 100,
+        "%s: ORB breakout confirmed — price %.2f > high %.2f, RVOL %.2f",
+        symbol, current_price, orb.high, orb.rvol,
     )
     return True
 

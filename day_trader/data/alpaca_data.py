@@ -63,6 +63,43 @@ def fetch_latest_prices(
         return {}
 
 
+def fetch_prev_close(
+    client: AlpacaClient,
+    symbols: list[str],
+) -> dict[str, float]:
+    """Fetch the most recent previous trading day's closing price for each symbol.
+
+    Returns {symbol: close_price}. Symbols with no data are excluded.
+    """
+    end = datetime.date.today() - datetime.timedelta(days=1)
+    start = end - datetime.timedelta(days=7)  # buffer for weekends / holidays
+
+    params = (
+        f"symbols={','.join(symbols)}"
+        f"&timeframe=1Day"
+        f"&start={start.isoformat()}"
+        f"&end={end.isoformat()}"
+        f"&limit=10000"
+        f"&feed={_FEED}"
+        f"&sort=desc"
+    )
+
+    try:
+        response = client.get(f"/v2/stocks/bars?{params}")
+        bars_by_symbol = response.get("bars", {})
+    except Exception as exc:
+        logger.error("Failed to fetch previous close bars: %s", exc)
+        return {}
+
+    result: dict[str, float] = {}
+    for symbol, bars in bars_by_symbol.items():
+        if bars:
+            result[symbol] = float(bars[0]["c"])  # most recent bar (sort=desc)
+
+    logger.info("Previous close fetched for %d/%d symbols", len(result), len(symbols))
+    return result
+
+
 def fetch_avg_daily_volume(
     client: AlpacaClient,
     symbols: list[str],

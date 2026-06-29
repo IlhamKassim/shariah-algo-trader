@@ -1,7 +1,7 @@
 import logging
 
 from day_trader.config import DayTraderConfig
-from day_trader.data.alpaca_data import fetch_latest_prices, fetch_opening_range_bars
+from day_trader.data.alpaca_data import fetch_latest_prices, fetch_opening_range_bars, fetch_prev_close
 from day_trader.execution.order_executor import DayOrderExecutor
 from day_trader.signals.orb import compute_orb, compute_stop_loss, is_breakout
 from day_trader.state import ActivePosition, DayTraderState
@@ -29,14 +29,19 @@ def run_market_scan(
 
     logger.info("Market scan starting — %d watchlist stocks", len(watchlist))
 
-    # Fetch opening range bars (9:30–10:00 AM) — must use data_client, not trading_client
+    # Fetch opening range bars (9:30–10:00 AM) and previous closes in parallel
     all_bars = fetch_opening_range_bars(data_client, watchlist, cfg.orb_minutes)
+    prev_closes = fetch_prev_close(data_client, watchlist)
 
     # Compute ORB for each symbol
     for symbol in watchlist:
         bars = all_bars.get(symbol, [])
         adv = avg_volumes.get(symbol, 1_000_000)
-        orb = compute_orb(symbol, bars, adv)
+        orb = compute_orb(
+            symbol, bars, adv,
+            orb_minutes=cfg.orb_minutes,
+            prev_close=prev_closes.get(symbol, 0.0),
+        )
         if orb is not None:
             state.orb[symbol] = orb
 
@@ -62,7 +67,15 @@ def run_market_scan(
         if price is None:
             continue
 
-        if not is_breakout(symbol, price, orb, cfg.volume_confirm_pct):
+        # Gap filter: require at least cfg.gap_pct gap from prior close
+        if orb.gap_pct < cfg.gap_pct:
+            logger.info(
+                "%s: gap too small (%.1f%%, need %.0f%%) — skipping",
+                symbol, orb.gap_pct * 100, cfg.gap_pct * 100,
+            )
+            continue
+
+        if not is_breakout(symbol, price, orb, cfg.rvol_threshold):
             continue
 
         # Enter position
@@ -80,8 +93,8 @@ def run_market_scan(
         )
         state.traded_today.add(symbol)
         logger.info(
-            "%s entered — price %.2f, stop %.2f, ORB [%.2f, %.2f]",
-            symbol, price, stop, orb.low, orb.high,
+            "%s entered — price %.2f, stop %.2f, ORB [%.2f, %.2f], gap %.1f%%, RVOL %.2f",
+            symbol, price, stop, orb.low, orb.high, orb.gap_pct * 100, orb.rvol,
         )
 
     logger.info(

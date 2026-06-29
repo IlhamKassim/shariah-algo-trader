@@ -9,8 +9,11 @@ logger = logging.getLogger(__name__)
 class ORBData:
     high: float
     low: float
-    open_volume: int   # total volume in the opening range window
-    avg_daily_volume: float  # 30-day average daily volume
+    open_volume: int          # total volume in the opening range window
+    avg_daily_volume: float   # 30-day average daily volume
+    rvol: float = 0.0         # open_volume / (adv * orb_minutes/390)
+    vwap: float = 0.0         # VWAP of the opening range window
+    gap_pct: float = 0.0      # (today_open - prev_close) / prev_close
 
 
 @dataclass

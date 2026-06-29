@@ -39,12 +39,25 @@ def run_intraday_monitor(
         logger.warning("Price fetch returned empty — skipping stop checks for %d position(s)", len(state.positions))
         return
 
-    # 1. Manage existing positions (stops)
-    to_exit: list[str] = []
+    # 1. Manage existing positions (stops and profit targets)
+    to_exit: list[tuple[str, str]] = []
     for symbol, pos in state.positions.items():
         price = prices.get(symbol)
         if price is None:
             continue
+
+        # Check profit target first (1.5× ORB range above entry)
+        orb_data = state.orb.get(symbol)
+        if orb_data is not None:
+            orb_range = orb_data.high - orb_data.low
+            target = pos.entry_price + cfg.profit_target_multiplier * orb_range
+            if price >= target:
+                logger.info(
+                    "%s profit target hit at %.2f (target %.2f, entry %.2f, range %.2f)",
+                    symbol, price, target, pos.entry_price, orb_range,
+                )
+                to_exit.append((symbol, f"profit target at {target:.2f}"))
+                continue
 
         # Update trailing stop peak
         if price > pos.highest_price:
@@ -60,23 +73,25 @@ def run_intraday_monitor(
                 else f"hard stop ({pos.stop_loss:.2f})"
             )
             logger.info("%s stop hit at %.2f — %s", symbol, price, reason)
-            to_exit.append(symbol)
+            to_exit.append((symbol, reason))
 
-    for symbol in to_exit:
+    for symbol, exit_reason in to_exit:
         pos = state.positions.pop(symbol, None)
         if pos is None:
             continue
         exit_price = prices.get(symbol)
-        executor.sell(symbol, reason=f"stop at {exit_price or 0:.2f}")
+        executor.sell(symbol, reason=exit_reason)
         if exit_price is not None:
             pnl_pct = (exit_price / pos.entry_price - 1) * 100
             logger.info("%s closed — P&L %.2f%%", symbol, pnl_pct)
         else:
             logger.warning("%s closed — exit price unavailable, P&L unknown", symbol)
 
-    # 2. Scan for late breakouts — stop entering new positions after 3:00 PM to avoid
-    #    entering a trade that gets immediately liquidated by the 3:55 PM EOD job
-    if state.open_position_count() < cfg.max_positions and datetime.now(_ET).hour < 15:
+    # 2. Scan for late breakouts — hard cutoff at 11:30 AM to avoid chasing midday noise
+    #    and to ensure positions have room to run before the 3:55 PM EOD liquidation.
+    now_et = datetime.now(_ET)
+    cutoff = now_et.replace(hour=11, minute=30, second=0, microsecond=0)
+    if state.open_position_count() < cfg.max_positions and now_et < cutoff:
         for symbol, orb in state.orb.items():
             if symbol in state.positions or symbol in state.traded_today:
                 continue
@@ -87,7 +102,11 @@ def run_intraday_monitor(
             if price is None:
                 continue
 
-            if not is_breakout(symbol, price, orb, cfg.volume_confirm_pct):
+            # Re-apply gap filter for late entries (gap condition set at open, unchanged)
+            if orb.gap_pct < cfg.gap_pct:
+                continue
+
+            if not is_breakout(symbol, price, orb, cfg.rvol_threshold):
                 continue
 
             notional = executor.buy(symbol, cfg.position_size_pct)
@@ -104,6 +123,6 @@ def run_intraday_monitor(
             )
             state.traded_today.add(symbol)
             logger.info(
-                "%s late breakout entry — price %.2f, stop %.2f",
-                symbol, price, stop,
+                "%s late breakout entry — price %.2f, stop %.2f, gap %.1f%%, RVOL %.2f",
+                symbol, price, stop, orb.gap_pct * 100, orb.rvol,
             )

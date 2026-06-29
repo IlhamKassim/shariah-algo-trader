@@ -68,3 +68,9 @@ services:
         value: "0.015"
       - key: DAY_ORB_MINUTES
         value: "30"
+      - key: DAY_RVOL_THRESHOLD
+        value: "1.5"
+      - key: DAY_GAP_PCT
+        value: "0.02"
+      - key: DAY_PROFIT_TARGET_MULT
+        value: "1.5"
