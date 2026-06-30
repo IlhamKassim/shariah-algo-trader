@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { BarChart2, Layers, Clock, LayoutDashboard, TrendingUp, GitCompare } from "lucide-react";
+import { BarChart2, Layers, Clock, LayoutDashboard, TrendingUp, GitCompare, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Overview } from "./pages/Overview";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
 import { Compare } from "./pages/Compare";
+import { DayTrader } from "./pages/DayTrader";
 import { api } from "./lib/api";
 
 const NAV = [
@@ -15,6 +16,7 @@ const NAV = [
   { to: "/universe", label: "Universe", icon: Layers, end: false },
   { to: "/activity", label: "Activity", icon: Clock, end: false },
   { to: "/compare", label: "Compare", icon: GitCompare, end: false },
+  { to: "/day-trader", label: "Day Trader", icon: Zap, end: false },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -37,6 +39,10 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/compare": {
     title: "Strategy Comparison",
     sub: "Shariah Algo vs Day Trader — risk-adjusted performance side by side",
+  },
+  "/day-trader": {
+    title: "Day Trader",
+    sub: "Gap & Go intraday positions, fills and scanner config",
   },
 };
 
@@ -234,6 +240,7 @@ export default function App() {
             <Route path="/universe" element={<Universe />} />
             <Route path="/activity" element={<Activity />} />
             <Route path="/compare" element={<Compare />} />
+            <Route path="/day-trader" element={<DayTrader />} />
           </Routes>
         </main>
       </div>

@@ -93,3 +93,42 @@ class ComplianceResponse(BaseModel):
     held_count: int
     universe_size: int
     last_checked: Optional[str]
+
+
+class DayTraderAccountResponse(BaseModel):
+    equity: float
+    cash: float
+    buying_power: float
+    dayl_pl: float
+    dayl_pl_pct: float
+    available: bool
+
+
+class DayTraderPositionResponse(BaseModel):
+    symbol: str
+    qty: float
+    market_value: float
+    avg_entry_price: float
+    unrealized_pl: float
+    unrealized_pl_pct: float
+    current_price: float
+    side: str
+
+
+class DayTraderTradeEntry(BaseModel):
+    timestamp: str
+    symbol: str
+    side: str
+    qty: float
+    price: float
+    notional: float
+
+
+class DayTraderResponse(BaseModel):
+    account: DayTraderAccountResponse
+    positions: list[DayTraderPositionResponse]
+    trades_today: list[DayTraderTradeEntry]
+    max_positions: int
+    gap_threshold_pct: float
+    rvol_threshold: float
+    stop_loss_pct: float

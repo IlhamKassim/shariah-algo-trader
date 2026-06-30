@@ -89,6 +89,45 @@ export interface ComplianceResponse {
   last_checked: string | null;
 }
 
+export interface DayTraderAccountResponse {
+  equity: number;
+  cash: number;
+  buying_power: number;
+  dayl_pl: number;
+  dayl_pl_pct: number;
+  available: boolean;
+}
+
+export interface DayTraderPositionResponse {
+  symbol: string;
+  qty: number;
+  market_value: number;
+  avg_entry_price: number;
+  unrealized_pl: number;
+  unrealized_pl_pct: number;
+  current_price: number;
+  side: string;
+}
+
+export interface DayTraderTradeEntry {
+  timestamp: string;
+  symbol: string;
+  side: string;
+  qty: number;
+  price: number;
+  notional: number;
+}
+
+export interface DayTraderResponse {
+  account: DayTraderAccountResponse;
+  positions: DayTraderPositionResponse[];
+  trades_today: DayTraderTradeEntry[];
+  max_positions: number;
+  gap_threshold_pct: number;
+  rvol_threshold: number;
+  stop_loss_pct: number;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
@@ -112,4 +151,5 @@ export const api = {
   performance: () => apiFetch<PerformanceResponse>("/api/performance"),
   compare: () => apiFetch<CompareResponse>("/api/compare"),
   compliance: () => apiFetch<ComplianceResponse>("/api/compliance"),
+  dayTrader: () => apiFetch<DayTraderResponse>("/api/day-trader"),
 };
