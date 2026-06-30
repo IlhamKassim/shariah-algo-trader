@@ -10,6 +10,7 @@ from dashboard.api.models import (
     DayTraderResponse,
     DayTraderTradeEntry,
 )
+from day_trader.data.watchlist import get_watchlist
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
@@ -39,6 +40,9 @@ def _unavailable() -> DayTraderResponse:
         gap_threshold_pct=float(os.environ.get("DAY_GAP_PCT", "0.03")) * 100,
         rvol_threshold=float(os.environ.get("DAY_RVOL_THRESHOLD", "1.5")),
         stop_loss_pct=float(os.environ.get("DAY_STOP_LOSS_PCT", "0.02")) * 100,
+        min_price=float(os.environ.get("DAY_MIN_PRICE", "10.0")),
+        min_adv=float(os.environ.get("DAY_MIN_ADV", "1000000")),
+        watchlist_size=len(get_watchlist()),
     )
 
 
@@ -115,6 +119,9 @@ def get_day_trader() -> DayTraderResponse:
             gap_threshold_pct=float(os.environ.get("DAY_GAP_PCT", "0.03")) * 100,
             rvol_threshold=float(os.environ.get("DAY_RVOL_THRESHOLD", "1.5")),
             stop_loss_pct=float(os.environ.get("DAY_STOP_LOSS_PCT", "0.02")) * 100,
+            min_price=float(os.environ.get("DAY_MIN_PRICE", "10.0")),
+            min_adv=float(os.environ.get("DAY_MIN_ADV", "1000000")),
+            watchlist_size=len(get_watchlist()),
         )
 
     except AlpacaError as exc:

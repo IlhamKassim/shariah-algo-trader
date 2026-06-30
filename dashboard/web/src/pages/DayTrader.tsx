@@ -70,8 +70,8 @@ export function DayTrader() {
           ) : (
             <div className="space-y-1.5">
               <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Strategy</span>
-                <span className="font-mono text-muted">Gap &amp; Go</span>
+                <span className="text-faint">Watchlist</span>
+                <span className="font-mono text-muted">{data?.watchlist_size} stocks</span>
               </div>
               <div className="flex justify-between text-[11px]">
                 <span className="text-faint">Gap ≥</span>
@@ -80,6 +80,14 @@ export function DayTrader() {
               <div className="flex justify-between text-[11px]">
                 <span className="text-faint">RVOL ≥</span>
                 <span className="font-mono text-muted">{data?.rvol_threshold}×</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-faint">Min price</span>
+                <span className="font-mono text-muted">${data?.min_price.toFixed(0)}+</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-faint">Min ADV</span>
+                <span className="font-mono text-muted">{data ? (data.min_adv / 1_000_000).toFixed(0) : "—"}M+</span>
               </div>
               <div className="flex justify-between text-[11px]">
                 <span className="text-faint">Stop loss</span>

@@ -126,6 +126,9 @@ export interface DayTraderResponse {
   gap_threshold_pct: number;
   rvol_threshold: number;
   stop_loss_pct: number;
+  min_price: number;
+  min_adv: number;
+  watchlist_size: number;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

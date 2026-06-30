@@ -50,9 +50,18 @@ def run_market_scan(
         if not price or not prev_close:
             continue
 
+        # Quality filters — price and liquidity gates before signal computation
+        if price < cfg.min_price:
+            logger.info("%s: price too low ($%.2f, need $%.2f)", symbol, price, cfg.min_price)
+            continue
+
+        adv = avg_volumes.get(symbol, 0.0)
+        if adv < cfg.min_adv:
+            logger.info("%s: ADV too low (%.0f shares, need %.0f)", symbol, adv, cfg.min_adv)
+            continue
+
         bars = first_bars.get(symbol, [])
         first_min_vol = sum(int(b["v"]) for b in bars) if bars else 0
-        adv = avg_volumes.get(symbol, 1_000_000)
 
         gap = compute_gap(symbol, price, prev_close, first_min_vol, adv)
         if gap is None:

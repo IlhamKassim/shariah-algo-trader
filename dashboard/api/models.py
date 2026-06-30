@@ -132,3 +132,6 @@ class DayTraderResponse(BaseModel):
     gap_threshold_pct: float
     rvol_threshold: float
     stop_loss_pct: float
+    min_price: float
+    min_adv: float
+    watchlist_size: int
