@@ -1,54 +1,61 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Search, X } from "lucide-react";
 import { api } from "../lib/api";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import { Skeleton } from "../components/ui/Skeleton";
 
-const TYPES = ["all", "rebalance", "compliance", "order", "error", "system"] as const;
-type TypeFilter = (typeof TYPES)[number];
-
 export function Activity() {
-  const [activeType, setActiveType] = useState<TypeFilter>("all");
-  const [dateFilter, setDateFilter] = useState<string>("");
+  const [symbolFilter, setSymbolFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
 
   const { data: activity, isLoading } = useQuery({
-    queryKey: ["activity", activeType, dateFilter],
-    queryFn: () =>
-      api.activity(
-        activeType !== "all" ? activeType : undefined,
-        dateFilter || undefined
-      ),
+    queryKey: ["activity", dateFilter],
+    queryFn: () => api.activity(undefined, dateFilter || undefined),
     refetchInterval: 30_000,
   });
+
+  const filtered = activity?.entries.filter((e) => {
+    if (!symbolFilter) return true;
+    const q = symbolFilter.toUpperCase();
+    return e.tickers.some((t) => t.includes(q)) || e.message.toUpperCase().includes(q);
+  }) ?? [];
 
   return (
     <div className="space-y-5">
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-0.5 bg-card border border-card-border rounded-xl p-1">
-          {TYPES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveType(t)}
-              className={`px-3 py-1.5 text-[12px] font-medium rounded-lg capitalize transition-colors ${
-                activeType === t
-                  ? "bg-card-border text-primary"
-                  : "text-faint hover:text-muted"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        {/* Symbol search */}
         <label className="relative flex items-center">
+          <Search size={13} className="absolute left-3 text-faint pointer-events-none" aria-hidden="true" />
           <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="bg-card border border-card-border rounded-xl px-3 py-2 text-[12px] font-mono text-muted focus:outline-none focus:border-brand-green/50 transition-colors cursor-pointer"
+            type="text"
+            placeholder="Filter by symbol…"
+            value={symbolFilter}
+            onChange={(e) => setSymbolFilter(e.target.value)}
+            aria-label="Filter trades by symbol"
+            className="bg-card border border-card-border rounded-xl pl-8 pr-3 py-2 text-[12px] text-muted placeholder:text-faint focus:outline-none focus:border-brand-green/50 transition-colors w-44"
           />
+          {symbolFilter && (
+            <button
+              onClick={() => setSymbolFilter("")}
+              aria-label="Clear symbol filter"
+              className="absolute right-2.5 text-faint hover:text-muted"
+            >
+              <X size={12} />
+            </button>
+          )}
         </label>
+
+        {/* Date filter */}
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          aria-label="Filter trades by date"
+          className="bg-card border border-card-border rounded-xl px-3 py-2 text-[12px] font-mono text-muted focus:outline-none focus:border-brand-green/50 transition-colors cursor-pointer"
+        />
         {dateFilter && (
           <button
             onClick={() => setDateFilter("")}
@@ -62,18 +69,25 @@ export function Activity() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Entries {activity ? `(${activity.entries.length})` : ""}
+            Trade Activity{" "}
+            {!isLoading && `(${filtered.length} trade${filtered.length !== 1 ? "s" : ""})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-3" aria-label="Loading activity">
               {[...Array(8)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-faint text-sm py-8 text-center">
+              {activity?.entries.length === 0
+                ? "No trades recorded yet. The bot will appear here once it places its first order."
+                : "No trades match your filters."}
+            </p>
           ) : (
-            <ActivityFeed entries={activity?.entries ?? []} />
+            <ActivityFeed entries={filtered} />
           )}
         </CardContent>
       </Card>

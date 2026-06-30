@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
 import { api } from "../lib/api";
 import { FactorScoreTable } from "../components/FactorScoreTable";
 import { Badge } from "../components/ui/Badge";
@@ -8,6 +9,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 
 export function Universe() {
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
 
   const { data: status } = useQuery({
     queryKey: ["status"],
@@ -32,10 +34,14 @@ export function Universe() {
   const heldCount = universe?.stocks.filter((s) => s.in_portfolio).length ?? 0;
   const topHeldCount = universe?.stocks.filter((s) => s.in_top_n && s.in_portfolio).length ?? 0;
 
+  const visibleStocks = universe?.stocks.filter((s) =>
+    !search || s.symbol.toUpperCase().includes(search.toUpperCase())
+  ) ?? [];
+
   return (
     <div className="space-y-5">
       {/* Header row */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-faint font-mono">⊤</span>
@@ -58,14 +64,29 @@ export function Universe() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => triggerRefresh()}
-          disabled={computing}
-          className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium rounded-lg bg-card border border-card-border hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed text-muted transition-colors"
-        >
-          <RefreshCw size={12} className={computing ? "animate-spin" : ""} />
-          {computing ? "Computing…" : "Refresh Scores"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Symbol search */}
+          <label className="relative flex items-center">
+            <Search size={13} className="absolute left-3 text-faint pointer-events-none" aria-hidden="true" />
+            <input
+              type="text"
+              placeholder="Search symbol…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Filter stocks by symbol"
+              className="bg-card border border-card-border rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-muted placeholder:text-faint focus:outline-none focus:border-brand-green/50 transition-colors w-36"
+            />
+          </label>
+          <button
+            onClick={() => triggerRefresh()}
+            disabled={computing}
+            aria-label={computing ? "Computing factor scores" : "Refresh factor scores"}
+            className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium rounded-lg bg-card border border-card-border hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed text-muted transition-colors"
+          >
+            <RefreshCw size={12} className={computing ? "animate-spin" : ""} aria-hidden="true" />
+            {computing ? "Computing…" : "Refresh Scores"}
+          </button>
+        </div>
       </div>
 
       <Card>
@@ -83,7 +104,7 @@ export function Universe() {
               ))}
             </div>
           ) : universe?.stocks.length ? (
-            <FactorScoreTable stocks={universe.stocks} topN={topN} />
+            <FactorScoreTable stocks={visibleStocks} topN={topN} />
           ) : (
             <p className="text-faint text-sm py-8 text-center">
               No factor scores yet. Click "Refresh Scores" to compute.

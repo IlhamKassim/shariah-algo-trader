@@ -6,6 +6,24 @@ interface HoldingsTableProps {
   compact?: boolean;
 }
 
+function PlCell({ value, pct }: { value: number; pct?: number }) {
+  const arrow = value >= 0 ? "▲" : "▼";
+  const color = plColor(value);
+  return (
+    <td className="py-2.5 text-right" aria-label={`P&L: ${formatCurrency(value)}${pct !== undefined ? ` (${formatPct(pct)})` : ""}`}>
+      <span className={`font-mono tabular-nums text-sm ${color}`}>
+        <span aria-hidden="true">{arrow} </span>
+        {formatCurrency(value)}
+      </span>
+      {pct !== undefined && (
+        <span className={`ml-1 font-mono tabular-nums text-xs ${plColor(pct)}`}>
+          {formatPct(pct)}
+        </span>
+      )}
+    </td>
+  );
+}
+
 export function HoldingsTable({ positions, compact = false }: HoldingsTableProps) {
   const rows = compact ? positions.slice(0, 5) : positions;
   const totalValue = positions.reduce((s, p) => s + p.market_value, 0);
@@ -15,34 +33,34 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" aria-label="Portfolio holdings">
         <thead>
           <tr className="text-left border-b border-divider">
-            <th className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
+            <th scope="col" className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
               Symbol
             </th>
-            <th className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
               Shares
             </th>
             {!compact && (
-              <th className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              <th scope="col" className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
                 Avg Cost
               </th>
             )}
             {!compact && (
-              <th className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              <th scope="col" className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
                 Price
               </th>
             )}
-            <th className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
               {compact ? "Value" : "Mkt Value"}
             </th>
             {!compact && (
-              <th className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+              <th scope="col" className="pb-2.5 pr-4 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
                 Weight
               </th>
             )}
-            <th className="pb-2.5 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
               Unreal. P&amp;L
             </th>
           </tr>
@@ -56,9 +74,9 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
                 key={pos.symbol}
                 className="border-b border-divider/60 hover:bg-card-hover transition-colors last:border-0"
               >
-                <td className="py-2.5 pr-4 font-mono font-semibold text-primary tabular-nums">
+                <th scope="row" className="py-2.5 pr-4 font-mono font-semibold text-primary tabular-nums text-left">
                   {pos.symbol}
-                </td>
+                </th>
                 <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums">
                   {pos.qty}
                 </td>
@@ -78,7 +96,7 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
                 {!compact && (
                   <td className="py-2.5 pr-4">
                     <div className="flex items-center justify-end gap-2">
-                      <div className="w-10 h-1 bg-card-border rounded-full overflow-hidden">
+                      <div className="w-10 h-1 bg-card-border rounded-full overflow-hidden" aria-hidden="true">
                         <div
                           className="h-full bg-brand-green rounded-full"
                           style={{ width: `${barWidth}%` }}
@@ -90,14 +108,7 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
                     </div>
                   </td>
                 )}
-                <td className="py-2.5 text-right">
-                  <span className={`font-mono tabular-nums text-sm ${plColor(pos.unrealized_pl)}`}>
-                    {formatCurrency(pos.unrealized_pl)}
-                  </span>
-                  <span className={`ml-1 font-mono tabular-nums text-xs ${plColor(pos.unrealized_pl_pct)}`}>
-                    {formatPct(pos.unrealized_pl_pct)}
-                  </span>
-                </td>
+                <PlCell value={pos.unrealized_pl} pct={pos.unrealized_pl_pct} />
               </tr>
             );
           })}

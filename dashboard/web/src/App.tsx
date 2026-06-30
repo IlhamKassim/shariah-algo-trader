@@ -58,6 +58,15 @@ function Header() {
     hour12: false,
   });
 
+  const isMarketOpen = (() => {
+    const day = time.getDay(); // 0=Sun, 6=Sat
+    if (day === 0 || day === 6) return false;
+    const etHour = parseInt(time.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }));
+    const etMin = time.getMinutes();
+    const mins = etHour * 60 + etMin;
+    return mins >= 9 * 60 + 30 && mins < 16 * 60;
+  })();
+
   return (
     <header className="h-14 px-6 flex items-center justify-between border-b border-divider bg-sidebar shrink-0">
       <div>
@@ -66,8 +75,8 @@ function Header() {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-green" />
-          <span className="text-xs text-muted">NYSE Open</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${isMarketOpen ? "bg-brand-green" : "bg-brand-red"}`} />
+          <span className="text-xs text-muted">{isMarketOpen ? "NYSE Open" : "Market Closed"}</span>
           <span className="font-mono text-xs text-muted tabular-nums ml-1">{etTime} ET</span>
         </div>
         <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded tracking-[0.08em]">

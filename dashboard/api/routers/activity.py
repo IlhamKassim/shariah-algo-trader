@@ -27,7 +27,7 @@ def _fetch_activities() -> list[ActivityEntry]:
             try:
                 ts = datetime.datetime.fromisoformat(
                     ts_raw.replace("Z", "+00:00")
-                ).strftime("%Y-%m-%d %H:%M:%S,000")
+                ).strftime("%Y-%m-%dT%H:%M:%S.000Z")
             except (ValueError, AttributeError):
                 ts = ts_raw
             symbol = act.get("symbol", "")

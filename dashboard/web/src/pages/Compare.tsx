@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { api, type StrategyMetrics } from "../lib/api";
+import { Skeleton } from "../components/ui/Skeleton";
 
 function MetricCard({
   label,
@@ -92,8 +93,16 @@ export function Compare() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted text-sm">
-        Loading comparison data...
+      <div className="space-y-6" aria-label="Loading comparison">
+        <Skeleton className="h-72 w-full rounded-xl" />
+        <div className="grid grid-cols-2 gap-6">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex flex-col gap-3">
+              <Skeleton className="h-6 w-32" />
+              {[...Array(5)].map((_, j) => <Skeleton key={j} className="h-16 w-full rounded-xl" />)}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

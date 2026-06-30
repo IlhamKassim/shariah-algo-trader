@@ -15,10 +15,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _BENCH_TICKER = os.environ.get("BENCHMARK_TICKER", "SPUS")
-_BENCH_CACHE_TTL = 3600  # 1 hour — benchmark data is daily, no need to re-fetch more often
+_BENCH_CACHE_TTL = 3600   # 1 hour — benchmark data is daily
+_HISTORY_CACHE_TTL = 300  # 5 minutes — equity updates intraday
 
 # Cache: (start_date_iso, end_date_iso) → (monotonic_time_fetched, pd.Series)
 _bench_cache: dict[tuple[str, str], tuple[float, pd.Series]] = {}
+# Cache: (monotonic_time_fetched, (timestamps, equities)) | None
+_history_cache: tuple[float, tuple[list, list]] | None = None
 
 
 def _fetch_benchmark(start_date: datetime.date, end_date: datetime.date) -> pd.Series:
@@ -49,11 +52,21 @@ def _fetch_benchmark(start_date: datetime.date, end_date: datetime.date) -> pd.S
     return series
 
 
+def _fetch_history(client: AlpacaClient) -> tuple[list, list]:
+    global _history_cache
+    if _history_cache is not None:
+        fetched_at, payload = _history_cache
+        if time.monotonic() - fetched_at < _HISTORY_CACHE_TTL:
+            return payload
+    history = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
+    payload = (history.get("timestamp", []), history.get("equity", []))
+    _history_cache = (time.monotonic(), payload)
+    return payload
+
+
 @router.get("/api/performance", response_model=PerformanceResponse)
 def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceResponse:
-    history = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
-    timestamps = history.get("timestamp", [])
-    equities = history.get("equity", [])
+    timestamps, equities = _fetch_history(client)
 
     if not timestamps or not equities:
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[])

@@ -84,3 +84,11 @@ class CompareResponse(BaseModel):
     shariah: StrategyMetrics
     daytrader: StrategyMetrics
     daytrader_available: bool
+
+
+class ComplianceResponse(BaseModel):
+    compliant: bool
+    violations: list[str]
+    held_count: int
+    universe_size: int
+    last_checked: Optional[str]

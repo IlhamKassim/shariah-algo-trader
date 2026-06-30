@@ -15,31 +15,31 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" aria-label="Factor score rankings">
         <thead>
           <tr className="text-left border-b border-divider">
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] w-10 pl-2">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] w-10 pl-2">
               Rank
             </th>
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
               Symbol
             </th>
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right" title="12-month price return minus 1-month (z-score)">
               Momentum Z
             </th>
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right" title="ROE, profit margin, low debt composite (z-score)">
               Quality Z
             </th>
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right" title="Inverse annualised volatility (z-score) — higher = less volatile">
               Low-Vol Z
             </th>
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right" title="Earnings yield E/P (z-score)">
               Value Z
             </th>
-            <th className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right">
+            <th scope="col" className="pb-2.5 pr-3 text-[10px] font-semibold text-section uppercase tracking-[0.09em] text-right" title="Equal-weighted average of all four factor z-scores">
               Factor Score
             </th>
-            <th className="pb-2.5 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
+            <th scope="col" className="pb-2.5 text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
               Status
             </th>
           </tr>
@@ -59,9 +59,9 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                 <td className="py-2.5 pr-3 font-mono text-faint text-xs tabular-nums pl-2">
                   #{s.rank}
                 </td>
-                <td className="py-2.5 pr-3 font-mono font-semibold text-primary">
+                <th scope="row" className="py-2.5 pr-3 font-mono font-semibold text-primary text-left">
                   {s.symbol}
-                </td>
+                </th>
                 <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
                   {fmt(s.momentum_score)}
                 </td>

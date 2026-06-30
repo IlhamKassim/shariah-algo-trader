@@ -80,6 +80,14 @@ export interface CompareResponse {
   daytrader_available: boolean;
 }
 
+export interface ComplianceResponse {
+  compliant: boolean;
+  violations: string[];
+  held_count: number;
+  universe_size: number;
+  last_checked: string | null;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
@@ -102,4 +110,5 @@ export const api = {
   },
   performance: () => apiFetch<PerformanceResponse>("/api/performance"),
   compare: () => apiFetch<CompareResponse>("/api/compare"),
+  compliance: () => apiFetch<ComplianceResponse>("/api/compliance"),
 };
