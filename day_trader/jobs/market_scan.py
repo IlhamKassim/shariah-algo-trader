@@ -1,7 +1,7 @@
 import logging
 
 from day_trader.config import DayTraderConfig
-from day_trader.data.alpaca_data import fetch_avg_daily_volume, fetch_latest_prices, fetch_opening_range_bars, fetch_prev_close
+from day_trader.data.alpaca_data import fetch_latest_prices, fetch_opening_range_bars, fetch_prev_close
 from day_trader.execution.order_executor import DayOrderExecutor
 from day_trader.signals.gap_and_go import compute_gap, is_valid_gap_entry
 from day_trader.state import ActivePosition, DayTraderState
@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 def run_market_scan(
     state: DayTraderState,
     cfg: DayTraderConfig,
-    trading_client: AlpacaClient,
     data_client: AlpacaClient,
     executor: DayOrderExecutor,
     watchlist: list[str],
@@ -26,6 +25,17 @@ def run_market_scan(
     """
     if state.is_stale():
         state.reset()
+
+    if state.circuit_broken:
+        logger.warning("Circuit breaker active — market scan skipped for today")
+        return
+
+    # Record starting equity once per day for circuit-breaker baseline
+    if state.starting_equity is None:
+        eq = executor.equity()
+        if eq is not None:
+            state.starting_equity = eq
+            logger.info("Starting equity recorded: $%.2f", eq)
 
     logger.info("Gap and Go scan starting — %d watchlist stocks", len(watchlist))
 

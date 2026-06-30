@@ -82,9 +82,14 @@ def compute_inv_vol_weights(tickers: list[str], raw_vols: dict[str, float]) -> d
     total = sum(inv_vols)
     weights = [v / total for v in inv_vols]
 
-    # Single-pass cap + renormalise
-    weights = [min(w, cap) for w in weights]
-    total2 = sum(weights)
-    weights = [w / total2 for w in weights]
+    # Iterative cap + renormalise until all weights are within the cap.
+    # A single pass is insufficient: renormalisation after capping can push
+    # previously-uncapped weights back above the cap.
+    for _ in range(len(tickers)):
+        capped = [min(w, cap) for w in weights]
+        total = sum(capped)
+        weights = [w / total for w in capped]
+        if all(w <= cap + 1e-9 for w in weights):
+            break
 
     return dict(zip(tickers, weights))

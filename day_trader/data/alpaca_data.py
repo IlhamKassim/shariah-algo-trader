@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 from zoneinfo import ZoneInfo
 
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
@@ -7,7 +8,7 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 logger = logging.getLogger(__name__)
 
 ET = ZoneInfo("America/New_York")
-_FEED = "iex"  # free feed; upgrade to "sip" with a paid Alpaca subscription
+_FEED = os.environ.get("ALPACA_FEED", "iex")  # set to "sip" with a paid Alpaca subscription
 
 
 def _et_to_rfc3339(dt: datetime.datetime) -> str:

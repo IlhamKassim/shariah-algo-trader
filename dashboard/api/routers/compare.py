@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_RISK_FREE_RATE = 0.05  # annualised
+_RISK_FREE_RATE = float(os.environ.get("RISK_FREE_RATE", "0.05"))  # annualised
 
 
 def _portfolio_history(client: AlpacaClient) -> tuple[list[str], list[float]]:

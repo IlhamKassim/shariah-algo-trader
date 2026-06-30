@@ -1,4 +1,7 @@
 import datetime
+import logging
+import os
+import time
 
 import pandas as pd
 import yfinance as yf
@@ -9,6 +12,41 @@ from dashboard.api.models import PerformanceResponse
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+_BENCH_TICKER = os.environ.get("BENCHMARK_TICKER", "SPUS")
+_BENCH_CACHE_TTL = 3600  # 1 hour — benchmark data is daily, no need to re-fetch more often
+
+# Cache: (start_date_iso, end_date_iso) → (monotonic_time_fetched, pd.Series)
+_bench_cache: dict[tuple[str, str], tuple[float, pd.Series]] = {}
+
+
+def _fetch_benchmark(start_date: datetime.date, end_date: datetime.date) -> pd.Series:
+    key = (start_date.isoformat(), end_date.isoformat())
+    cached = _bench_cache.get(key)
+    if cached is not None:
+        fetched_at, series = cached
+        if time.monotonic() - fetched_at < _BENCH_CACHE_TTL:
+            return series
+
+    logger.info("Fetching %s benchmark %s → %s", _BENCH_TICKER, start_date, end_date)
+    bench_raw = yf.download(
+        _BENCH_TICKER,
+        start=str(start_date),
+        end=str(end_date + datetime.timedelta(days=1)),
+        auto_adjust=True,
+        progress=False,
+    )
+    if bench_raw.empty:
+        series = pd.Series(dtype=float)
+    else:
+        bench_close = bench_raw["Close"]
+        if isinstance(bench_close, pd.DataFrame):
+            bench_close = bench_close.iloc[:, 0]
+        series = bench_close
+
+    _bench_cache[key] = (time.monotonic(), series)
+    return series
 
 
 @router.get("/api/performance", response_model=PerformanceResponse)
@@ -34,33 +72,24 @@ def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceRe
     port_cumulative = ((1 + port_returns).cumprod() - 1).round(6).tolist()
 
     start_date = equity_series.index[0].date()
-    end_date = equity_series.index[-1].date() + datetime.timedelta(days=1)
-    bench_raw = yf.download(
-        "SPUS",
-        start=str(start_date),
-        end=str(end_date),
-        auto_adjust=True,
-        progress=False,
-    )
+    end_date = equity_series.index[-1].date()
+    bench_close = _fetch_benchmark(start_date, end_date)
 
-    if bench_raw.empty:
+    if bench_close.empty:
         bench_cumulative = [0.0] * len(port_cumulative)
-    else:
-        bench_close = bench_raw["Close"]
-        if isinstance(bench_close, pd.DataFrame):
-            bench_close = bench_close.iloc[:, 0]
-        bench_close = bench_close.reindex(equity_series.index).ffill().dropna()
-        bench_returns = bench_close.pct_change().fillna(0)
-        bench_cumulative = ((1 + bench_returns).cumprod() - 1).round(6).tolist()
+        return PerformanceResponse(
+            dates=[d.isoformat() for d in equity_series.index.date],
+            portfolio_cumulative=port_cumulative,
+            benchmark_cumulative=bench_cumulative,
+        )
 
-        # Align lengths
-        min_len = min(len(port_cumulative), len(bench_cumulative))
-        dates = [equity_series.index[i].date().isoformat() for i in range(min_len)]
-        port_cumulative = port_cumulative[:min_len]
-        bench_cumulative = bench_cumulative[:min_len]
+    bench_close = bench_close.reindex(equity_series.index).ffill().dropna()
+    bench_returns = bench_close.pct_change().fillna(0)
+    bench_cumulative = ((1 + bench_returns).cumprod() - 1).round(6).tolist()
 
+    min_len = min(len(port_cumulative), len(bench_cumulative))
     return PerformanceResponse(
-        dates=dates,
-        portfolio_cumulative=port_cumulative,
-        benchmark_cumulative=bench_cumulative,
+        dates=[equity_series.index[i].date().isoformat() for i in range(min_len)],
+        portfolio_cumulative=port_cumulative[:min_len],
+        benchmark_cumulative=bench_cumulative[:min_len],
     )

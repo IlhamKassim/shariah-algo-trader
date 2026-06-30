@@ -24,8 +24,26 @@ def run_intraday_monitor(
         state.reset()
         return
 
+    if state.circuit_broken:
+        return
+
     if not state.positions:
         return
+
+    # Circuit breaker: close everything and halt if daily loss exceeds the limit
+    if state.starting_equity is not None:
+        current_equity = executor.equity()
+        if current_equity is not None:
+            loss_pct = (state.starting_equity - current_equity) / state.starting_equity
+            if loss_pct >= cfg.max_loss_pct:
+                logger.warning(
+                    "Circuit breaker triggered — daily loss %.1f%% exceeds limit %.1f%%; closing all positions",
+                    loss_pct * 100, cfg.max_loss_pct * 100,
+                )
+                executor.close_all()
+                state.positions.clear()
+                state.circuit_broken = True
+                return
 
     prices = fetch_latest_prices(data_client, list(state.positions.keys()))
 

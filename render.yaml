@@ -22,6 +22,12 @@ services:
         sync: false
       - key: DAY_ALPACA_BASE_URL
         sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: RISK_FREE_RATE
+        value: "0.05"
+      - key: BENCHMARK_TICKER
+        value: "SPUS"
 
   - type: worker
     name: shariah-algo-trader-bot
@@ -42,6 +48,12 @@ services:
         value: "SPUS"
       - key: TOP_N
         sync: false
+      - key: JOB_TIME
+        value: "09:30"
+      - key: DRIFT_THRESHOLD
+        value: "0.03"
+      - key: SECTOR_CAP
+        value: "0.20"
 
   - type: worker
     name: day-trader-bot
@@ -72,3 +84,7 @@ services:
         value: "1.5"
       - key: DAY_PROFIT_TARGET_MULT
         value: "2.0"
+      - key: DAY_MAX_LOSS_PCT
+        value: "0.05"
+      - key: ALPACA_FEED
+        value: "iex"

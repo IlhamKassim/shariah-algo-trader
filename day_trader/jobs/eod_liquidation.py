@@ -13,6 +13,13 @@ def run_eod_liquidation(state: DayTraderState, executor: DayOrderExecutor) -> No
     intraday and avoids any overnight interest or gap risk.
     """
     logger.info("EOD liquidation starting — %d position(s) to close", len(state.positions))
-    executor.close_all()
-    state.positions.clear()
-    logger.info("EOD liquidation complete — all positions cleared from state")
+    failed = executor.close_all()
+    # Only remove positions that were successfully closed so we don't lose
+    # track of positions that Alpaca still holds (e.g. on transient API errors).
+    for symbol in list(state.positions):
+        if symbol not in failed:
+            del state.positions[symbol]
+    if failed:
+        logger.warning("EOD: %d position(s) NOT cleared from state (sell failed): %s", len(failed), sorted(failed))
+    else:
+        logger.info("EOD liquidation complete — all positions cleared from state")

@@ -1,58 +1,49 @@
-import os
-import re
+import datetime
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Query
 
+from dashboard.api.deps import get_alpaca
 from dashboard.api.models import ActivityEntry, ActivityResponse
+from shariah_algo_trader.execution.alpaca_client import AlpacaError
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-_LOG_PATH = os.environ.get("TRADER_LOG", "/tmp/shariah-trader.err")
-_LINE_RE = re.compile(
-    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+)\s+(\w+)\s+(\S+)\s+—\s+(.+)$"
-)
-_TICKER_RE = re.compile(r"\b([A-Z]{1,5})\b")
+_PAGE_SIZE = 100
 
 
-def _classify(module: str, level: str) -> str:
-    if "compliance_check" in module:
-        return "compliance"
-    if "rebalance" in module:
-        return "rebalance"
-    if "order_executor" in module:
-        return "order"
-    if level in ("ERROR", "WARNING"):
-        return "error"
-    return "system"
-
-
-def _extract_tickers(message: str) -> list[str]:
-    # Pull out capitalised short words that look like tickers, excluding known non-ticker words
-    _EXCLUDE = {"BUY", "SELL", "INFO", "ERROR", "WARNING", "DEBUG", "FULL", "HTTP"}
-    return [t for t in _TICKER_RE.findall(message) if t not in _EXCLUDE]
-
-
-def _parse_log(log_path: str, max_lines: int = 500) -> list[ActivityEntry]:
-    try:
-        with open(log_path) as f:
-            lines = f.readlines()
-    except OSError:
-        return []
-
+def _fetch_activities() -> list[ActivityEntry]:
+    """Fetch recent trade fills from Alpaca /v2/account/activities."""
+    client = get_alpaca()
     entries: list[ActivityEntry] = []
-    for line in reversed(lines[-max_lines:]):
-        m = _LINE_RE.match(line.rstrip())
-        if not m:
-            continue
-        ts, level, module, message = m.groups()
-        entries.append(ActivityEntry(
-            timestamp=ts,
-            level=level,
-            type=_classify(module, level),
-            message=message,
-            tickers=_extract_tickers(message),
-        ))
+    try:
+        data = client.get(f"/v2/account/activities?activity_type=FILL&page_size={_PAGE_SIZE}")
+        if not isinstance(data, list):
+            return []
+        for act in data:
+            ts_raw = act.get("transaction_time", "")
+            try:
+                ts = datetime.datetime.fromisoformat(
+                    ts_raw.replace("Z", "+00:00")
+                ).strftime("%Y-%m-%d %H:%M:%S,000")
+            except (ValueError, AttributeError):
+                ts = ts_raw
+            symbol = act.get("symbol", "")
+            side = act.get("side", "").upper()
+            price = act.get("price", "")
+            qty = act.get("qty", "")
+            message = f"{side} {symbol} — {qty} shares @ ${price}"
+            entries.append(ActivityEntry(
+                timestamp=ts,
+                level="INFO",
+                type="order",
+                message=message,
+                tickers=[symbol] if symbol else [],
+            ))
+    except AlpacaError as exc:
+        logger.warning("Activity fetch failed: %s", exc)
     return entries
 
 
@@ -61,9 +52,10 @@ def get_activity(
     type: Optional[str] = Query(default=None),
     date: Optional[str] = Query(default=None),
 ) -> ActivityResponse:
-    entries = _parse_log(_LOG_PATH)
-    if type:
-        entries = [e for e in entries if e.type == type]
+    entries = _fetch_activities()
+    if type and type != "order":
+        # All Alpaca activities are trade orders; other type filters return empty
+        entries = []
     if date:
         entries = [e for e in entries if e.timestamp.startswith(date)]
     return ActivityResponse(entries=entries)

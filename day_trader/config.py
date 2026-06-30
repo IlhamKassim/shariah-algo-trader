@@ -33,3 +33,5 @@ class DayTraderConfig:
         self.rvol_threshold: float = float(os.environ.get("DAY_RVOL_THRESHOLD", "1.5"))
         # Profit target = entry + mult × gap_amount
         self.profit_target_mult: float = float(os.environ.get("DAY_PROFIT_TARGET_MULT", "2.0"))
+        # Circuit breaker: halt trading if daily equity loss exceeds this fraction
+        self.max_loss_pct: float = float(os.environ.get("DAY_MAX_LOSS_PCT", "0.05"))

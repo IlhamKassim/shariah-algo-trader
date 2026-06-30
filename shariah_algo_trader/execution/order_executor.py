@@ -27,10 +27,15 @@ class OrderExecutor:
         })
         logger.info("BUY %s — $%.2f (%.1f%% of $%.2f equity)", ticker, notional, weight * 100, equity)
 
-    def sell(self, ticker: str) -> None:
-        """Liquidate the full position for ticker."""
-        self._client.delete(f"/v2/positions/{ticker}")
-        logger.info("SELL %s — full position liquidated", ticker)
+    def sell(self, ticker: str) -> bool:
+        """Liquidate the full position for ticker. Returns True on success."""
+        try:
+            self._client.delete(f"/v2/positions/{ticker}")
+            logger.info("SELL %s — full position liquidated", ticker)
+            return True
+        except Exception as exc:
+            logger.error("SELL %s failed: %s", ticker, exc)
+            return False
 
     def adjust(self, ticker: str, target_weight: float, current_value: float) -> None:
         """Trim or top-up an existing position to reach target_weight × equity.

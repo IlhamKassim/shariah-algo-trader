@@ -11,6 +11,7 @@ def run_compliance_check(
     fetch_universe: Callable[[], set[str]],
     executor: OrderExecutor,
     get_position_weights: Callable[[], dict[str, float]] | None = None,
+    get_target_weights: Callable[[], dict[str, float]] | None = None,
     drift_threshold: float = 0.03,
     top_n: int = 20,
     trigger_rebalance: Callable[[], None] | None = None,
@@ -20,7 +21,8 @@ def run_compliance_check(
     Compliance: immediately sells any holding absent from the Eligible Universe.
 
     Drift: if any position's weight deviates more than `drift_threshold` from
-    equal weight (1/top_n), calls `trigger_rebalance` to force an early rebalance.
+    its target inv-vol weight (or equal weight when no target is available),
+    calls `trigger_rebalance` to force an early rebalance.
     Drift detection is skipped when `get_position_weights` or `trigger_rebalance`
     are not provided.
     """
@@ -53,18 +55,26 @@ def run_compliance_check(
     if not weights:
         return
 
-    equal_weight = 1.0 / top_n
+    # Use target inv-vol weights if available; fall back to equal weight.
+    target: dict[str, float] = {}
+    if get_target_weights is not None:
+        try:
+            target = get_target_weights()
+        except Exception as exc:
+            logger.warning("Drift check: failed to fetch target weights (%s), falling back to equal weight", exc)
+    fallback_weight = 1.0 / top_n
+
     drifted = {
         ticker: weight
         for ticker, weight in weights.items()
-        if abs(weight - equal_weight) > drift_threshold
+        if abs(weight - target.get(ticker, fallback_weight)) > drift_threshold
     }
 
     if drifted:
         logger.warning(
             "Drift detected in %d position(s): %s — triggering early rebalance",
             len(drifted),
-            {t: f"{w:.1%}" for t, w in sorted(drifted.items(), key=lambda x: -abs(x[1] - equal_weight))},
+            {t: f"{w:.1%}" for t, w in sorted(drifted.items(), key=lambda x: -abs(x[1] - target.get(x[0], fallback_weight)))},
         )
         try:
             trigger_rebalance()
@@ -72,6 +82,6 @@ def run_compliance_check(
             logger.error("Drift-triggered rebalance failed: %s", exc, exc_info=True)
     else:
         logger.info(
-            "Drift check — all %d positions within %.1f%% of equal weight (%.1f%%)",
-            len(weights), drift_threshold * 100, equal_weight * 100,
+            "Drift check — all %d positions within %.1f%% of target weight",
+            len(weights), drift_threshold * 100,
         )

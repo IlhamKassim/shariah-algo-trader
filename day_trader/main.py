@@ -34,11 +34,16 @@ def main() -> None:
     logger.info("Watchlist: %d symbols — fetching average daily volumes...", len(watchlist))
     avg_volumes = fetch_avg_daily_volume(data_client, watchlist)
 
+    def refresh_adv_job() -> None:
+        fresh = fetch_avg_daily_volume(data_client, watchlist)
+        avg_volumes.clear()
+        avg_volumes.update(fresh)
+        logger.info("ADV refreshed — %d symbols", len(avg_volumes))
+
     def market_scan_job() -> None:
         run_market_scan(
             state=state,
             cfg=cfg,
-            trading_client=trading_client,
             data_client=data_client,
             executor=executor,
             watchlist=watchlist,
@@ -67,6 +72,7 @@ def main() -> None:
         run_market_scan=market_scan_job,
         run_intraday_monitor=intraday_monitor_job,
         run_eod_liquidation=eod_liquidation_job,
+        refresh_adv=refresh_adv_job,
     )
 
 

@@ -7,7 +7,7 @@ An algorithmic trading bot that operates exclusively within a Shariah-compliant 
 ### Strategy
 
 **Factor Score**:
-The composite rank assigned to each stock in the Eligible Universe, computed as the equal-weighted combination of its Momentum Factor and Quality Factor z-scores. Portfolio inclusion is determined by Factor Score rank — only the top-N scoring stocks are held at any time.
+The composite rank assigned to each stock in the Eligible Universe, computed as the equal-weighted combination of four factor z-scores: Momentum, Quality, Low Volatility, and Value (25% each). Portfolio inclusion is determined by Factor Score rank — only the top-N scoring stocks are held at any time.
 _Avoid_: composite score, ranking, signal
 
 **Momentum Factor**:
@@ -19,7 +19,7 @@ A measure of a stock's financial health, derived from profitability and earnings
 _Avoid_: fundamentals score, financial quality, balance sheet score
 
 **Portfolio**:
-The set of exactly 20 stocks currently held by the bot — always a subset of the Eligible Universe, selected by top-20 Factor Score rank. Each position is equal-weighted at 5% of total capital. The Portfolio is long-only, unleveraged, and fully invested in spot equities.
+The set of exactly 20 stocks currently held by the bot — always a subset of the Eligible Universe, selected by top-N Factor Score rank. Positions are sized using inverse-volatility weighting (lower-volatility stocks receive larger allocations), capped at 2× equal weight to prevent extreme concentration. The Portfolio is long-only, unleveraged, and fully invested in spot equities.
 _Avoid_: holdings, positions, basket
 
 ### Compliance Events
@@ -41,7 +41,7 @@ _Avoid_: refresh, update, reconcile, sync
 ### Scheduling
 
 **Scheduler**:
-A local cron job that triggers the two recurring system jobs: the daily Compliance Check (every trading day at market open) and the monthly Rebalance (first trading day of each calendar month). Both jobs are stateless — they read current positions from Alpaca and current universe from FMP at runtime.
+An APScheduler BlockingScheduler deployed as a Render background worker. Triggers two recurring jobs: the daily Compliance Check (every NYSE trading day at market open) and the monthly Rebalance (first NYSE trading day of each calendar month). Both jobs are stateless — they read current positions from Alpaca and current universe from ETF holdings at runtime.
 _Avoid_: runner, task queue, job runner, daemon
 
 ### State
@@ -59,7 +59,7 @@ _Avoid_: exchange, trading platform, order router
 ### Data
 
 **Market Data Provider**:
-Financial Modeling Prep (FMP). Used to fetch both daily price history (for Momentum Factor calculation) and quarterly fundamental snapshots (for Quality Factor calculation) across all stocks in the Eligible Universe.
+yfinance (Yahoo Finance). Used to fetch daily price history and fundamental snapshots (return on equity, profit margins, earnings stability) for all factor calculations. Alpaca's data API is used for intraday volume data.
 _Avoid_: data source, data feed, price API
 
 ### Universe & Compliance

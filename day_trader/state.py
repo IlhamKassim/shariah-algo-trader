@@ -31,6 +31,8 @@ class DayTraderState:
     gaps: dict[str, GapData] = field(default_factory=dict)
     positions: dict[str, ActivePosition] = field(default_factory=dict)
     traded_today: set[str] = field(default_factory=set)
+    starting_equity: float | None = None  # recorded at first scan of the day
+    circuit_broken: bool = False          # True once daily loss limit is hit
 
     def reset(self) -> None:
         new_date = datetime.date.today()
@@ -39,6 +41,8 @@ class DayTraderState:
         self.gaps.clear()
         self.positions.clear()
         self.traded_today.clear()
+        self.starting_equity = None
+        self.circuit_broken = False
 
     def is_stale(self) -> bool:
         return self.date != datetime.date.today()

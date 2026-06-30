@@ -42,6 +42,9 @@ def main() -> None:
     )
     executor = OrderExecutor(alpaca)
 
+    # Cached target weights from the last completed rebalance, used by drift detection.
+    _last_target_weights: dict[str, float] = {}
+
     def _get_position_weights() -> dict[str, float]:
         positions = alpaca.get("/v2/positions")
         total = sum(float(p["market_value"]) for p in positions)
@@ -67,6 +70,8 @@ def main() -> None:
             sector_cap=cfg.sector_cap,
         )
         weights = compute_inv_vol_weights(target, raw_vols)
+        _last_target_weights.clear()
+        _last_target_weights.update(weights)
         regime_ok = is_bull_market()
 
         run_rebalance(
@@ -85,6 +90,7 @@ def main() -> None:
             fetch_universe=lambda: fetch_combined_universe(cfg.etf_symbols),
             executor=executor,
             get_position_weights=_get_position_weights,
+            get_target_weights=lambda: dict(_last_target_weights),
             drift_threshold=cfg.drift_threshold,
             top_n=cfg.top_n,
             trigger_rebalance=rebalance_job,
