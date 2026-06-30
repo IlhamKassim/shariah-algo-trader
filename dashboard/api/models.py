@@ -66,6 +66,7 @@ class PerformanceResponse(BaseModel):
     dates: list[str]
     portfolio_cumulative: list[float]
     benchmark_cumulative: list[float]
+    sp500_cumulative: list[float]
 
 
 class StrategyMetrics(BaseModel):

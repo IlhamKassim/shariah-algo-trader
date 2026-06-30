@@ -60,6 +60,7 @@ export interface PerformanceResponse {
   dates: string[];
   portfolio_cumulative: number[];
   benchmark_cumulative: number[];
+  sp500_cumulative: number[];
 }
 
 export interface StrategyMetrics {

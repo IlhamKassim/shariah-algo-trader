@@ -54,6 +54,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
     date,
     Strategy: data.portfolio_cumulative[i],
     SPUS: data.benchmark_cumulative[i],
+    "S&P 500": data.sp500_cumulative[i],
   }));
 
   const filtered = allPoints.slice(-PERIOD_DAYS[period]);
@@ -61,6 +62,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
   const last = filtered.at(-1);
   const stratVal = last?.Strategy ?? 0;
   const spusVal = last?.SPUS ?? 0;
+  const sp500Val = last?.["S&P 500"] ?? 0;
   const alphaVal = stratVal - spusVal;
   const sign = (v: number) => (v >= 0 ? "+" : "");
 
@@ -68,7 +70,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
     <div>
       {/* Stats + period toggle */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-5 text-[11px]">
+        <div className="flex items-center gap-5 text-[11px] flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-4 h-0.5 bg-brand-green inline-block rounded" />
             <span className="text-muted">Strategy</span>
@@ -77,14 +79,21 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             </span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-faint inline-block rounded border-dashed" style={{ borderTop: "2px dashed #5B6675", background: "transparent" }} />
+            <span className="w-4 h-0.5 inline-block rounded" style={{ borderTop: "2px dashed #5B6675", background: "transparent" }} />
             <span className="text-muted">SPUS</span>
             <span className="font-mono font-semibold text-muted tabular-nums">
               {sign(spusVal)}{(spusVal * 100).toFixed(2)}%
             </span>
           </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-4 h-0.5 inline-block rounded" style={{ borderTop: "2px dashed #f59e0b", background: "transparent" }} />
+            <span className="text-muted">S&amp;P 500</span>
+            <span className="font-mono font-semibold tabular-nums" style={{ color: "#f59e0b" }}>
+              {sign(sp500Val)}{(sp500Val * 100).toFixed(2)}%
+            </span>
+          </span>
           <span className="text-muted">
-            Alpha{" "}
+            Alpha vs SPUS{" "}
             <span className={`font-mono font-semibold tabular-nums ${alphaVal >= 0 ? "text-brand-green" : "text-brand-red"}`}>
               {sign(alphaVal)}{(alphaVal * 100).toFixed(2)} pts
             </span>
@@ -148,6 +157,15 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             strokeDasharray="5 4"
             dot={false}
             activeDot={{ r: 3, fill: "#5B6675", strokeWidth: 0 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="S&P 500"
+            stroke="#f59e0b"
+            strokeWidth={1.5}
+            strokeDasharray="5 4"
+            dot={false}
+            activeDot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
