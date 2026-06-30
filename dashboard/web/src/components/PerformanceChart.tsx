@@ -54,7 +54,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
     date,
     Strategy: data.portfolio_cumulative[i],
     SPUS: data.benchmark_cumulative[i],
-    "S&P 500": data.sp500_cumulative[i],
+    sp500: data.sp500_cumulative[i],
   }));
 
   const filtered = allPoints.slice(-PERIOD_DAYS[period]);
@@ -62,7 +62,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
   const last = filtered.at(-1);
   const stratVal = last?.Strategy ?? 0;
   const spusVal = last?.SPUS ?? 0;
-  const sp500Val = last?.["S&P 500"] ?? 0;
+  const sp500Val = last?.sp500 ?? 0;
   const alphaVal = stratVal - spusVal;
   const sign = (v: number) => (v >= 0 ? "+" : "");
 
@@ -160,7 +160,8 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
           />
           <Line
             type="monotone"
-            dataKey="S&P 500"
+            dataKey="sp500"
+            name="S&P 500"
             stroke="#f59e0b"
             strokeWidth={1.5}
             strokeDasharray="5 4"
