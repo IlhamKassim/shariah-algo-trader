@@ -11,7 +11,10 @@ def _state() -> DayTraderState:
     return DayTraderState(date=datetime.date.today())
 
 
-def _cfg(max_pos=5, size_pct=0.10, gap_thr=0.03, rvol_thr=1.5, profit_mult=2.0, stop_pct=0.02, trailing_pct=0.015):
+def _cfg(
+    max_pos=5, size_pct=0.10, gap_thr=0.03, rvol_thr=1.5, profit_mult=2.0,
+    stop_pct=0.02, trailing_pct=0.015, min_price=10.0, min_adv=100_000,
+):
     cfg = MagicMock()
     cfg.max_positions = max_pos
     cfg.position_size_pct = size_pct
@@ -20,6 +23,8 @@ def _cfg(max_pos=5, size_pct=0.10, gap_thr=0.03, rvol_thr=1.5, profit_mult=2.0, 
     cfg.profit_target_mult = profit_mult
     cfg.stop_loss_pct = stop_pct
     cfg.trailing_stop_pct = trailing_pct
+    cfg.min_price = min_price
+    cfg.min_adv = min_adv
     return cfg
 
 

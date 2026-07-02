@@ -4,13 +4,19 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 
 logger = logging.getLogger(__name__)
 
+_CASH_BUFFER_PCT = 0.005  # hold back 0.5% of equity as a settlement/slippage buffer
+
 
 class DayOrderExecutor:
     def __init__(self, client: AlpacaClient):
         self._client = client
+        self._cash_remaining: float | None = None
+
+    def _account(self) -> dict:
+        return self._client.get("/v2/account")
 
     def _equity(self) -> float:
-        return float(self._client.get("/v2/account")["equity"])
+        return float(self._account()["equity"])
 
     def equity(self) -> float | None:
         """Return current account equity, or None on API failure."""
@@ -20,13 +26,35 @@ class DayOrderExecutor:
             logger.error("Failed to fetch equity: %s", exc)
             return None
 
-    def buy(self, symbol: str, position_size_pct: float) -> float | None:
-        """Submit a market buy for position_size_pct × equity.
+    def start_cycle(self) -> None:
+        """Reset tracked cash so it's re-read fresh. Call once before each market scan."""
+        self._cash_remaining = None
 
-        Returns the notional spent, or None on failure.
+    def _reserve_cash(self, notional: float) -> float:
+        """Cap a buy's notional to cash actually available, decrementing a running tally.
+
+        A single scan can enter several positions back-to-back; sizing each purely off
+        equity (as before) let them collectively overspend settled cash. Cash is read
+        once per cycle since Alpaca doesn't reflect an order's impact instantly.
+        """
+        if self._cash_remaining is None:
+            account = self._account()
+            buffer = float(account["equity"]) * _CASH_BUFFER_PCT
+            self._cash_remaining = max(float(account["cash"]) - buffer, 0.0)
+        capped = round(max(min(notional, self._cash_remaining), 0.0), 2)
+        self._cash_remaining -= capped
+        return capped
+
+    def buy(self, symbol: str, position_size_pct: float) -> float | None:
+        """Submit a market buy for position_size_pct × equity, capped to available cash.
+
+        Returns the notional spent, or None on failure or insufficient cash.
         """
         equity = self._equity()
-        notional = round(equity * position_size_pct, 2)
+        notional = self._reserve_cash(round(equity * position_size_pct, 2))
+        if notional <= 0:
+            logger.warning("SKIP DAY BUY %s — no cash available", symbol)
+            return None
         try:
             self._client.post("/v2/orders", {
                 "symbol": symbol,

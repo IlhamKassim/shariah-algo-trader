@@ -30,6 +30,8 @@ def run_market_scan(
         logger.warning("Circuit breaker active — market scan skipped for today")
         return
 
+    executor.start_cycle()
+
     # Record starting equity once per day for circuit-breaker baseline
     if state.starting_equity is None:
         eq = executor.equity()

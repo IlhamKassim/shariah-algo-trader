@@ -5,19 +5,47 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 logger = logging.getLogger(__name__)
 
 _MIN_TRADE_NOTIONAL = 25.0  # skip adjustments smaller than this
+_CASH_BUFFER_PCT = 0.005  # hold back 0.5% of equity as a settlement/slippage buffer
 
 
 class OrderExecutor:
     def __init__(self, client: AlpacaClient):
         self._client = client
+        self._cash_remaining: float | None = None
+
+    def _account(self) -> dict:
+        return self._client.get("/v2/account")
 
     def _equity(self) -> float:
-        return float(self._client.get("/v2/account")["equity"])
+        return float(self._account()["equity"])
+
+    def start_cycle(self) -> None:
+        """Reset tracked cash so it's re-read fresh. Call once before each rebalance pass."""
+        self._cash_remaining = None
+
+    def _reserve_cash(self, notional: float) -> float:
+        """Cap a buy's notional to cash actually available, decrementing a running tally.
+
+        Cash is read from the live account once per cycle (not once per order) because
+        Alpaca doesn't reflect an order's cash impact instantly — re-querying between
+        every order in a tight rebalance loop would still let orders collectively
+        overspend. A fixed equity buffer absorbs fill slippage on the rest.
+        """
+        if self._cash_remaining is None:
+            account = self._account()
+            buffer = float(account["equity"]) * _CASH_BUFFER_PCT
+            self._cash_remaining = max(float(account["cash"]) - buffer, 0.0)
+        capped = round(max(min(notional, self._cash_remaining), 0.0), 2)
+        self._cash_remaining -= capped
+        return capped
 
     def buy(self, ticker: str, weight: float = 0.05) -> None:
-        """Submit a market buy for `weight` × portfolio equity."""
+        """Submit a market buy for `weight` × portfolio equity, capped to available cash."""
         equity = self._equity()
-        notional = round(equity * weight, 2)
+        notional = self._reserve_cash(round(equity * weight, 2))
+        if notional < _MIN_TRADE_NOTIONAL:
+            logger.warning("SKIP BUY %s — insufficient cash ($%.2f available)", ticker, notional)
+            return
         self._client.post("/v2/orders", {
             "symbol": ticker,
             "notional": notional,
@@ -55,6 +83,11 @@ class OrderExecutor:
 
         side = "buy" if delta > 0 else "sell"
         notional = round(abs(delta), 2)
+        if side == "buy":
+            notional = self._reserve_cash(notional)
+            if notional < _MIN_TRADE_NOTIONAL:
+                logger.warning("SKIP ADJUST %s — insufficient cash ($%.2f available)", ticker, notional)
+                return
         self._client.post("/v2/orders", {
             "symbol": ticker,
             "notional": notional,

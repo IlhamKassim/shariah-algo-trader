@@ -27,6 +27,7 @@ def run_rebalance(
     `get_target_weights` returns {ticker: weight_fraction} summing to ~1.0.
     """
     logger.info("Rebalance starting — regime_ok=%s", regime_ok)
+    executor.start_cycle()
 
     current = get_portfolio()
     positions = get_positions()

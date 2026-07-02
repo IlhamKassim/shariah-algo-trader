@@ -97,6 +97,9 @@ function Header() {
 }
 
 function Sidebar() {
+  const location = useLocation();
+  const isDayTraderPage = location.pathname === "/day-trader";
+
   const { data: status } = useQuery({
     queryKey: ["status"],
     queryFn: api.status,
@@ -148,9 +151,15 @@ function Sidebar() {
             <p className="text-sm font-bold text-primary leading-tight">Algo Trader</p>
           </div>
         </div>
-        <p className="text-[10px] text-brand-green font-medium tracking-[0.03em]">
-          Long-only · No leverage · Halal
-        </p>
+        {isDayTraderPage ? (
+          <p className="text-[10px] text-brand-gold font-medium tracking-[0.03em]">
+            Benchmark bot · Not Shariah-screened
+          </p>
+        ) : (
+          <p className="text-[10px] text-brand-green font-medium tracking-[0.03em]">
+            Long-only · No leverage · Halal
+          </p>
+        )}
       </div>
 
       {/* Nav label */}
