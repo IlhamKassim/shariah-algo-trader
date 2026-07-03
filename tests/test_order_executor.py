@@ -118,6 +118,23 @@ class TestSell:
         url = client._session.delete.call_args.args[0]
         assert url.endswith("/v2/positions/MSFT")
 
+    def test_sell_proceeds_credited_to_pool_for_later_buy_same_cycle(self):
+        # $3000 cash on hand is nowhere near enough for a 5% ($5000) buy, but
+        # selling a $10,000 position first should free that cash within the
+        # same cycle — the broker's reported cash balance won't reflect the
+        # fill yet, so the executor must track it itself.
+        low_cash = {"equity": "100000.00", "cash": "3000.00", "currency": "USD"}
+        client = make_client(get_data=low_cash, delete_data={"status": "pending_cancel"}, post_data=ORDER_RESPONSE)
+        executor = OrderExecutor(client)
+        executor.start_cycle()
+
+        executor.sell("MSFT", value=10000.00)
+        executor.buy("AAPL")
+
+        posted = client._session.post.call_args
+        body = posted.kwargs.get("json") or posted.args[1]
+        assert body["notional"] == pytest.approx(5000.00)
+
 
 class TestAdjust:
     def test_top_up_notional_capped_to_available_cash(self):
@@ -157,3 +174,19 @@ class TestAdjust:
         body = posted.kwargs.get("json") or posted.args[1]
         assert body["side"] == "sell"
         assert body["notional"] == pytest.approx(4000.00)
+
+    def test_trim_proceeds_credited_to_pool_for_later_buy_same_cycle(self):
+        # No cash on hand, but trimming MSFT down to target frees $6000 —
+        # that should be available for AAPL's buy later in the same cycle.
+        no_cash = {"equity": "100000.00", "cash": "500.00", "currency": "USD"}
+        client = make_client(get_data=no_cash, post_data=ORDER_RESPONSE)
+        executor = OrderExecutor(client)
+        executor.start_cycle()
+
+        executor.adjust("MSFT", target_weight=0.03, current_value=9000.00)
+        executor.buy("AAPL")
+
+        posted = client._session.post.call_args_list[-1]
+        body = posted.kwargs.get("json") or posted.args[1]
+        assert body["symbol"] == "AAPL"
+        assert body["notional"] == pytest.approx(5000.00)

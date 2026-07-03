@@ -11,11 +11,11 @@ def _equal_weights(tickers):
     return {t: 1.0 / n for t in tickers}
 
 
-def _run(portfolio, universe, target, executor, regime_ok=True):
+def _run(portfolio, universe, target, executor, regime_ok=True, positions=None):
     tgt = list(target)
     run_rebalance(
         get_portfolio=lambda: set(portfolio),
-        get_positions=lambda: {},
+        get_positions=lambda: dict(positions or {}),
         fetch_universe=lambda: set(universe),
         get_target_portfolio=lambda: tgt,
         get_target_weights=lambda: _equal_weights(tgt),
@@ -28,7 +28,7 @@ class TestRebalanceDiff:
     def test_buys_entering_stocks_and_sells_departing_stocks(self):
         executor = make_executor()
         _run({"AAPL", "MSFT"}, {"AAPL", "AMZN", "GOOG"}, ["AAPL", "AMZN"], executor)
-        executor.sell.assert_called_once_with("MSFT")
+        executor.sell.assert_called_once_with("MSFT", 0.0)
         bought = {c.args[0] for c in executor.buy.call_args_list}
         assert bought == {"AMZN"}
 
@@ -72,5 +72,16 @@ class TestRebalanceDiff:
     def test_bear_market_skips_buys_but_still_sells(self):
         executor = make_executor()
         _run({"MSFT"}, {"AAPL", "AMZN"}, ["AAPL", "AMZN"], executor, regime_ok=False)
-        executor.sell.assert_called_once_with("MSFT")
+        executor.sell.assert_called_once_with("MSFT", 0.0)
         executor.buy.assert_not_called()
+
+    def test_sell_passes_known_position_value_for_cash_credit(self):
+        # The departing position's market value is known up front — passing it
+        # to sell() lets the executor credit that cash for this same cycle's
+        # buys instead of waiting on the broker's cash balance to settle.
+        executor = make_executor()
+        _run(
+            {"MSFT"}, {"AAPL", "AMZN"}, ["AAPL", "AMZN"], executor,
+            positions={"MSFT": 7500.0},
+        )
+        executor.sell.assert_called_once_with("MSFT", 7500.0)

@@ -46,9 +46,11 @@ def run_rebalance(
         len(sells), sorted(sells), len(stays), len(buys), sorted(buys),
     )
 
-    # 1. Sell departing positions first to free capital
+    # 1. Sell departing positions first to free capital. Passing the known
+    # position value lets the executor credit that cash for this same
+    # cycle's buys instead of waiting on the broker's balance to settle.
     for ticker in sells:
-        executor.sell(ticker)
+        executor.sell(ticker, positions.get(ticker, 0.0))
 
     if not regime_ok:
         logger.warning(
