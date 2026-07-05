@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { BarChart2, Layers, Clock, LayoutDashboard, TrendingUp, GitCompare, Zap } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Overview } from "./pages/Overview";
 import { Portfolio } from "./pages/Portfolio";
@@ -11,12 +11,12 @@ import { DayTrader } from "./pages/DayTrader";
 import { api } from "./lib/api";
 
 const NAV = [
-  { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
-  { to: "/portfolio", label: "Portfolio", icon: BarChart2, end: false },
-  { to: "/universe", label: "Universe", icon: Layers, end: false },
-  { to: "/activity", label: "Activity", icon: Clock, end: false },
-  { to: "/compare", label: "Compare", icon: GitCompare, end: false },
-  { to: "/day-trader", label: "Day Trader", icon: Zap, end: false },
+  { to: "/", label: "Overview", end: true },
+  { to: "/portfolio", label: "Portfolio", end: false },
+  { to: "/universe", label: "Universe", end: false },
+  { to: "/activity", label: "Activity", end: false },
+  { to: "/compare", label: "Compare", end: false },
+  { to: "/day-trader", label: "Day Trader", end: false },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -46,8 +46,9 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   },
 };
 
-function Header() {
+function Topbar() {
   const location = useLocation();
+  const isDayTraderPage = location.pathname === "/day-trader";
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -55,7 +56,6 @@ function Header() {
     return () => clearInterval(id);
   }, []);
 
-  const meta = PAGE_META[location.pathname] ?? PAGE_META["/"];
   const etTime = time.toLocaleTimeString("en-US", {
     timeZone: "America/New_York",
     hour: "2-digit",
@@ -72,33 +72,6 @@ function Header() {
     const mins = etHour * 60 + etMin;
     return mins >= 9 * 60 + 30 && mins < 16 * 60;
   })();
-
-  return (
-    <header className="h-14 px-6 flex items-center justify-between border-b border-divider bg-sidebar shrink-0">
-      <div>
-        <h1 className="text-[15px] font-semibold text-primary leading-tight">{meta.title}</h1>
-        <p className="text-[11px] text-muted leading-tight">{meta.sub}</p>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${isMarketOpen ? "bg-brand-green" : "bg-brand-red"}`} />
-          <span className="text-xs text-muted">{isMarketOpen ? "NYSE Open" : "Market Closed"}</span>
-          <span className="font-mono text-xs text-muted tabular-nums ml-1">{etTime} ET</span>
-        </div>
-        <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded tracking-[0.08em]">
-          PAPER
-        </span>
-        <div className="w-7 h-7 rounded-full bg-card-border flex items-center justify-center text-[11px] font-semibold text-muted select-none">
-          IK
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function Sidebar() {
-  const location = useLocation();
-  const isDayTraderPage = location.pathname === "/day-trader";
 
   const { data: status } = useQuery({
     queryKey: ["status"],
@@ -123,136 +96,102 @@ function Sidebar() {
     "/universe": universe?.stocks.length,
   };
 
-  const nextFireDisplay = status?.next_fire_at
-    ? (() => {
-        const d = new Date(status.next_fire_at);
-        const mon = d.toLocaleDateString("en-US", { month: "short" });
-        const day = d.getDate();
-        const time = status.next_fire_at.slice(11, 16);
-        return `${mon} ${day}, ${time}`;
-      })()
-    : "—";
-
   return (
-    <aside className="w-56 shrink-0 bg-sidebar border-r border-divider flex flex-col">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-divider">
-        <div className="flex items-center gap-3 mb-3">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, #34E3AE 0%, #0FA674 100%)" }}
-          >
-            <TrendingUp size={17} className="text-[#0A0E13]" strokeWidth={2.5} />
+    <header className="border-b border-divider bg-sidebar shrink-0 px-6">
+      {/* Brand row */}
+      <div className="h-14 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-brand-gold">
+            <TrendingUp size={15} className="text-page" strokeWidth={2.5} />
           </div>
-          <div>
-            <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] leading-none">
-              Shariah
-            </p>
-            <p className="text-sm font-bold text-primary leading-tight">Algo Trader</p>
+          <div className="flex items-baseline gap-2.5 min-w-0 flex-wrap">
+            <span className="text-sm font-bold text-primary tracking-[0.02em] whitespace-nowrap">
+              SHARIAH ALGO TRADER
+            </span>
+            <span
+              className={`text-[10px] font-medium tracking-[0.03em] whitespace-nowrap ${
+                isDayTraderPage ? "text-brand-gold" : "text-muted"
+              }`}
+            >
+              {isDayTraderPage ? "Benchmark bot · Not Shariah-screened" : "Long-only · No leverage · Halal"}
+            </span>
           </div>
         </div>
-        {isDayTraderPage ? (
-          <p className="text-[10px] text-brand-gold font-medium tracking-[0.03em]">
-            Benchmark bot · Not Shariah-screened
-          </p>
-        ) : (
-          <p className="text-[10px] text-brand-green font-medium tracking-[0.03em]">
-            Long-only · No leverage · Halal
-          </p>
-        )}
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${isMarketOpen ? "bg-brand-green" : "bg-brand-red"}`} />
+            <span className="text-xs text-muted whitespace-nowrap">{isMarketOpen ? "NYSE Open" : "Market Closed"}</span>
+            <span className="font-mono text-xs text-muted tabular-nums ml-1">{etTime} ET</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${status?.scheduler_running ? "bg-brand-green" : "bg-brand-red"}`}
+            />
+            <span className="text-xs text-muted whitespace-nowrap">
+              Scheduler {status?.scheduler_running ? "Active" : "Offline"}
+            </span>
+          </div>
+          <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em]">
+            PAPER
+          </span>
+          <div className="w-7 h-7 rounded-full bg-card-border flex items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
+            IK
+          </div>
+        </div>
       </div>
 
-      {/* Nav label */}
-      <div className="px-5 pt-4 pb-1">
-        <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
-          Menu
-        </p>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 px-3 pt-1 space-y-0.5">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+      {/* Nav tabs */}
+      <nav className="flex gap-6 border-b border-divider overflow-x-auto">
+        {NAV.map(({ to, label, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) =>
-              `relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              `pb-2.5 -mb-px text-[12px] font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 isActive
-                  ? "bg-[#0D1F18] text-brand-green"
-                  : "text-muted hover:text-primary hover:bg-card-hover"
+                  ? "text-brand-gold border-brand-gold"
+                  : "text-muted border-transparent hover:text-primary"
               }`
             }
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-brand-green" />
-                )}
-                <Icon size={15} />
-                <span className="flex-1 text-sm">{label}</span>
-                {navCounts[to] != null && (
-                  <span className="font-mono text-[11px] text-faint tabular-nums">
-                    {navCounts[to]}
-                  </span>
-                )}
-              </>
+            {label}
+            {navCounts[to] != null && (
+              <span className="font-mono text-[10px] text-faint tabular-nums">{navCounts[to]}</span>
             )}
           </NavLink>
         ))}
       </nav>
+    </header>
+  );
+}
 
-      {/* Scheduler mini-card */}
-      <div className="mx-3 mb-4 mt-3 rounded-xl border border-card-border bg-card p-3">
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[10px] font-semibold text-section uppercase tracking-[0.09em]">
-            Scheduler
-          </span>
-          <div className="flex items-center gap-1">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                status?.scheduler_running ? "bg-brand-green" : "bg-brand-red"
-              }`}
-            />
-            <span className="text-[11px] text-muted">
-              {status?.scheduler_running ? "Active" : "Offline"}
-            </span>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-faint">Next</span>
-            <span className="font-mono text-muted tabular-nums">{nextFireDisplay}</span>
-          </div>
-          <div className="flex justify-between text-[11px]">
-            <span className="text-faint">Universe</span>
-            <span className="font-mono text-muted">
-              {status?.etf_symbol ?? "—"} · {status?.top_n ?? "—"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </aside>
+function PageHeading() {
+  const location = useLocation();
+  const meta = PAGE_META[location.pathname] ?? PAGE_META["/"];
+  return (
+    <div className="mb-6">
+      <h1 className="text-[15px] font-semibold text-primary leading-tight">{meta.title}</h1>
+      <p className="text-[11px] text-muted leading-tight mt-0.5">{meta.sub}</p>
+    </div>
   );
 }
 
 export default function App() {
   return (
-    <div className="flex h-screen bg-page overflow-hidden">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6">
-          <Routes>
-            <Route path="/" element={<Overview />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/universe" element={<Universe />} />
-            <Route path="/activity" element={<Activity />} />
-            <Route path="/compare" element={<Compare />} />
-            <Route path="/day-trader" element={<DayTrader />} />
-          </Routes>
-        </main>
-      </div>
+    <div className="min-h-screen bg-page flex flex-col">
+      <Topbar />
+      <main className="flex-1 overflow-y-auto px-6 py-6 max-w-[1400px] w-full mx-auto">
+        <PageHeading />
+        <Routes>
+          <Route path="/" element={<Overview />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/universe" element={<Universe />} />
+          <Route path="/activity" element={<Activity />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/day-trader" element={<DayTrader />} />
+        </Routes>
+      </main>
     </div>
   );
 }

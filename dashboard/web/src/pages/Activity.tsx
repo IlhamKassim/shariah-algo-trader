@@ -35,7 +35,7 @@ export function Activity() {
             value={symbolFilter}
             onChange={(e) => setSymbolFilter(e.target.value)}
             aria-label="Filter trades by symbol"
-            className="bg-card border border-card-border rounded-xl pl-8 pr-3 py-2 text-[12px] text-muted placeholder:text-faint focus:outline-none focus:border-brand-green/50 transition-colors w-44"
+            className="bg-card border border-card-border rounded-none pl-8 pr-3 py-2 text-[12px] text-muted placeholder:text-faint focus:outline-none focus:border-brand-gold/50 transition-colors w-44"
           />
           {symbolFilter && (
             <button
@@ -54,7 +54,7 @@ export function Activity() {
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value)}
           aria-label="Filter trades by date"
-          className="bg-card border border-card-border rounded-xl px-3 py-2 text-[12px] font-mono text-muted focus:outline-none focus:border-brand-green/50 transition-colors cursor-pointer"
+          className="appearance-none bg-card border border-card-border rounded-none px-3 py-2 text-[12px] font-mono text-muted focus:outline-none focus:border-brand-gold/50 transition-colors cursor-pointer"
         />
         {dateFilter && (
           <button

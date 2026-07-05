@@ -4,6 +4,6 @@ interface SkeletonProps {
 
 export function Skeleton({ className = "" }: SkeletonProps) {
   return (
-    <div className={`animate-pulse bg-card-border rounded-lg ${className}`} />
+    <div className={`animate-pulse bg-card-border rounded-none ${className}`} />
   );
 }

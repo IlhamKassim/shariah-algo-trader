@@ -1,3 +1,4 @@
+import { TrendingDown, TrendingUp } from "lucide-react";
 import type { PositionResponse } from "../lib/api";
 import { formatCurrency, formatPct, plColor } from "../lib/utils";
 
@@ -7,12 +8,15 @@ interface HoldingsTableProps {
 }
 
 function PlCell({ value, pct }: { value: number; pct?: number }) {
-  const arrow = value >= 0 ? "▲" : "▼";
   const color = plColor(value);
   return (
     <td className="py-2.5 text-right" aria-label={`P&L: ${formatCurrency(value)}${pct !== undefined ? ` (${formatPct(pct)})` : ""}`}>
-      <span className={`font-mono tabular-nums text-sm ${color}`}>
-        <span aria-hidden="true">{arrow} </span>
+      <span className={`font-mono tabular-nums text-sm inline-flex items-center gap-1 ${color}`}>
+        {value >= 0 ? (
+          <TrendingUp size={11} aria-hidden="true" />
+        ) : (
+          <TrendingDown size={11} aria-hidden="true" />
+        )}
         {formatCurrency(value)}
       </span>
       {pct !== undefined && (
@@ -96,9 +100,9 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
                 {!compact && (
                   <td className="py-2.5 pr-4">
                     <div className="flex items-center justify-end gap-2">
-                      <div className="w-10 h-1 bg-card-border rounded-full overflow-hidden" aria-hidden="true">
+                      <div className="w-10 h-1 bg-card-border overflow-hidden" aria-hidden="true">
                         <div
-                          className="h-full bg-brand-green rounded-full"
+                          className="h-full bg-brand-gold"
                           style={{ width: `${barWidth}%` }}
                         />
                       </div>

@@ -58,7 +58,7 @@ export function ActivityFeed({ entries, compact = false }: ActivityFeedProps) {
                 {entry.tickers.slice(0, 3).map((t) => (
                   <span
                     key={t}
-                    className="font-mono text-[11px] text-brand-green bg-[#34E3AE]/10 border border-[#34E3AE]/20 px-1.5 py-0.5 rounded"
+                    className="font-mono text-[11px] text-primary bg-card-hover border border-card-border px-1.5 py-0.5 rounded-none"
                     aria-label={`Ticker: ${t}`}
                   >
                     {t}

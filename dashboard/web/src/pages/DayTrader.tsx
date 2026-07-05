@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import { api } from "../lib/api";
 import { formatCurrency, formatPct, plColor } from "../lib/utils";
-import { KPICard } from "../components/KPICard";
+import { Hero, HeroStat, HeroFacts } from "../components/Hero";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import { Skeleton } from "../components/ui/Skeleton";
 
@@ -29,15 +29,9 @@ export function DayTrader() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Equity"
-          value={account ? formatCurrency(account.equity) : "—"}
-          loading={isLoading}
-        />
-        <KPICard
+    <div className="space-y-6">
+      <Hero>
+        <HeroStat
           label="Daily P&L"
           value={
             account ? (
@@ -55,51 +49,33 @@ export function DayTrader() {
           }
           loading={isLoading}
         />
-        <KPICard
-          label="Buying Power"
-          value={account ? formatCurrency(account.buying_power) : "—"}
+        <HeroFacts
           loading={isLoading}
+          facts={[
+            { label: "Equity", value: account ? formatCurrency(account.equity) : "—" },
+            { label: "Buying Power", value: account ? formatCurrency(account.buying_power) : "—" },
+          ]}
         />
-        {/* Scanner config card */}
-        <Card className="p-5">
-          <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-3">
-            Scanner Config
-          </p>
-          {isLoading ? (
-            <Skeleton className="h-16 w-full" />
-          ) : (
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Watchlist</span>
-                <span className="font-mono text-muted">{data?.watchlist_size} stocks</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Gap ≥</span>
-                <span className="font-mono text-muted">{data?.gap_threshold_pct.toFixed(0)}%</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">RVOL ≥</span>
-                <span className="font-mono text-muted">{data?.rvol_threshold}×</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Min price</span>
-                <span className="font-mono text-muted">${data?.min_price.toFixed(0)}+</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Min ADV</span>
-                <span className="font-mono text-muted">{data ? (data.min_adv / 1_000_000).toFixed(0) : "—"}M+</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Stop loss</span>
-                <span className="font-mono text-muted">{data?.stop_loss_pct.toFixed(0)}%</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-faint">Max positions</span>
-                <span className="font-mono text-muted">{data?.max_positions}</span>
-              </div>
-            </div>
-          )}
-        </Card>
+      </Hero>
+
+      {/* Scanner config strip */}
+      <div className="border-b border-divider pb-4">
+        <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-2.5">
+          Scanner Config
+        </p>
+        {isLoading ? (
+          <Skeleton className="h-4 w-full" />
+        ) : (
+          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-[11px]">
+            <span className="text-faint">Watchlist <span className="font-mono text-muted">{data?.watchlist_size} stocks</span></span>
+            <span className="text-faint">Gap ≥ <span className="font-mono text-muted">{data?.gap_threshold_pct.toFixed(0)}%</span></span>
+            <span className="text-faint">RVOL ≥ <span className="font-mono text-muted">{data?.rvol_threshold}×</span></span>
+            <span className="text-faint">Min price <span className="font-mono text-muted">${data?.min_price.toFixed(0)}+</span></span>
+            <span className="text-faint">Min ADV <span className="font-mono text-muted">{data ? (data.min_adv / 1_000_000).toFixed(0) : "—"}M+</span></span>
+            <span className="text-faint">Stop loss <span className="font-mono text-muted">{data?.stop_loss_pct.toFixed(0)}%</span></span>
+            <span className="text-faint">Max positions <span className="font-mono text-muted">{data?.max_positions}</span></span>
+          </div>
+        )}
       </div>
 
       {/* Open positions + today's trades */}
@@ -191,7 +167,7 @@ export function DayTrader() {
                         <TrendingDown size={13} className="text-brand-red shrink-0" />
                       )}
                       <span className="font-mono font-semibold text-[12px] text-primary">{t.symbol}</span>
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-none ${
                         t.side === "BUY"
                           ? "bg-brand-green/10 text-brand-green"
                           : "bg-brand-red/10 text-brand-red"

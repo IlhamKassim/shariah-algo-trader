@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { PerformanceResponse } from "../lib/api";
+import { CHART } from "../lib/chartColors";
 
 interface PerformanceChartProps {
   data: PerformanceResponse;
@@ -36,7 +37,7 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-card border border-card-border rounded-xl p-3 text-xs shadow-xl">
+    <div className="bg-card border border-card-border rounded-none p-3 text-xs">
       <p className="text-faint font-mono mb-1.5">{label}</p>
       {payload.map((p) => (
         <p key={p.name} className="font-mono tabular-nums" style={{ color: p.color }}>
@@ -72,23 +73,23 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-5 text-[11px] flex-wrap">
           <span className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-brand-green inline-block rounded" />
+            <span className="w-4 h-0.5 bg-brand-gold inline-block" />
             <span className="text-muted">Strategy</span>
-            <span className="font-mono font-semibold text-brand-green tabular-nums">
+            <span className="font-mono font-semibold text-brand-gold tabular-nums">
               {sign(stratVal)}{(stratVal * 100).toFixed(2)}%
             </span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 inline-block rounded" style={{ borderTop: "2px dashed #5B6675", background: "transparent" }} />
+            <span className="w-4 h-0.5 inline-block" style={{ borderTop: `2px dashed ${CHART.tickText}`, background: "transparent" }} />
             <span className="text-muted">SPUS</span>
             <span className="font-mono font-semibold text-muted tabular-nums">
               {sign(spusVal)}{(spusVal * 100).toFixed(2)}%
             </span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 inline-block rounded" style={{ borderTop: "2px dashed #f59e0b", background: "transparent" }} />
+            <span className="w-4 h-0.5 inline-block" style={{ borderTop: `2px dashed ${CHART.blue}`, background: "transparent" }} />
             <span className="text-muted">S&amp;P 500</span>
-            <span className="font-mono font-semibold tabular-nums" style={{ color: "#f59e0b" }}>
+            <span className="font-mono font-semibold tabular-nums" style={{ color: CHART.blue }}>
               {sign(sp500Val)}{(sp500Val * 100).toFixed(2)}%
             </span>
           </span>
@@ -99,15 +100,15 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             </span>
           </span>
         </div>
-        <div className="flex gap-0.5 bg-card-hover rounded-lg p-0.5">
+        <div className="flex gap-3">
           {PERIODS.map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+              className={`pb-1 text-[11px] font-medium border-b-2 transition-colors ${
                 period === p
-                  ? "bg-card-border text-primary"
-                  : "text-faint hover:text-muted"
+                  ? "text-brand-gold border-brand-gold"
+                  : "text-faint border-transparent hover:text-muted"
               }`}
             >
               {p}
@@ -120,20 +121,20 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
         <ComposedChart data={filtered} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="stratGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#34E3AE" stopOpacity={0.18} />
-              <stop offset="95%" stopColor="#34E3AE" stopOpacity={0} />
+              <stop offset="5%" stopColor={CHART.gold} stopOpacity={0.18} />
+              <stop offset="95%" stopColor={CHART.gold} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#161D26" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
           <XAxis
             dataKey="date"
-            tick={{ fill: "#5B6675", fontSize: 10, fontFamily: "IBM Plex Mono" }}
+            tick={{ fill: CHART.tickText, fontSize: 10, fontFamily: "IBM Plex Mono" }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(v) => v.slice(5)}
           />
           <YAxis
-            tick={{ fill: "#5B6675", fontSize: 10, fontFamily: "IBM Plex Mono" }}
+            tick={{ fill: CHART.tickText, fontSize: 10, fontFamily: "IBM Plex Mono" }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
@@ -143,30 +144,30 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
           <Area
             type="monotone"
             dataKey="Strategy"
-            stroke="#34E3AE"
+            stroke={CHART.gold}
             strokeWidth={2}
             fill="url(#stratGrad)"
             dot={false}
-            activeDot={{ r: 4, fill: "#34E3AE", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: CHART.gold, strokeWidth: 0 }}
           />
           <Line
             type="monotone"
             dataKey="SPUS"
-            stroke="#5B6675"
+            stroke={CHART.tickText}
             strokeWidth={1.5}
             strokeDasharray="5 4"
             dot={false}
-            activeDot={{ r: 3, fill: "#5B6675", strokeWidth: 0 }}
+            activeDot={{ r: 3, fill: CHART.tickText, strokeWidth: 0 }}
           />
           <Line
             type="monotone"
             dataKey="sp500"
             name="S&P 500"
-            stroke="#f59e0b"
+            stroke={CHART.blue}
             strokeWidth={1.5}
             strokeDasharray="5 4"
             dot={false}
-            activeDot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
+            activeDot={{ r: 3, fill: CHART.blue, strokeWidth: 0 }}
           />
         </ComposedChart>
       </ResponsiveContainer>

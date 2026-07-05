@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { api, type StrategyMetrics } from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
+import { CHART } from "../lib/chartColors";
 
 function MetricCard({
   label,
@@ -30,7 +31,7 @@ function MetricCard({
       ? "text-brand-green"
       : "text-brand-red";
   return (
-    <div className="rounded-xl border border-card-border bg-card p-4">
+    <div className="py-3 border-b border-divider last:border-0 last:pb-0">
       <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-1">
         {label}
       </p>
@@ -48,8 +49,8 @@ function StrategyColumn({
   color: string;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 mb-1">
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2 mb-1 pb-3 border-b border-divider">
         <span className="w-3 h-3 rounded-full" style={{ background: color }} />
         <span className="text-sm font-semibold text-primary">{m.name}</span>
       </div>
@@ -94,12 +95,12 @@ export function Compare() {
   if (isLoading) {
     return (
       <div className="space-y-6" aria-label="Loading comparison">
-        <Skeleton className="h-72 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full" />
         <div className="grid grid-cols-2 gap-6">
           {[0, 1].map((i) => (
             <div key={i} className="flex flex-col gap-3">
               <Skeleton className="h-6 w-32" />
-              {[...Array(5)].map((_, j) => <Skeleton key={j} className="h-16 w-full rounded-xl" />)}
+              {[...Array(5)].map((_, j) => <Skeleton key={j} className="h-14 w-full" />)}
             </div>
           ))}
         </div>
@@ -124,7 +125,7 @@ export function Compare() {
   return (
     <div className="space-y-6">
       {!data.daytrader_available && (
-        <div className="rounded-xl border border-brand-gold/30 bg-brand-gold/5 px-4 py-3 text-sm text-brand-gold">
+        <div className="border-l-2 border-brand-gold bg-brand-gold/5 pl-4 py-3 text-sm text-brand-gold">
           Day trader account not configured yet — add{" "}
           <code className="font-mono text-xs">DAY_ALPACA_API_KEY</code> and{" "}
           <code className="font-mono text-xs">DAY_ALPACA_API_SECRET</code> to your environment
@@ -133,28 +134,28 @@ export function Compare() {
       )}
 
       {/* Equity curve chart */}
-      <div className="rounded-xl border border-card-border bg-card p-5">
-        <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-4">
+      <div>
+        <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-4 pb-3 border-b border-divider">
           Equity Curve Comparison (1 Month)
         </p>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e2530" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
             <XAxis
               dataKey="date"
-              tick={{ fill: "#6b7280", fontSize: 10 }}
+              tick={{ fill: CHART.tickText, fontSize: 10 }}
               tickFormatter={(v) => v.slice(5)}
             />
             <YAxis
-              tick={{ fill: "#6b7280", fontSize: 10 }}
+              tick={{ fill: CHART.tickText, fontSize: 10 }}
               tickFormatter={(v) =>
                 `$${(v / 1000).toFixed(0)}k`
               }
               width={52}
             />
             <Tooltip
-              contentStyle={{ background: "#0d1117", border: "1px solid #1e2530", borderRadius: 8 }}
-              labelStyle={{ color: "#9ca3af", fontSize: 11 }}
+              contentStyle={{ background: "#0C0B09", border: `1px solid ${CHART.grid}`, borderRadius: 0 }}
+              labelStyle={{ color: CHART.tickText, fontSize: 11 }}
               formatter={(value, name) => [
                 `$${Number(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
                 name === "shariah" ? "Shariah Algo" : "Day Trader",
@@ -162,12 +163,12 @@ export function Compare() {
             />
             <Legend
               formatter={(value) => (value === "shariah" ? "Shariah Algo" : "Day Trader")}
-              wrapperStyle={{ fontSize: 11, color: "#9ca3af" }}
+              wrapperStyle={{ fontSize: 11, color: CHART.tickText }}
             />
             <Line
               type="monotone"
               dataKey="shariah"
-              stroke="#34E3AE"
+              stroke={CHART.gold}
               strokeWidth={2}
               dot={false}
               connectNulls
@@ -176,7 +177,7 @@ export function Compare() {
               <Line
                 type="monotone"
                 dataKey="daytrader"
-                stroke="#f59e0b"
+                stroke={CHART.blue}
                 strokeWidth={2}
                 dot={false}
                 connectNulls
@@ -188,10 +189,10 @@ export function Compare() {
 
       {/* Side-by-side metrics */}
       <div className="grid grid-cols-2 gap-6">
-        <StrategyColumn m={data.shariah} color="#34E3AE" />
+        <StrategyColumn m={data.shariah} color={CHART.gold} />
         <StrategyColumn
           m={data.daytrader_available ? data.daytrader : { ...data.daytrader, name: "Day Trader (pending)" }}
-          color="#f59e0b"
+          color={CHART.blue}
         />
       </div>
     </div>

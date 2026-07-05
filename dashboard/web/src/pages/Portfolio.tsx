@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { formatCurrency, formatPct, plColor } from "../lib/utils";
 import { HoldingsTable } from "../components/HoldingsTable";
-import { KPICard } from "../components/KPICard";
+import { Hero, HeroStat, HeroFacts } from "../components/Hero";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import { Skeleton } from "../components/ui/Skeleton";
 
@@ -29,25 +29,9 @@ export function Portfolio() {
   const totalPLPct = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
 
   return (
-    <div className="space-y-5">
-      {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Open Positions"
-          value={positions ? String(positions.length) : "—"}
-          loading={isLoading}
-        />
-        <KPICard
-          label="Invested"
-          value={positions ? formatCurrency(totalInvested) : "—"}
-          loading={isLoading}
-        />
-        <KPICard
-          label="Cash"
-          value={account ? formatCurrency(account.cash) : "—"}
-          loading={loadingAccount}
-        />
-        <KPICard
+    <div className="space-y-6">
+      <Hero>
+        <HeroStat
           label="Unrealized P&L"
           value={
             positions ? (
@@ -63,7 +47,15 @@ export function Portfolio() {
           }
           loading={isLoading}
         />
-      </div>
+        <HeroFacts
+          loading={isLoading || loadingAccount}
+          facts={[
+            { label: "Open Positions", value: positions ? String(positions.length) : "—" },
+            { label: "Invested", value: positions ? formatCurrency(totalInvested) : "—" },
+            { label: "Cash", value: account ? formatCurrency(account.cash) : "—" },
+          ]}
+        />
+      </Hero>
 
       {/* Positions table */}
       <Card>

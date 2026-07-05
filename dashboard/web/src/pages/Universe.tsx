@@ -44,7 +44,6 @@ export function Universe() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-faint font-mono">⊤</span>
             <span className="text-[12px] text-muted font-medium">
               Top {topN}{" "}
               {topHeldCount > 0 && (
@@ -74,14 +73,14 @@ export function Universe() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Filter stocks by symbol"
-              className="bg-card border border-card-border rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-muted placeholder:text-faint focus:outline-none focus:border-brand-green/50 transition-colors w-36"
+              className="bg-card border border-card-border rounded-none pl-8 pr-3 py-1.5 text-[12px] text-muted placeholder:text-faint focus:outline-none focus:border-brand-gold/50 transition-colors w-36"
             />
           </label>
           <button
             onClick={() => triggerRefresh()}
             disabled={computing}
             aria-label={computing ? "Computing factor scores" : "Refresh factor scores"}
-            className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium rounded-lg bg-card border border-card-border hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed text-muted transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium rounded-none bg-card border border-card-border hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed text-muted transition-colors"
           >
             <RefreshCw size={12} className={computing ? "animate-spin" : ""} aria-hidden="true" />
             {computing ? "Computing…" : "Refresh Scores"}

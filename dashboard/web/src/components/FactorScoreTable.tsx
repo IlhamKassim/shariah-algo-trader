@@ -52,7 +52,7 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                 key={s.symbol}
                 className={`border-b border-divider/60 last:border-0 transition-colors hover:bg-card-hover ${
                   s.in_top_n
-                    ? "bg-[#34E3AE]/[0.03] border-l-2 border-l-brand-green"
+                    ? "bg-brand-gold/[0.03] border-l-2 border-l-brand-gold"
                     : "border-l-2 border-l-transparent"
                 }`}
               >
@@ -76,14 +76,10 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                 </td>
                 <td className="py-2.5 pr-3">
                   <div className="flex items-center justify-end gap-2">
-                    <div className="w-16 h-1.5 bg-card-border rounded-full overflow-hidden">
+                    <div className="w-16 h-1.5 bg-card-border overflow-hidden">
                       <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${barPct}%`,
-                          background:
-                            "linear-gradient(90deg, #34E3AE 0%, #0FA674 100%)",
-                        }}
+                        className="h-full bg-brand-gold"
+                        style={{ width: `${barPct}%` }}
                       />
                     </div>
                     <span className="font-mono font-semibold text-primary tabular-nums w-10 text-right">
@@ -93,7 +89,7 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                 </td>
                 <td className="py-2.5">
                   <div className="flex gap-1 flex-wrap">
-                    {s.in_top_n && <Badge variant="green">Top {topN}</Badge>}
+                    {s.in_top_n && <Badge variant="amber">Top {topN}</Badge>}
                     {s.in_portfolio && <Badge variant="blue">Held</Badge>}
                   </div>
                 </td>
