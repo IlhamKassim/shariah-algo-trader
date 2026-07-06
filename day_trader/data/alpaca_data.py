@@ -46,6 +46,29 @@ def fetch_opening_range_bars(
         return {}
 
 
+def compute_opening_ranges(
+    client: AlpacaClient,
+    symbols: list[str],
+    orb_minutes: int = 15,
+) -> dict[str, tuple[float, float]]:
+    """Fetch today's opening-range bars and reduce them to a (high, low) per symbol.
+
+    Alpaca's historical bars for the fixed 9:30 AM window are available
+    regardless of what time this is called — unlike a live price, this data
+    doesn't go stale, so it's safe (and preferred over locally caching it) to
+    recompute this from Alpaca directly whenever state.opening_ranges is
+    missing, e.g. after a same-day process restart that happened after 9:31 AM.
+    """
+    bars_by_symbol = fetch_opening_range_bars(client, symbols, orb_minutes=orb_minutes)
+    ranges: dict[str, tuple[float, float]] = {}
+    for symbol, bars in bars_by_symbol.items():
+        highs = [b["h"] for b in bars if "h" in b]
+        lows = [b["l"] for b in bars if "l" in b]
+        if highs and lows:
+            ranges[symbol] = (max(highs), min(lows))
+    return ranges
+
+
 def fetch_recent_bars(
     client: AlpacaClient,
     symbols: list[str],

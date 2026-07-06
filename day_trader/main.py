@@ -1,8 +1,9 @@
+import datetime
 import logging
 import sys
 
 from day_trader.config import DayTraderConfig
-from day_trader.data.alpaca_data import fetch_avg_daily_volume
+from day_trader.data.alpaca_data import ET, compute_opening_ranges, fetch_avg_daily_volume
 from day_trader.data.watchlist import get_watchlist
 from day_trader.execution.order_executor import DayOrderExecutor
 from day_trader.jobs.eod_liquidation import run_eod_liquidation
@@ -13,6 +14,7 @@ from day_trader.scheduling.scheduler import start_scheduler
 from day_trader.state import state
 from day_trader.state_persistence import reconcile_on_startup
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
+from shariah_algo_trader.scheduling.trading_calendar import is_trading_day
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +39,19 @@ def main() -> None:
     avg_volumes = fetch_avg_daily_volume(data_client, watchlist)
 
     reconcile_on_startup(state, executor)
+
+    # Opening ranges are only computed once a day, by the 9:31 AM Gap and Go
+    # scan — if this process started after that (e.g. a mid-day restart), the
+    # ORB breakout scanner would otherwise have nothing to check against for
+    # the rest of today. Alpaca's historical bars for the fixed 9:30 AM window
+    # are still valid no matter what time it is now, so backfill directly from
+    # there rather than needing to have cached it locally.
+    now_et = datetime.datetime.now(tz=ET)
+    range_close = now_et.replace(hour=9, minute=30, second=0, microsecond=0) + datetime.timedelta(minutes=cfg.orb_minutes)
+    if is_trading_day(now_et.date()) and now_et >= range_close and not state.opening_ranges:
+        logger.info("Backfilling today's opening ranges (process started after the %d-minute window closed)...", cfg.orb_minutes)
+        state.opening_ranges.update(compute_opening_ranges(data_client, watchlist, cfg.orb_minutes))
+        logger.info("Opening ranges backfilled for %d/%d symbols", len(state.opening_ranges), len(watchlist))
 
     def refresh_adv_job() -> None:
         fresh = fetch_avg_daily_volume(data_client, watchlist)
