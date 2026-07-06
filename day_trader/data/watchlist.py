@@ -1,44 +1,34 @@
-# Unrestricted high-volume watchlist for Gap and Go day trading.
-# No Shariah screening — includes banks, airlines, crypto, and leveraged ETFs
-# to maximise the available gap opportunities each morning.
+# Unrestricted, high-beta watchlist for Gap and Go day trading.
+# No Shariah screening. Curated for names that actually produce violent,
+# catalyst-driven gaps — mega-cap anchors, banks, index/broad-sector ETFs,
+# industrials, energy majors, big pharma, and other low-beta names were
+# dropped since they rarely clear a meaningful gap threshold.
 # Price and ADV quality filters are applied dynamically at scan time.
 _DEFAULT_WATCHLIST: list[str] = [
-    # Mega-cap tech
-    "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META", "GOOGL", "AMD", "INTC", "MU",
-    # Semiconductors
-    "QCOM", "AVGO", "TXN", "KLAC", "LRCX", "AMAT", "MRVL", "SMCI", "ARM", "ON",
-    # Software / Cloud
+    # Mega-cap (highest-beta only)
+    "NVDA", "TSLA", "AMD",
+    # Semiconductors (sector-wide earnings-gap prone)
+    "QCOM", "AVGO", "TXN", "KLAC", "LRCX", "AMAT", "MRVL", "SMCI", "ARM", "ON", "MU", "INTC",
+    # Software / Cloud (high-growth SaaS gaps hardest on earnings)
     "CRM", "NOW", "SNOW", "DDOG", "NET", "CRWD", "ZS", "OKTA", "HUBS", "TTD",
     "TWLO", "DOCU", "ZM", "GTLB", "BILL", "CFLT", "MDB", "ESTC",
-    # Financials
-    "JPM", "BAC", "GS", "MS", "WFC", "C", "AXP", "BLK", "SCHW", "COF",
-    # Payments / Fintech
-    "V", "MA", "PYPL", "SQ", "AFRM", "UPST",
+    # Fintech (higher-beta only)
+    "PYPL", "SQ", "AFRM", "UPST",
     # Crypto-adjacent
     "COIN", "MARA", "RIOT", "HOOD", "SOFI",
-    # Consumer / Marketplace
-    "NFLX", "DIS", "UBER", "ABNB", "DASH", "SPOT", "ROKU",
-    "WMT", "TGT", "COST", "HD", "NKE", "LULU", "ETSY", "CHWY",
-    # Airlines
-    "AAL", "DAL", "UAL", "LUV",
-    # Energy
-    "XOM", "CVX", "OXY", "HAL", "SLB", "MRO", "DVN",
-    # Healthcare / Biotech
-    "LLY", "ABBV", "JNJ", "PFE", "MRK", "AMGN", "GILD", "MRNA",
-    "REGN", "VRTX", "BIIB", "BMY", "BNTX", "IDXX",
+    # Consumer / Marketplace (higher-beta growth only)
+    "UBER", "ABNB", "DASH", "SPOT", "ROKU", "ETSY", "CHWY",
+    # Energy (smaller, higher-beta only)
+    "OXY", "HAL", "SLB", "MRO", "DVN",
+    # Biotech (binary-catalyst names only)
+    "MRNA", "REGN", "VRTX", "BIIB", "BNTX",
     # EV / Auto
     "RIVN", "NIO", "LCID", "F", "GM", "STLA",
-    # Industrial / Aerospace / Defense
-    "BA", "RTX", "LMT", "NOC", "GE", "CAT", "DE",
     # Growth / Momentum
     "PLTR", "SHOP", "SNAP", "RBLX", "PINS", "LYFT",
-    # Media
-    "PARA", "WBD",
-    # Index ETFs
-    "SPY", "QQQ", "IWM", "DIA",
-    # Sector ETFs (gap on macro/sector news)
-    "XLF", "XLE", "XLK", "XLV", "XBI", "GLD", "SLV",
-    # Leveraged ETFs (amplified gap moves)
+    # Sector ETF (biotech only — binary-catalyst constituents)
+    "XBI",
+    # Leveraged ETFs (built-in volatility amplification)
     "SOXL", "TQQQ", "UVXY", "LABU",
 ]
 

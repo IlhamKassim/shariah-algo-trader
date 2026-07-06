@@ -73,18 +73,18 @@ services:
       - key: DAY_MAX_POSITIONS
         value: "5"
       - key: DAY_POSITION_SIZE_PCT
-        value: "0.10"
+        value: "0.20"
       - key: DAY_STOP_LOSS_PCT
-        value: "0.02"
-      - key: DAY_TRAILING_STOP_PCT
-        value: "0.015"
-      - key: DAY_GAP_PCT
-        value: "0.03"
-      - key: DAY_RVOL_THRESHOLD
-        value: "1.5"
-      - key: DAY_PROFIT_TARGET_MULT
-        value: "2.0"
-      - key: DAY_MAX_LOSS_PCT
         value: "0.05"
+      - key: DAY_TRAILING_STOP_PCT
+        value: "0.03"
+      - key: DAY_GAP_PCT
+        value: "0.045"
+      - key: DAY_RVOL_THRESHOLD
+        value: "2.5"
+      - key: DAY_PROFIT_TARGET_MULT
+        value: "3.0"
+      - key: DAY_MAX_LOSS_PCT
+        value: "0.07"
       - key: ALPACA_FEED
         value: "iex"
