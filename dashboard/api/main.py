@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from dashboard.api.cache import get_universe_cache
 from dashboard.api.deps import get_alpaca, get_config
@@ -45,6 +46,19 @@ app.include_router(performance.router)
 app.include_router(compare.router)
 app.include_router(day_trader.router)
 
+class SPAStaticFiles(StaticFiles):
+    """Serve index.html for any unmatched path so React Router can handle
+    client-side routes (e.g. a direct visit or refresh on /universe)."""
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404 and not path.startswith("api/"):
+                return await super().get_response("index.html", scope)
+            raise
+
+
 _STATIC = Path(__file__).parent / "static"
 if _STATIC.exists():
-    app.mount("/", StaticFiles(directory=str(_STATIC), html=True), name="static")
+    app.mount("/", SPAStaticFiles(directory=str(_STATIC), html=True), name="static")
