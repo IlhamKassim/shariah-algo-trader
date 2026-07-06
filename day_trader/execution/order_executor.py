@@ -82,11 +82,15 @@ class DayOrderExecutor:
             logger.error("DAY SELL %s failed: %s", symbol, exc)
             return False
 
+    def list_positions(self) -> list[dict]:
+        """Return Alpaca's current list of open positions for this account."""
+        return self._client.get("/v2/positions")
+
     def close_all(self) -> set[str]:
         """Liquidate all open positions (EOD). Returns the set of symbols that failed."""
         failed: set[str] = set()
         try:
-            positions = self._client.get("/v2/positions")
+            positions = self.list_positions()
             if not positions:
                 logger.info("EOD liquidation — no open positions")
                 return failed

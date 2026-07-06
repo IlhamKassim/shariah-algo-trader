@@ -1,5 +1,6 @@
 import logging
 
+from day_trader import state_persistence
 from day_trader.execution.order_executor import DayOrderExecutor
 from day_trader.state import DayTraderState
 
@@ -12,6 +13,13 @@ def run_eod_liquidation(state: DayTraderState, executor: DayOrderExecutor) -> No
     This guarantees no overnight holds, which keeps the strategy long-only
     intraday and avoids any overnight interest or gap risk.
     """
+    try:
+        _run(state, executor)
+    finally:
+        state_persistence.save(state)
+
+
+def _run(state: DayTraderState, executor: DayOrderExecutor) -> None:
     logger.info("EOD liquidation starting — %d position(s) to close", len(state.positions))
     failed = executor.close_all()
     # Only remove positions that were successfully closed so we don't lose

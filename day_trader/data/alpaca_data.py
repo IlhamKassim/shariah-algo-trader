@@ -46,6 +46,39 @@ def fetch_opening_range_bars(
         return {}
 
 
+def fetch_recent_bars(
+    client: AlpacaClient,
+    symbols: list[str],
+    lookback_minutes: int = 5,
+) -> dict[str, list[dict]]:
+    """Fetch 1-minute bars for a rolling trailing window ending now.
+
+    Used by the all-day ORB breakout scanner to compute a rolling volume rate,
+    as opposed to fetch_opening_range_bars' fixed 9:30 AM window.
+
+    Returns {symbol: [bar, ...]} where each bar has keys: t, o, h, l, c, v.
+    """
+    now = datetime.datetime.now(tz=ET)
+    start = now - datetime.timedelta(minutes=lookback_minutes)
+
+    params = (
+        f"symbols={','.join(symbols)}"
+        f"&timeframe=1Min"
+        f"&start={_et_to_rfc3339(start)}"
+        f"&end={_et_to_rfc3339(now)}"
+        f"&limit=10000"
+        f"&feed={_FEED}"
+        f"&sort=asc"
+    )
+
+    try:
+        response = client.get(f"/v2/stocks/bars?{params}")
+        return response.get("bars", {})
+    except Exception as exc:
+        logger.error("Failed to fetch recent bars: %s", exc)
+        return {}
+
+
 def fetch_latest_prices(
     client: AlpacaClient,
     symbols: list[str],

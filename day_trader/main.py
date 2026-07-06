@@ -7,9 +7,11 @@ from day_trader.data.watchlist import get_watchlist
 from day_trader.execution.order_executor import DayOrderExecutor
 from day_trader.jobs.eod_liquidation import run_eod_liquidation
 from day_trader.jobs.intraday_monitor import run_intraday_monitor
+from day_trader.jobs.intraday_scan import run_intraday_scan
 from day_trader.jobs.market_scan import run_market_scan
 from day_trader.scheduling.scheduler import start_scheduler
 from day_trader.state import state
+from day_trader.state_persistence import reconcile_on_startup
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 
 logging.basicConfig(
@@ -33,6 +35,8 @@ def main() -> None:
     watchlist = get_watchlist()
     logger.info("Watchlist: %d symbols — fetching average daily volumes...", len(watchlist))
     avg_volumes = fetch_avg_daily_volume(data_client, watchlist)
+
+    reconcile_on_startup(state, executor)
 
     def refresh_adv_job() -> None:
         fresh = fetch_avg_daily_volume(data_client, watchlist)
@@ -58,6 +62,16 @@ def main() -> None:
             executor=executor,
         )
 
+    def intraday_scan_job() -> None:
+        run_intraday_scan(
+            state=state,
+            cfg=cfg,
+            data_client=data_client,
+            executor=executor,
+            watchlist=watchlist,
+            avg_volumes=avg_volumes,
+        )
+
     def eod_liquidation_job() -> None:
         run_eod_liquidation(state=state, executor=executor)
 
@@ -71,6 +85,7 @@ def main() -> None:
     start_scheduler(
         run_market_scan=market_scan_job,
         run_intraday_monitor=intraday_monitor_job,
+        run_intraday_scan=intraday_scan_job,
         run_eod_liquidation=eod_liquidation_job,
         refresh_adv=refresh_adv_job,
     )

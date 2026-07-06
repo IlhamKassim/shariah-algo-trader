@@ -29,6 +29,7 @@ class DayTraderState:
 
     date: datetime.date = field(default_factory=datetime.date.today)
     gaps: dict[str, GapData] = field(default_factory=dict)
+    opening_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)  # symbol -> (range_high, range_low)
     positions: dict[str, ActivePosition] = field(default_factory=dict)
     traded_today: set[str] = field(default_factory=set)
     starting_equity: float | None = None  # recorded at first scan of the day
@@ -39,6 +40,7 @@ class DayTraderState:
         logger.info("DayTraderState reset for %s (was %s)", new_date, self.date)
         self.date = new_date
         self.gaps.clear()
+        self.opening_ranges.clear()
         self.positions.clear()
         self.traded_today.clear()
         self.starting_equity = None

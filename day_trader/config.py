@@ -38,3 +38,5 @@ class DayTraderConfig:
         # Quality filters applied at scan time — keeps junk out of the expanded watchlist
         self.min_price: float = float(os.environ.get("DAY_MIN_PRICE", "10.0"))
         self.min_adv: float = float(os.environ.get("DAY_MIN_ADV", "1000000"))
+        # Opening Range Breakout window length (minutes) for all-day entries
+        self.orb_minutes: int = int(os.environ.get("DAY_ORB_MINUTES", "15"))

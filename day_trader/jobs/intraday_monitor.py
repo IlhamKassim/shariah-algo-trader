@@ -1,5 +1,6 @@
 import logging
 
+from day_trader import state_persistence
 from day_trader.config import DayTraderConfig
 from day_trader.data.alpaca_data import fetch_latest_prices
 from day_trader.execution.order_executor import DayOrderExecutor
@@ -17,9 +18,23 @@ def run_intraday_monitor(
 ) -> None:
     """Run every minute — manage trailing stops and profit targets.
 
-    Gap and Go only enters at the 9:31 AM open scan, so this job purely manages
-    existing positions. No new entries are made here.
+    Gap and Go only enters at the 9:31 AM open scan; the ORB breakout scanner
+    (intraday_scan.py) enters throughout the day. This job purely manages
+    existing positions regardless of how they were entered. No new entries
+    are made here.
     """
+    try:
+        _run(state, cfg, data_client, executor)
+    finally:
+        state_persistence.save(state)
+
+
+def _run(
+    state: DayTraderState,
+    cfg: DayTraderConfig,
+    data_client: AlpacaClient,
+    executor: DayOrderExecutor,
+) -> None:
     if state.is_stale():
         state.reset()
         return

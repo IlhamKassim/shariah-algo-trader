@@ -15,6 +15,7 @@ _TIMEZONE = "America/New_York"
 def start_scheduler(
     run_market_scan: Callable,
     run_intraday_monitor: Callable,
+    run_intraday_scan: Callable,
     run_eod_liquidation: Callable,
     refresh_adv: Callable | None = None,
 ) -> None:
@@ -24,6 +25,7 @@ def start_scheduler(
     - 9:00 AM  — Refresh average daily volumes
     - 9:31 AM  — Gap and Go open scan (enter gapping stocks right at open)
     - 9:32 AM – 3:54 PM — intraday monitor every minute (stops + profit targets)
+    - 9:32 AM – 3:54 PM — ORB breakout scan every minute (all-day new entries)
     - 3:55 PM  — EOD liquidation (close all, no overnight holds)
     """
     scheduler = BlockingScheduler(timezone=_TIMEZONE)
@@ -65,6 +67,27 @@ def start_scheduler(
     # 10:00 AM – 3:54 PM
     scheduler.add_job(
         func=_safe(run_intraday_monitor, "IntradayMonitor"),
+        trigger=CronTrigger(
+            day_of_week="mon-fri",
+            hour="10-15",
+            minute="0-54",
+            timezone=_TIMEZONE,
+        ),
+    )
+
+    # 9:32–9:59 AM — ORB breakout scan (all-day new entries)
+    scheduler.add_job(
+        func=_safe(run_intraday_scan, "IntradayScan"),
+        trigger=CronTrigger(
+            day_of_week="mon-fri",
+            hour=9,
+            minute="32-59",
+            timezone=_TIMEZONE,
+        ),
+    )
+    # 10:00 AM – 3:54 PM
+    scheduler.add_job(
+        func=_safe(run_intraday_scan, "IntradayScan"),
         trigger=CronTrigger(
             day_of_week="mon-fri",
             hour="10-15",

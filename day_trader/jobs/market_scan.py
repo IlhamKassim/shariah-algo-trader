@@ -1,5 +1,6 @@
 import logging
 
+from day_trader import state_persistence
 from day_trader.config import DayTraderConfig
 from day_trader.data.alpaca_data import fetch_latest_prices, fetch_opening_range_bars, fetch_prev_close
 from day_trader.execution.order_executor import DayOrderExecutor
@@ -23,6 +24,20 @@ def run_market_scan(
     Gap and Go enters right at the open on stocks with a significant overnight
     gap confirmed by strong first-minute volume (RVOL). No waiting for a range.
     """
+    try:
+        _run(state, cfg, data_client, executor, watchlist, avg_volumes)
+    finally:
+        state_persistence.save(state)
+
+
+def _run(
+    state: DayTraderState,
+    cfg: DayTraderConfig,
+    data_client: AlpacaClient,
+    executor: DayOrderExecutor,
+    watchlist: list[str],
+    avg_volumes: dict[str, float],
+) -> None:
     if state.is_stale():
         state.reset()
 
@@ -41,8 +56,10 @@ def run_market_scan(
 
     logger.info("Gap and Go scan starting — %d watchlist stocks", len(watchlist))
 
-    # Fetch first-minute bars (9:30–9:31) for volume, previous closes, and current prices
-    first_bars = fetch_opening_range_bars(data_client, watchlist, orb_minutes=1)
+    # Fetch the full opening-range window once — first bar's volume feeds the
+    # gap RVOL check below, and the window's high/low is stashed for the
+    # all-day ORB breakout scanner (day_trader/jobs/intraday_scan.py) to use.
+    opening_bars = fetch_opening_range_bars(data_client, watchlist, orb_minutes=cfg.orb_minutes)
     prev_closes = fetch_prev_close(data_client, watchlist)
     prices = fetch_latest_prices(data_client, watchlist)
 
@@ -62,8 +79,15 @@ def run_market_scan(
             logger.info("%s: ADV too low (%.0f shares, need %.0f)", symbol, adv, cfg.min_adv)
             continue
 
-        bars = first_bars.get(symbol, [])
-        first_min_vol = sum(int(b["v"]) for b in bars) if bars else 0
+        bars = opening_bars.get(symbol, [])
+        if bars:
+            first_min_vol = int(bars[0]["v"])
+            highs = [b["h"] for b in bars if "h" in b]
+            lows = [b["l"] for b in bars if "l" in b]
+            if highs and lows:
+                state.opening_ranges[symbol] = (max(highs), min(lows))
+        else:
+            first_min_vol = 0
 
         gap = compute_gap(symbol, price, prev_close, first_min_vol, adv)
         if gap is None:
