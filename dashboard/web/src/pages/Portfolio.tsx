@@ -48,11 +48,10 @@ export function Portfolio() {
           loading={isLoading}
         />
         <HeroFacts
-          loading={isLoading || loadingAccount}
           facts={[
-            { label: "Open Positions", value: positions ? String(positions.length) : "—" },
-            { label: "Invested", value: positions ? formatCurrency(totalInvested) : "—" },
-            { label: "Cash", value: account ? formatCurrency(account.cash) : "—" },
+            { label: "Open Positions", loading: isLoading, value: positions ? String(positions.length) : "—" },
+            { label: "Invested", loading: isLoading, value: positions ? formatCurrency(totalInvested) : "—" },
+            { label: "Cash", loading: loadingAccount, value: account ? formatCurrency(account.cash) : "—" },
           ]}
         />
       </Hero>

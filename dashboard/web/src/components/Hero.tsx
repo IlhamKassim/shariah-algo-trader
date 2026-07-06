@@ -43,15 +43,10 @@ export interface HeroFactItem {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
+  loading?: boolean;
 }
 
-export function HeroFacts({
-  facts,
-  loading = false,
-}: {
-  facts: HeroFactItem[];
-  loading?: boolean;
-}) {
+export function HeroFacts({ facts }: { facts: HeroFactItem[] }) {
   return (
     <div className="flex flex-wrap divide-x divide-divider">
       {facts.map((f) => (
@@ -59,7 +54,7 @@ export function HeroFacts({
           <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-2">
             {f.label}
           </p>
-          {loading ? (
+          {f.loading ? (
             <Skeleton className="h-6 w-20" />
           ) : (
             <>

@@ -50,10 +50,9 @@ export function DayTrader() {
           loading={isLoading}
         />
         <HeroFacts
-          loading={isLoading}
           facts={[
-            { label: "Equity", value: account ? formatCurrency(account.equity) : "—" },
-            { label: "Buying Power", value: account ? formatCurrency(account.buying_power) : "—" },
+            { label: "Equity", loading: isLoading, value: account ? formatCurrency(account.equity) : "—" },
+            { label: "Buying Power", loading: isLoading, value: account ? formatCurrency(account.buying_power) : "—" },
           ]}
         />
       </Hero>

@@ -119,7 +119,7 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
           {rows.length === 0 && (
             <tr>
               <td
-                colSpan={compact ? 3 : 7}
+                colSpan={compact ? 4 : 7}
                 className="py-8 text-center text-faint text-sm"
               >
                 No open positions

@@ -77,10 +77,10 @@ export function Overview() {
           loading={loadingAccount}
         />
         <HeroFacts
-          loading={loadingAccount || loadingCompliance}
           facts={[
             {
               label: "Daily P&L",
+              loading: loadingAccount,
               value: account ? (
                 <span className={plColor(account.dayl_pl)}>{formatCurrency(account.dayl_pl)}</span>
               ) : (
@@ -94,11 +94,13 @@ export function Overview() {
             },
             {
               label: "Cash",
+              loading: loadingAccount,
               value: account ? formatCurrency(account.cash) : "—",
               sub: cashPct != null ? `${cashPct}% of book` : undefined,
             },
             {
               label: "Shariah Compliance",
+              loading: loadingCompliance,
               value: complianceValue,
               sub: complianceSub,
             },
