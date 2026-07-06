@@ -76,10 +76,10 @@ def main() -> None:
         run_eod_liquidation(state=state, executor=executor)
 
     logger.info(
-        "Day Trader starting — Gap and Go strategy, %d stocks, "
-        "gap≥%.0f%%, RVOL≥%.1f, max_positions=%d, position_size=%.0f%%",
+        "Day Trader starting — Gap and Go (9:31 AM open) + ORB breakout (9:32 AM-3:54 PM), "
+        "%d stocks, gap≥%.1f%%, RVOL≥%.1f, max_positions=%d, position_size=%.0f%%, orb_minutes=%d",
         len(watchlist), cfg.gap_threshold * 100, cfg.rvol_threshold,
-        cfg.max_positions, cfg.position_size_pct * 100,
+        cfg.max_positions, cfg.position_size_pct * 100, cfg.orb_minutes,
     )
 
     start_scheduler(
