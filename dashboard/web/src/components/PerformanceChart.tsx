@@ -87,9 +87,9 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             </span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 inline-block" style={{ borderTop: `2px dashed ${CHART.blue}`, background: "transparent" }} />
+            <span className="w-4 h-0.5 inline-block" style={{ borderTop: `2px dashed ${CHART.secondary}`, background: "transparent" }} />
             <span className="text-muted">S&amp;P 500</span>
-            <span className="font-mono font-semibold tabular-nums" style={{ color: CHART.blue }}>
+            <span className="font-mono font-semibold tabular-nums" style={{ color: CHART.secondary }}>
               {sign(sp500Val)}{(sp500Val * 100).toFixed(2)}%
             </span>
           </span>
@@ -163,11 +163,11 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             type="monotone"
             dataKey="sp500"
             name="S&P 500"
-            stroke={CHART.blue}
+            stroke={CHART.secondary}
             strokeWidth={1.5}
             strokeDasharray="5 4"
             dot={false}
-            activeDot={{ r: 3, fill: CHART.blue, strokeWidth: 0 }}
+            activeDot={{ r: 3, fill: CHART.secondary, strokeWidth: 0 }}
           />
         </ComposedChart>
       </ResponsiveContainer>

@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { api, type StrategyMetrics } from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
+import { StatBlock } from "../components/ui/StatBlock";
 import { CHART } from "../lib/chartColors";
 
 function MetricCard({
@@ -32,11 +33,7 @@ function MetricCard({
       : "text-brand-red";
   return (
     <div className="py-3 border-b border-divider last:border-0 last:pb-0">
-      <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-1">
-        {label}
-      </p>
-      <p className={`text-xl font-bold font-mono tabular-nums ${color}`}>{value}</p>
-      {sub && <p className="text-[11px] text-faint mt-0.5">{sub}</p>}
+      <StatBlock label={label} value={value} sub={sub} valueClassName={`text-xl font-bold ${color}`} />
     </div>
   );
 }
@@ -154,7 +151,7 @@ export function Compare() {
               width={52}
             />
             <Tooltip
-              contentStyle={{ background: "#0C0B09", border: `1px solid ${CHART.grid}`, borderRadius: 0 }}
+              contentStyle={{ background: CHART.bg, border: `1px solid ${CHART.grid}`, borderRadius: 0 }}
               labelStyle={{ color: CHART.tickText, fontSize: 11 }}
               formatter={(value, name) => [
                 `$${Number(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
@@ -177,7 +174,7 @@ export function Compare() {
               <Line
                 type="monotone"
                 dataKey="daytrader"
-                stroke={CHART.blue}
+                stroke={CHART.secondary}
                 strokeWidth={2}
                 dot={false}
                 connectNulls
@@ -192,7 +189,7 @@ export function Compare() {
         <StrategyColumn m={data.shariah} color={CHART.gold} />
         <StrategyColumn
           m={data.daytrader_available ? data.daytrader : { ...data.daytrader, name: "Day Trader (pending)" }}
-          color={CHART.blue}
+          color={CHART.secondary}
         />
       </div>
     </div>

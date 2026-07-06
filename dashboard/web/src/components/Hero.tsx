@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Skeleton } from "./ui/Skeleton";
+import { StatBlock } from "./ui/StatBlock";
 
 export function Hero({ children }: { children: ReactNode }) {
   return (
@@ -18,24 +18,14 @@ interface HeroStatProps {
 
 export function HeroStat({ label, value, sub, loading = false }: HeroStatProps) {
   return (
-    <div>
-      <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-2">
-        {label}
-      </p>
-      {loading ? (
-        <>
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-4 w-28" />
-        </>
-      ) : (
-        <>
-          <div className="font-mono text-4xl md:text-5xl font-bold text-primary tabular-nums leading-none">
-            {value}
-          </div>
-          {sub && <div className="mt-2 text-xs text-muted">{sub}</div>}
-        </>
-      )}
-    </div>
+    <StatBlock
+      label={label}
+      value={value}
+      sub={sub}
+      loading={loading}
+      valueClassName="text-4xl md:text-5xl font-bold text-primary leading-none"
+      skeletonClassName="h-10 w-48 mb-2"
+    />
   );
 }
 
@@ -51,19 +41,7 @@ export function HeroFacts({ facts }: { facts: HeroFactItem[] }) {
     <div className="flex flex-wrap divide-x divide-divider">
       {facts.map((f) => (
         <div key={f.label} className="px-6 first:pl-0 last:pr-0">
-          <p className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] mb-2">
-            {f.label}
-          </p>
-          {f.loading ? (
-            <Skeleton className="h-6 w-20" />
-          ) : (
-            <>
-              <div className="font-mono text-xl font-semibold text-primary tabular-nums leading-tight">
-                {f.value}
-              </div>
-              {f.sub && <div className="mt-1 text-[11px] text-faint">{f.sub}</div>}
-            </>
-          )}
+          <StatBlock label={f.label} value={f.value} sub={f.sub} loading={f.loading} />
         </div>
       ))}
     </div>
