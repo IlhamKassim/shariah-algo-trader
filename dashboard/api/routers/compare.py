@@ -14,6 +14,34 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _RISK_FREE_RATE = float(os.environ.get("RISK_FREE_RATE", "0.05"))  # annualised
+_ET = datetime.timezone(datetime.timedelta(hours=-4))  # EDT
+
+
+def _live_equity(client: AlpacaClient) -> float | None:
+    try:
+        acct = client.get("/v2/account")
+        equity = float(acct.get("equity", 0))
+        return equity if equity > 0 else None
+    except AlpacaError:
+        return None
+
+
+def _patch_today(
+    dates: list[str], equities: list[float], live_equity: float | None
+) -> tuple[list[str], list[float]]:
+    """Overwrite (or append) today's bar with live /v2/account equity.
+
+    Alpaca's portfolio/history endpoint lags the live account for the
+    current trading day — its last bar can read stale by up to a full
+    session, which is what caused the Compare page to disagree with the
+    live Day Trader panel.
+    """
+    if live_equity is None:
+        return dates, equities
+    today = datetime.datetime.now(_ET).date().isoformat()
+    if dates and dates[-1] == today:
+        return dates[:-1] + [today], equities[:-1] + [live_equity]
+    return dates + [today], equities + [live_equity]
 
 
 def _portfolio_history(client: AlpacaClient) -> tuple[list[str], list[float]]:
@@ -85,6 +113,7 @@ def _align_series(
 def get_compare() -> CompareResponse:
     shariah_client = get_alpaca()
     shariah_dates, shariah_eq = _portfolio_history(shariah_client)
+    shariah_dates, shariah_eq = _patch_today(shariah_dates, shariah_eq, _live_equity(shariah_client))
     shariah_metrics = _compute_metrics("Shariah Algo", shariah_eq)
 
     # Day trader account (optional — graceful if keys not yet configured)
@@ -112,6 +141,7 @@ def get_compare() -> CompareResponse:
     try:
         day_client = AlpacaClient(day_key, day_secret, day_url)
         day_dates, day_eq = _portfolio_history(day_client)
+        day_dates, day_eq = _patch_today(day_dates, day_eq, _live_equity(day_client))
         day_metrics = _compute_metrics("Day Trader", day_eq)
 
         if shariah_dates and day_dates:
