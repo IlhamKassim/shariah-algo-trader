@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from dashboard.api.deps import get_alpaca
 from dashboard.api.live_equity import live_equity, patch_today
 from dashboard.api.models import PerformanceResponse
-from shariah_algo_trader.execution.alpaca_client import AlpacaClient
+from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,7 +76,11 @@ def _fetch_history(client: AlpacaClient) -> tuple[list, list]:
 
 @router.get("/api/performance", response_model=PerformanceResponse)
 def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceResponse:
-    timestamps, equities = _fetch_history(client)
+    try:
+        timestamps, equities = _fetch_history(client)
+    except AlpacaError as exc:
+        logger.warning("Performance history fetch failed: %s", exc)
+        return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])
 
     if not timestamps or not equities:
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])

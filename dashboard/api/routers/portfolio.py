@@ -1,15 +1,22 @@
+import logging
+
 from fastapi import APIRouter, Depends
 
 from dashboard.api.deps import get_alpaca
 from dashboard.api.models import PositionResponse
-from shariah_algo_trader.execution.alpaca_client import AlpacaClient
+from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/api/portfolio", response_model=list[PositionResponse])
 def get_portfolio(client: AlpacaClient = Depends(get_alpaca)) -> list[PositionResponse]:
-    positions = client.get("/v2/positions")
+    try:
+        positions = client.get("/v2/positions")
+    except AlpacaError as exc:
+        logger.warning("Portfolio fetch failed: %s", exc)
+        return []
     return [
         PositionResponse(
             symbol=pos["symbol"],

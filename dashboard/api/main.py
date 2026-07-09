@@ -9,6 +9,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from dashboard.api.cache import get_universe_cache
 from dashboard.api.deps import get_alpaca, get_config
+from dashboard.api.hardening import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    build_default_limiter,
+    build_refresh_limiter,
+)
 from dashboard.api.routers import account, activity, compare, compliance, day_trader, performance, portfolio, status, universe
 from dashboard.api.routers.universe import schedule_startup_refresh
 
@@ -22,13 +28,26 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Shariah Algo Trader Dashboard", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Shariah Algo Trader Dashboard",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
     *[o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()],
 ]
 
+app.add_middleware(
+    RateLimitMiddleware,
+    default_limiter=build_default_limiter(),
+    route_limiters={("POST", "/api/universe/refresh"): build_refresh_limiter()},
+)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
