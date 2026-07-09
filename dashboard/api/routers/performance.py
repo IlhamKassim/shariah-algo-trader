@@ -8,6 +8,7 @@ import yfinance as yf
 from fastapi import APIRouter, Depends
 
 from dashboard.api.deps import get_alpaca
+from dashboard.api.live_equity import live_equity, patch_today
 from dashboard.api.models import PerformanceResponse
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 
@@ -81,10 +82,9 @@ def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceRe
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])
 
     dates = [datetime.date.fromtimestamp(ts).isoformat() for ts in timestamps]
-    equity_series = pd.Series(
-        [float(e) if e is not None else float("nan") for e in equities],
-        index=pd.to_datetime(dates),
-    ).dropna()
+    equities_f = [float(e) if e is not None else float("nan") for e in equities]
+    dates, equities_f = patch_today(dates, equities_f, live_equity(client))
+    equity_series = pd.Series(equities_f, index=pd.to_datetime(dates)).dropna()
     equity_series = equity_series[equity_series > 0]
 
     if len(equity_series) < 2:
