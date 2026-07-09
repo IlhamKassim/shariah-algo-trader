@@ -1,8 +1,9 @@
 import datetime
+from zoneinfo import ZoneInfo
 
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
-_ET = datetime.timezone(datetime.timedelta(hours=-4))  # EDT
+_ET = ZoneInfo("America/New_York")
 
 
 def live_equity(client: AlpacaClient) -> float | None:

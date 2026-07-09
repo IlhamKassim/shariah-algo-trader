@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
 
@@ -16,7 +17,7 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaErro
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-_ET = datetime.timezone(datetime.timedelta(hours=-4))  # EDT
+_ET = ZoneInfo("America/New_York")
 
 
 def _get_day_client() -> AlpacaClient | None:
@@ -88,9 +89,11 @@ def get_day_trader() -> DayTraderResponse:
             ))
 
         # Today's fills
-        today_et = datetime.datetime.now(tz=_ET).date().isoformat()
+        today_start_et = datetime.datetime.now(tz=_ET).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         fills = client.get(
-            f"/v2/account/activities?activity_type=FILL&after={today_et}T00:00:00-04:00"
+            f"/v2/account/activities?activity_type=FILL&after={today_start_et.isoformat()}"
         )
         trades_today = []
         for f in (fills if isinstance(fills, list) else []):
