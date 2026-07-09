@@ -59,9 +59,9 @@ def get_day_trader() -> DayTraderResponse:
         equity = float(acct.get("equity", 0))
         cash = float(acct.get("cash", 0))
         buying_power = float(acct.get("buying_power", 0))
-        dayl_pl = float(acct.get("unrealized_intraday_pl", 0))
-        prev_equity = equity - dayl_pl
-        dayl_pl_pct = (dayl_pl / prev_equity * 100) if prev_equity > 0 else 0.0
+        last_equity = float(acct.get("last_equity") or equity)
+        dayl_pl = equity - last_equity
+        dayl_pl_pct = (dayl_pl / last_equity * 100) if last_equity else 0.0
 
         account = DayTraderAccountResponse(
             equity=round(equity, 2),
