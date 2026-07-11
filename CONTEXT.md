@@ -12,6 +12,7 @@ _Avoid_: composite score, ranking, signal
 
 **Momentum Factor**:
 A stock's recent price performance relative to its peers in the Eligible Universe, measured over a trailing window (conventionally 12-month return minus the most recent 1-month to exclude short-term reversal). Pure price data — no fundamental inputs.
+Note: because the Eligible Universe's Shariah screen (via SPUS) measures debt against market capitalization rather than total assets, external research (MSCI, Oct 2025) indicates this screen family structurally tilts the eligible universe toward growth/momentum names (vs. total-assets-denominator screens, which tilt toward value). Some of this factor's observed return contribution may reflect that pre-existing universe tilt rather than the scoring itself.
 _Avoid_: price momentum, return signal, trend score
 
 **Quality Factor**:
@@ -71,6 +72,10 @@ _Avoid_: whitelist, stock list, universe, approved list
 **Holdings Snapshot**:
 A point-in-time record of an ETF's constituent stocks and their weights, fetched from a data provider API on a recurring schedule. The bot's Eligible Universe is derived from the most recent Holdings Snapshot. When a stock drops out of a new snapshot, it exits the Eligible Universe.
 _Avoid_: holdings list, ETF data, universe refresh, constituent list
+
+**Shariah Screen**:
+The bot's own filter — excluding any stock with Total Debt / Total Assets > 33% from the Quality Factor. Applied on top of the Eligible Universe, which is already pre-screened by the source ETF (e.g. SPUS) using that ETF's own methodology. This project does not perform or claim independent, board-certified Shariah compliance verification (e.g. against the full AAOIFI standard) — the Shariah Screen is a single supplementary debt-ratio filter, nothing more.
+_Avoid_: Shariah-compliant, compliant, certified, AAOIFI-compliant, halal (as a bare claim)
 
 ## Example Dialogue
 
