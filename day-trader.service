@@ -1,0 +1,15 @@
+[Unit]
+Description=Day Trader Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shariah-algo-trader
+EnvironmentFile=/home/ubuntu/shariah-algo-trader/.env
+ExecStart=/home/ubuntu/shariah-algo-trader/.venv/bin/day-trader
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
