@@ -28,6 +28,7 @@ export interface PositionResponse {
 
 export interface StockScore {
   symbol: string;
+  company_name?: string;
   momentum_score: number;
   quality_score: number;
   volatility_score: number;

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { StockScore } from "../lib/api";
 import { Badge } from "./ui/Badge";
 
@@ -10,11 +12,42 @@ function fmt(n: number) {
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}`;
 }
 
+interface TooltipState {
+  name: string;
+  x: number;
+  y: number;
+}
+
 export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
   const maxScore = stocks.length > 0 ? Math.max(...stocks.map((s) => s.factor_score)) : 1;
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   return (
     <div className="overflow-x-auto">
+      {/* Portal tooltip — attached directly to <body>, immune to overflow clipping */}
+      {tooltip &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              left: tooltip.x + 14,
+              top: tooltip.y - 12,
+              zIndex: 9999,
+              pointerEvents: "none",
+              background: "var(--color-card, #1a1a1a)",
+              border: "1px solid var(--color-card-border, #333)",
+              padding: "4px 10px",
+              fontSize: "12px",
+              color: "var(--color-primary, #e5e5e5)",
+              whiteSpace: "nowrap",
+              boxShadow: "0 4px 24px 0 rgba(0,0,0,0.5)",
+              lineHeight: 1.5,
+            }}
+          >
+            {tooltip.name}
+          </div>,
+          document.body
+        )}
       <table className="w-full text-sm" aria-label="Factor score rankings">
         <thead>
           <tr className="text-left border-b border-divider">
@@ -60,7 +93,21 @@ export function FactorScoreTable({ stocks, topN }: FactorScoreTableProps) {
                   #{s.rank}
                 </td>
                 <th scope="row" className="py-2.5 pr-3 font-mono font-semibold text-primary text-left">
-                  {s.symbol}
+                  <a
+                    href={`https://finance.yahoo.com/quote/${s.symbol}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline hover:text-brand-gold transition-colors"
+                    onMouseEnter={(e) =>
+                      setTooltip({ name: s.company_name || s.symbol, x: e.clientX, y: e.clientY })
+                    }
+                    onMouseMove={(e) =>
+                      setTooltip((t) => t ? { ...t, x: e.clientX, y: e.clientY } : null)
+                    }
+                    onMouseLeave={() => setTooltip(null)}
+                  >
+                    {s.symbol}
+                  </a>
                 </th>
                 <td className="py-2.5 pr-3 text-right font-mono text-muted tabular-nums">
                   {fmt(s.momentum_score)}

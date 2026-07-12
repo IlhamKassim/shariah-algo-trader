@@ -111,3 +111,31 @@ def fetch_combined_universe(etf_symbols: list[str]) -> set[str]:
         [s for s in etf_symbols if s not in failed],
     )
     return combined
+
+
+def fetch_company_names(etf_symbols: list[str]) -> dict[str, str]:
+    """Fetch ETF spreadsheets and build a mapping of symbol -> company_name."""
+    names: dict[str, str] = {}
+    for symbol in etf_symbols:
+        try:
+            cfg = _ETF_CONFIG.get(symbol.upper())
+            if cfg is None:
+                continue
+            response = requests.get(cfg["url"], headers=_HEADERS, timeout=30)
+            response.raise_for_status()
+            reader = csv.DictReader(io.StringIO(response.text))
+            
+            fieldnames = list(reader.fieldnames or [])
+            ticker_col = next((c for c in _POSSIBLE_TICKER_COLS if c in fieldnames), None)
+            name_col = next((c for c in ["SecurityName", "Name", "NAME", "description", "Description"] if c in fieldnames), None)
+            
+            if ticker_col and name_col:
+                for row in reader:
+                    t_val = row.get(ticker_col, "").strip().upper()
+                    n_val = row.get(name_col, "").strip()
+                    if t_val and n_val:
+                        names[t_val] = n_val
+        except Exception as exc:
+            logger.warning("Failed to fetch company names for %s: %s", symbol, exc)
+    return names
+

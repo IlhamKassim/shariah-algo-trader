@@ -8,7 +8,7 @@ from dashboard.api.cache import UniverseCache, get_universe_cache
 from dashboard.api.deps import get_alpaca, get_config
 from dashboard.api.models import StockScore, UniverseResponse
 from shariah_algo_trader.config import Config
-from shariah_algo_trader.data.universe import fetch_combined_universe
+from shariah_algo_trader.data.universe import fetch_combined_universe, fetch_company_names
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 from shariah_algo_trader.factors.momentum import compute_momentum_factor
 from shariah_algo_trader.factors.quality import compute_quality_factor
@@ -22,6 +22,7 @@ router = APIRouter()
 def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None:
     try:
         universe = fetch_combined_universe(cfg.etf_symbols)
+        company_names = fetch_company_names(cfg.etf_symbols)
         momentum = compute_momentum_factor(universe)
         quality = compute_quality_factor(universe)
         raw_vols = compute_raw_volatility(universe)
@@ -51,6 +52,7 @@ def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None
         stocks = [
             {
                 "symbol": ticker,
+                "company_name": company_names.get(ticker, ticker),
                 "momentum_score": round(momentum.get(ticker, 0.0), 4),
                 "quality_score": round(quality.get(ticker, 0.0), 4),
                 "volatility_score": round(vol_scores.get(ticker, 0.0), 4),

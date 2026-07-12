@@ -34,6 +34,7 @@ class PositionResponse(BaseModel):
 
 class StockScore(BaseModel):
     symbol: str
+    company_name: Optional[str] = None
     momentum_score: float
     quality_score: float
     volatility_score: float
