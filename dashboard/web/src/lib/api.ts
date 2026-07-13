@@ -132,6 +132,14 @@ export interface DayTraderResponse {
   watchlist_size: number;
 }
 
+export interface AuthStatus {
+  auth_enabled: boolean;
+  password_auth_enabled: boolean;
+  google_auth_enabled: boolean;
+  authenticated: boolean;
+}
+
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
@@ -156,4 +164,14 @@ export const api = {
   compare: () => apiFetch<CompareResponse>("/api/compare"),
   compliance: () => apiFetch<ComplianceResponse>("/api/compliance"),
   dayTrader: () => apiFetch<DayTraderResponse>("/api/day-trader"),
+  authStatus: () => apiFetch<AuthStatus>("/api/auth/status"),
+  login: (password: string) =>
+    apiFetch<{ status: string }>("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    }),
+  logout: () =>
+    apiFetch<{ status: string }>("/api/auth/logout", { method: "POST" }),
 };
+

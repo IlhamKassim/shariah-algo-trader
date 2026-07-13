@@ -2,20 +2,31 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from dashboard.api.cache import get_universe_cache
-from dashboard.api.deps import get_alpaca, get_config
+from dashboard.api.deps import get_alpaca, get_config, verify_auth
 from dashboard.api.hardening import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
     build_default_limiter,
     build_refresh_limiter,
 )
-from dashboard.api.routers import account, activity, compare, compliance, day_trader, performance, portfolio, status, universe
+from dashboard.api.routers import (
+    account,
+    activity,
+    auth,
+    compare,
+    compliance,
+    day_trader,
+    performance,
+    portfolio,
+    status,
+    universe,
+)
 from dashboard.api.routers.universe import schedule_startup_refresh
 
 
@@ -55,15 +66,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(status.router)
-app.include_router(account.router)
-app.include_router(portfolio.router)
-app.include_router(universe.router)
-app.include_router(activity.router)
-app.include_router(compliance.router)
-app.include_router(performance.router)
-app.include_router(compare.router)
-app.include_router(day_trader.router)
+# Open auth router endpoints (login, logout, status)
+app.include_router(auth.router)
+
+# Secure all other endpoints
+app.include_router(status.router, dependencies=[Depends(verify_auth)])
+app.include_router(account.router, dependencies=[Depends(verify_auth)])
+app.include_router(portfolio.router, dependencies=[Depends(verify_auth)])
+app.include_router(universe.router, dependencies=[Depends(verify_auth)])
+app.include_router(activity.router, dependencies=[Depends(verify_auth)])
+app.include_router(compliance.router, dependencies=[Depends(verify_auth)])
+app.include_router(performance.router, dependencies=[Depends(verify_auth)])
+app.include_router(compare.router, dependencies=[Depends(verify_auth)])
+app.include_router(day_trader.router, dependencies=[Depends(verify_auth)])
+
 
 class SPAStaticFiles(StaticFiles):
     """Serve index.html for any unmatched path so React Router can handle

@@ -41,3 +41,19 @@ class Config:
 
         # Absolute weight-drift threshold that triggers an intra-month rebalance
         self.drift_threshold: float = float(os.environ.get("DRIFT_THRESHOLD", "0.03"))
+
+        # Dashboard Authentication
+        self.dashboard_password: str | None = os.environ.get("DASHBOARD_PASSWORD")
+        self.dashboard_session_secret: str | None = os.environ.get("DASHBOARD_SESSION_SECRET")
+
+        # Google OAuth2 Authentication
+        self.google_client_id: str | None = os.environ.get("GOOGLE_CLIENT_ID")
+        self.google_client_secret: str | None = os.environ.get("GOOGLE_CLIENT_SECRET")
+        self.google_redirect_uri: str | None = os.environ.get("GOOGLE_REDIRECT_URI")
+        self.allowed_google_emails: set[str] = {
+            e.strip().lower()
+            for e in os.environ.get("ALLOWED_GOOGLE_EMAILS", "").split(",")
+            if e.strip()
+        }
+
+

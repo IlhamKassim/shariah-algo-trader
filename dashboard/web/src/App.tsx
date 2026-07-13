@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { TrendingUp } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, LogOut } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Overview } from "./pages/Overview";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
 import { Compare } from "./pages/Compare";
 import { DayTrader } from "./pages/DayTrader";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Login } from "./pages/Login";
 import { api } from "./lib/api";
 
 const NAV = [
@@ -91,6 +93,22 @@ function Topbar() {
     refetchInterval: false,
   });
 
+  const queryClient = useQueryClient();
+  const { data: auth } = useQuery({
+    queryKey: ["authStatus"],
+    queryFn: api.authStatus,
+    refetchOnWindowFocus: false,
+  });
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+      await queryClient.invalidateQueries({ queryKey: ["authStatus"] });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   const navCounts: Record<string, number | undefined> = {
     "/portfolio": positions?.length,
     "/universe": universe?.stocks.length,
@@ -134,6 +152,16 @@ function Topbar() {
           <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em]">
             PAPER
           </span>
+          {auth?.auth_enabled && auth?.authenticated && (
+            <button
+              onClick={handleLogout}
+              className="text-muted hover:text-brand-red px-2.5 py-1 border border-divider hover:border-brand-red/30 transition-colors flex items-center gap-1.5 text-[10px] font-semibold tracking-wider cursor-pointer"
+              title="Logout session"
+            >
+              <LogOut size={12} />
+              LOGOUT
+            </button>
+          )}
           <div className="w-7 h-7 rounded-full bg-card-border flex items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
             IK
           </div>
@@ -179,19 +207,29 @@ function PageHeading() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-page flex flex-col">
-      <Topbar />
-      <main className="flex-1 overflow-y-auto px-6 py-6 max-w-[1400px] w-full mx-auto">
-        <PageHeading />
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/universe" element={<Universe />} />
-          <Route path="/activity" element={<Activity />} />
-          <Route path="/compare" element={<Compare />} />
-          <Route path="/day-trader" element={<DayTrader />} />
-        </Routes>
-      </main>
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="*"
+        element={
+          <ProtectedRoute>
+            <div className="min-h-screen bg-page flex flex-col">
+              <Topbar />
+              <main className="flex-1 overflow-y-auto px-6 py-6 max-w-[1400px] w-full mx-auto">
+                <PageHeading />
+                <Routes>
+                  <Route path="/" element={<Overview />} />
+                  <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/universe" element={<Universe />} />
+                  <Route path="/activity" element={<Activity />} />
+                  <Route path="/compare" element={<Compare />} />
+                  <Route path="/day-trader" element={<DayTrader />} />
+                </Routes>
+              </main>
+            </div>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
