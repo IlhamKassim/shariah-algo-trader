@@ -1,155 +1,150 @@
 # Shariah Algo Trader
 
-An algorithmic trading bot that operates exclusively within a Shariah-compliant equity universe, taking long-only spot positions with no leverage, margin, derivatives, or options.
+<div align="center">
 
-The Portfolio holds the top-20 stocks by Factor Score (equal-weighted Momentum Factor + Quality Factor z-scores) drawn from the Eligible Universe — the current holdings of a designated Shariah-compliant ETF such as SPUS.
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](#)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](#)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](#)
+[![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](#)
 
-## Setup
+</div>
 
-**Prerequisites:** Python 3.11+, [uv](https://github.com/astral-sh/uv)
+An algorithmic trading bot that operates exclusively within a Shariah-compliant equity universe, taking long-only spot positions with no leverage, margin, derivatives, or options. 
 
+The strategy scoring rank is computed using an equal-weighted combination of four factor z-scores (Momentum, Quality, Low Volatility, and Value) drawn from the Eligible Universe—defined by the constituent holdings of a designated Shariah-compliant ETF such as `SPUS`.
+
+---
+
+## 🖥️ Live Dashboard Preview
+
+Here is a visual mockup of the dark-gold monospaced trading dashboard console:
+
+![Shariah Algo Trader Console](docs/images/dashboard_preview.png)
+
+---
+
+## 🎯 Features
+
+- **Dynamic Eligible Universe**: Automatically synchronizes with Shariah-compliant ETF constituents holdings snapshots (e.g. SPUS, HLAL) to define the pool of tradable assets.
+- **Factor-Based Allocation**: Scores assets using a 4-Factor system:
+  - **Momentum Factor**: Peering 12-month return performance minus short-term 1-month reversal.
+  - **Quality Factor**: Metrics of ROE, profit stability, and debt-ratio screenings.
+  - **Low Volatility Factor**: Evaluates volatility profiles to allocate heavier weights to lower-volatility items.
+  - **Value Factor**: Evaluates PE/PB ratios.
+- **Stateless Compliance Guard**: Executes a daily **Compliance Check** against the holdings snapshot at NYSE market open, triggering an immediate **Compliance Exit** (forced sale) if a stock leaves the Shariah ETF.
+- **Monthly Rebalancing**: Computes factor ranks and re-weights the top-20 stocks on the first trading day of each month.
+- **Sleek Admin Console**: Full React + TypeScript SPA console styled with a premium pitch-black, dark gold terminal theme.
+- **Console Security**:
+  - **Password Protection**: Restricts API endpoints behind standard console key password logins.
+  - **Google OAuth2 Sign-In**: Authenticates sessions via Google, restricted to a whitelisted set of administrator emails.
+  - **Outbound Tunneling Ready**: Fully compatible with Cloudflare Zero Trust Tunnels for secure exposure without open incoming ports.
+
+---
+
+## 🛠️ Setup
+
+### Prerequisites
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv) (fast Python package manager)
+- Node.js (for frontend compilation during development)
+
+### 1. Clone & Install Dependencies
 ```bash
-# 1. Clone and enter the repo
 git clone <repo-url>
 cd shariah-algo-trader
 
-# 2. Copy the example env file and fill in your credentials
-cp .env.example .env
-# Edit .env with your Alpaca and FMP API keys
-
-# 3. Install dependencies (creates .venv automatically)
+# Install Python virtual environment & workspace dependencies
 uv sync --extra dev
 ```
 
-## Environment variables
+### 2. Configure Environment
+Copy the `.env.example` file and populate it with your broker and data provider keys:
+```bash
+cp .env.example .env
+```
 
-All runtime configuration is read from environment variables. Copy `.env.example` to `.env` and set each value:
+Open `.env` and fill in the values:
+```env
+# Alpaca paper broker credentials
+ALPACA_API_KEY=your_alpaca_api_key
+ALPACA_API_SECRET=your_alpaca_api_secret
+ALPACA_BASE_URL=https://paper-api.alpaca.markets
 
-| Variable | Description |
-|---|---|
-| `ALPACA_API_KEY` | Alpaca API key |
-| `ALPACA_API_SECRET` | Alpaca API secret |
-| `ALPACA_BASE_URL` | `https://paper-api.alpaca.markets` (paper) or `https://api.alpaca.markets` (live) |
-| `ETF_SYMBOL` | ETF whose holdings define the Eligible Universe (e.g. `SPUS`) |
-| `TOP_N` | Number of top-ranked stocks to hold in the Portfolio (default `20`) |
+# Financial Modeling Prep (market data)
+FMP_API_KEY=your_fmp_api_key
 
-Two optional variables control the Scheduler's firing time:
+# ETF Universe (e.g. SPUS) and Portfolio size
+ETF_SYMBOL=SPUS
+TOP_N=20
 
-| Variable | Default | Description |
-|---|---|---|
-| `JOB_TIME` | `09:30` | Time to fire jobs each trading day (HH:MM, 24-hour) |
-| `JOB_TIMEZONE` | `America/New_York` | Timezone for `JOB_TIME` |
+# Optional: Enable dashboard password console protection
+DASHBOARD_PASSWORD=your_secure_password_here
 
-## Running tests
+# Optional: Enable Google OAuth2 sign-in
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-your_client_secret
+GOOGLE_REDIRECT_URI=https://shariahtrading.my/api/auth/google/callback
+ALLOWED_GOOGLE_EMAILS=yourname@gmail.com
+```
 
+---
+
+## 🚀 Running the System
+
+### Running the Trading Bot
+The bot runs a blocking process that triggers jobs according to the NYSE calendar:
+```bash
+# Direct run
+uv run python main.py
+
+# Or via the console script shortcut
+uv run shariah-trader
+```
+The Scheduler fires daily at `09:30 ET` for **Compliance Checks** and monthly on the first trading day for **Rebalances**.
+
+### Starting the Dashboard Console
+1. Compile the React frontend assets (only needed during development):
+   ```bash
+   cd dashboard/web
+   npm run build
+   cd ../..
+   ```
+2. Start the FastAPI backend server:
+   ```bash
+   uv run uvicorn dashboard.api.main:app --host 0.0.0.0 --port 8000
+   ```
+   Open **http://localhost:8000** in your browser.
+
+---
+
+## 🧪 Testing
+
+Run pytest to verify the full suite of 170+ unit and integration tests (including the mocked Google OAuth2 callbacks):
 ```bash
 uv run pytest
 ```
 
-## Running the bot
+---
 
-```bash
-# After installing with uv sync:
-uv run shariah-trader
-
-# Or directly:
-uv run python main.py
-```
-
-The bot blocks and fires every NYSE trading day at 09:30 ET — Compliance Check daily, Rebalance on the first trading day of each calendar month.
-
-## Running in production (long-term)
-
-The scheduler is a long-running blocking process. To keep it alive across reboots:
-
-**macOS (launchd)**
-
-Create `~/Library/LaunchAgents/com.shariah-trader.plist`:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key><string>com.shariah-trader</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/path/to/.venv/bin/shariah-trader</string>
-    </array>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>ALPACA_API_KEY</key><string>your_key</string>
-        <!-- add remaining env vars -->
-    </dict>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
-    <key>StandardOutPath</key><string>/tmp/shariah-trader.log</string>
-    <key>StandardErrorPath</key><string>/tmp/shariah-trader.err</string>
-</dict>
-</plist>
-```
-Then: `launchctl load ~/Library/LaunchAgents/com.shariah-trader.plist`
-
-**Linux (systemd)**
-
-Create `/etc/systemd/system/shariah-trader.service`:
-```ini
-[Unit]
-Description=Shariah Algo Trader
-
-[Service]
-ExecStart=/path/to/.venv/bin/shariah-trader
-EnvironmentFile=/path/to/.env
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-Then: `sudo systemctl enable --now shariah-trader`
-
-**Quick background run (development)**
-```bash
-nohup uv run shariah-trader > shariah-trader.log 2>&1 &
-```
-
-## Dashboard
-
-A local web dashboard provides real-time visibility into the bot's activity without reading log files.
-
-**Start the dashboard:**
-```bash
-uv run uvicorn dashboard.api.main:app --host 0.0.0.0 --port 8000
-```
-Then open **http://localhost:8000** in your browser.
-
-**Pages:**
-
-| Page | What it shows |
-|---|---|
-| Overview | Portfolio value, daily P&L, compliance status, performance chart vs SPUS benchmark, recent activity |
-| Portfolio | Full holdings table with entry price, current price, and unrealised P&L per position |
-| Universe | Every stock in the Eligible Universe ranked by Factor Score — Momentum z-score, Quality z-score, composite score, and whether it is currently held |
-| Activity | Filterable audit log of every Compliance Check, Rebalance, and order submitted |
-
-Factor scores are computed automatically when the dashboard server starts (takes 2–4 minutes on first load) and can be refreshed manually from the Universe page.
-
-**Live dashboard:** https://shariah-algo-trader.onrender.com
-
-**Deploy to Render (permanent public URL):**
-
-A `render.yaml` is included. Create a free account at [render.com](https://render.com), connect this repo, and set the five environment variables above. Render will build and serve the dashboard automatically.
-
-## Project layout
+## 📂 Project Layout
 
 ```
-shariah_algo_trader/
-    config.py       — env-var config loading
-    main.py         — wiring entrypoint (constructs clients, starts Scheduler)
-    data/           — Holdings Snapshot fetching (SP Funds ETF CSV)
-    factors/        — Momentum Factor, Quality Factor, and Factor Scorer
-    jobs/           — Compliance Check and Rebalance jobs
-    execution/      — Alpaca order submission
-    scheduling/     — Scheduler and NYSE trading-day calendar
-dashboard/
-    api/            — FastAPI backend (routers, models, cache)
-    web/            — React + TypeScript frontend source
+shariah-algo-trader/
+├── shariah_algo_trader/    # Core Python trading logic
+│   ├── config.py           # Configuration loading & validation
+│   ├── main.py             # Main entry point (scheduler loop)
+│   ├── data/               # ETF constituents snapshots
+│   ├── factors/            # Momentum, Quality, and Value scoring
+│   ├── execution/          # Alpaca broker connections
+│   └── jobs/               # Compliance checks and monthly rebalances
+├── dashboard/              
+│   ├── api/                # FastAPI backend endpoints
+│   │   ├── routers/        # Routers (auth, account, universe, etc.)
+│   │   └── static/         # Compiled React production bundle
+│   └── web/                # React + Vite + TypeScript source
+├── tests/                  # Pytest unit testing suites
+├── docs/                   # Documentation and diagrams
+├── pyproject.toml          # uv python project metadata
+└── README.md               # Visual systems overview
 ```
