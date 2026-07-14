@@ -9,3 +9,7 @@ dist/
 build/
 .pytest_cache/
 day_trader/.runtime/
+
+# Backtesting
+shariah_algo_trader/backtesting/.cache/
+shariah_algo_trader/backtesting/results_*.json
