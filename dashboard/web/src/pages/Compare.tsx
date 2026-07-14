@@ -185,7 +185,7 @@ export function Compare() {
       </div>
 
       {/* Side-by-side metrics */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <StrategyColumn m={data.shariah} color={CHART.gold} />
         <StrategyColumn
           m={data.daytrader_available ? data.daytrader : { ...data.daytrader, name: "Day Trader (pending)" }}

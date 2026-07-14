@@ -70,37 +70,37 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
   return (
     <div>
       {/* Stats + period toggle */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-5 text-[11px] flex-wrap">
-          <span className="flex items-center gap-1.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-x-4 gap-y-1.5 text-[11px] flex-wrap">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-4 h-0.5 bg-brand-gold inline-block" />
             <span className="text-muted">Strategy</span>
             <span className="font-mono font-semibold text-brand-gold tabular-nums">
               {sign(stratVal)}{(stratVal * 100).toFixed(2)}%
             </span>
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-4 h-0.5 inline-block" style={{ borderTop: `2px dashed ${CHART.tickText}`, background: "transparent" }} />
             <span className="text-muted">SPUS</span>
             <span className="font-mono font-semibold text-muted tabular-nums">
               {sign(spusVal)}{(spusVal * 100).toFixed(2)}%
             </span>
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-4 h-0.5 inline-block" style={{ borderTop: `2px dashed ${CHART.secondary}`, background: "transparent" }} />
             <span className="text-muted">S&amp;P 500</span>
             <span className="font-mono font-semibold tabular-nums" style={{ color: CHART.secondary }}>
               {sign(sp500Val)}{(sp500Val * 100).toFixed(2)}%
             </span>
           </span>
-          <span className="text-muted">
+          <span className="text-muted whitespace-nowrap">
             Alpha vs SPUS{" "}
             <span className={`font-mono font-semibold tabular-nums ${alphaVal >= 0 ? "text-brand-green" : "text-brand-red"}`}>
               {sign(alphaVal)}{(alphaVal * 100).toFixed(2)} pts
             </span>
           </span>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 sm:self-auto self-start">
           {PERIODS.map((p) => (
             <button
               key={p}

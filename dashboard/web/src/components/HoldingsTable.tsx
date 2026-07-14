@@ -1,6 +1,6 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
 import type { PositionResponse } from "../lib/api";
-import { formatCurrency, formatPct, plColor } from "../lib/utils";
+import { formatCurrency, formatPct, plColor, formatQty } from "../lib/utils";
 
 interface HoldingsTableProps {
   positions: PositionResponse[];
@@ -10,7 +10,7 @@ interface HoldingsTableProps {
 function PlCell({ value, pct }: { value: number; pct?: number }) {
   const color = plColor(value);
   return (
-    <td className="py-2.5 text-right" aria-label={`P&L: ${formatCurrency(value)}${pct !== undefined ? ` (${formatPct(pct)})` : ""}`}>
+    <td className="py-2.5 text-right whitespace-nowrap" aria-label={`P&L: ${formatCurrency(value)}${pct !== undefined ? ` (${formatPct(pct)})` : ""}`}>
       <span className={`font-mono tabular-nums text-sm inline-flex items-center gap-1 ${color}`}>
         {value >= 0 ? (
           <TrendingUp size={11} aria-hidden="true" />
@@ -78,23 +78,23 @@ export function HoldingsTable({ positions, compact = false }: HoldingsTableProps
                 key={pos.symbol}
                 className="border-b border-divider/60 hover:bg-card-hover transition-colors last:border-0"
               >
-                <th scope="row" className="py-2.5 pr-4 font-mono font-semibold text-primary tabular-nums text-left">
+                <th scope="row" className="py-2.5 pr-4 font-mono font-semibold text-primary tabular-nums text-left whitespace-nowrap">
                   {pos.symbol}
                 </th>
-                <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums">
-                  {pos.qty}
+                <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums whitespace-nowrap">
+                  {formatQty(pos.qty)}
                 </td>
                 {!compact && (
-                  <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums">
+                  <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums whitespace-nowrap">
                     {formatCurrency(pos.avg_entry_price)}
                   </td>
                 )}
                 {!compact && (
-                  <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums">
+                  <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums whitespace-nowrap">
                     {formatCurrency(pos.current_price)}
                   </td>
                 )}
-                <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums">
+                <td className="py-2.5 pr-4 text-right font-mono text-muted tabular-nums whitespace-nowrap">
                   {formatCurrency(pos.market_value)}
                 </td>
                 {!compact && (

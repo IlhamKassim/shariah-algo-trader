@@ -12,6 +12,11 @@ export function formatPct(value: number, decimals = 2): string {
   return `${sign}${value.toFixed(decimals)}%`;
 }
 
+export function formatQty(value: number, decimals = 4): string {
+  if (value % 1 === 0) return value.toLocaleString("en-US");
+  return value.toLocaleString("en-US", { maximumFractionDigits: decimals });
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",

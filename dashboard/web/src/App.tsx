@@ -67,11 +67,21 @@ function Topbar() {
   });
 
   const isMarketOpen = (() => {
-    const day = time.getDay(); // 0=Sun, 6=Sat
-    if (day === 0 || day === 6) return false;
-    const etHour = parseInt(time.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }));
-    const etMin = time.getMinutes();
-    const mins = etHour * 60 + etMin;
+    const nyParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      minute: "numeric",
+      weekday: "short",
+      hour12: false,
+    }).formatToParts(time);
+
+    const getPart = (type: string) => nyParts.find((p) => p.type === type)?.value || "";
+    const weekday = getPart("weekday"); // "Mon", "Tue", etc.
+    const hour = parseInt(getPart("hour"), 10);
+    const minute = parseInt(getPart("minute"), 10);
+
+    if (weekday === "Sat" || weekday === "Sun") return false;
+    const mins = hour * 60 + minute;
     return mins >= 9 * 60 + 30 && mins < 16 * 60;
   })();
 
@@ -117,25 +127,44 @@ function Topbar() {
   return (
     <header className="border-b border-divider bg-sidebar shrink-0 px-6">
       {/* Brand row */}
-      <div className="h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-brand-gold">
-            <TrendingUp size={15} className="text-page" strokeWidth={2.5} />
+      <div className="min-h-14 py-3 md:py-0 md:h-14 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center justify-between w-full md:w-auto gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-brand-gold">
+              <TrendingUp size={15} className="text-page" strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-primary tracking-[0.02em] whitespace-nowrap">
+                SHARIAH ALGO TRADER
+              </span>
+              <span
+                className={`text-[9px] font-medium tracking-[0.03em] whitespace-nowrap ${
+                  isDayTraderPage ? "text-brand-gold" : "text-muted"
+                }`}
+              >
+                {isDayTraderPage ? "Benchmark bot · Not Shariah-screened" : "Long-only · No leverage · Halal"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-baseline gap-2.5 min-w-0 flex-wrap">
-            <span className="text-sm font-bold text-primary tracking-[0.02em] whitespace-nowrap">
-              SHARIAH ALGO TRADER
-            </span>
-            <span
-              className={`text-[10px] font-medium tracking-[0.03em] whitespace-nowrap ${
-                isDayTraderPage ? "text-brand-gold" : "text-muted"
-              }`}
-            >
-              {isDayTraderPage ? "Benchmark bot · Not Shariah-screened" : "Long-only · No leverage · Halal"}
-            </span>
+          {/* Mobile-only session actions */}
+          <div className="flex items-center gap-2 md:hidden">
+            {auth?.auth_enabled && auth?.authenticated && (
+              <button
+                onClick={handleLogout}
+                className="text-muted hover:text-brand-red p-1.5 border border-divider hover:border-brand-red/30 transition-colors cursor-pointer"
+                title="Logout session"
+              >
+                <LogOut size={12} />
+              </button>
+            )}
+            <div className="w-7 h-7 rounded-full bg-card-border flex items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
+              IK
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-4 shrink-0">
+        
+        {/* Status block */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 w-full md:w-auto text-muted">
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full ${isMarketOpen ? "bg-brand-green" : "bg-brand-red"}`} />
             <span className="text-xs text-muted whitespace-nowrap">{isMarketOpen ? "NYSE Open" : "Market Closed"}</span>
@@ -149,21 +178,23 @@ function Topbar() {
               Scheduler {status?.scheduler_running ? "Active" : "Offline"}
             </span>
           </div>
-          <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em]">
-            PAPER
-          </span>
-          {auth?.auth_enabled && auth?.authenticated && (
-            <button
-              onClick={handleLogout}
-              className="text-muted hover:text-brand-red px-2.5 py-1 border border-divider hover:border-brand-red/30 transition-colors flex items-center gap-1.5 text-[10px] font-semibold tracking-wider cursor-pointer"
-              title="Logout session"
-            >
-              <LogOut size={12} />
-              LOGOUT
-            </button>
-          )}
-          <div className="w-7 h-7 rounded-full bg-card-border flex items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
-            IK
+          <div className="flex items-center gap-2 md:ml-1">
+            <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap">
+              PAPER
+            </span>
+            {auth?.auth_enabled && auth?.authenticated && (
+              <button
+                onClick={handleLogout}
+                className="hidden md:flex text-muted hover:text-brand-red px-2.5 py-1 border border-divider hover:border-brand-red/30 transition-colors items-center gap-1.5 text-[10px] font-semibold tracking-wider cursor-pointer"
+                title="Logout session"
+              >
+                <LogOut size={12} />
+                LOGOUT
+              </button>
+            )}
+            <div className="hidden md:flex w-7 h-7 rounded-full bg-card-border items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
+              IK
+            </div>
           </div>
         </div>
       </div>

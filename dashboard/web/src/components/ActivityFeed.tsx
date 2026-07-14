@@ -44,11 +44,11 @@ export function ActivityFeed({ entries, compact = false }: ActivityFeedProps) {
         return (
           <li
             key={`${entry.timestamp}-${idx}`}
-            className="flex gap-4 py-3 border-b border-divider/60 last:border-0"
+            className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-3 border-b border-divider/60 last:border-0"
           >
             <time
               dateTime={entry.timestamp}
-              className="font-mono text-[11px] text-faint whitespace-nowrap tabular-nums pt-0.5 min-w-[130px]"
+              className="font-mono text-[11px] text-faint whitespace-nowrap tabular-nums pt-0.5 sm:min-w-[130px]"
             >
               {fmtTimestamp(entry.timestamp)}
             </time>
