@@ -55,3 +55,28 @@ To transform this from a DIY terminal-based script into a user-friendly platform
 *   **Security Liability:** Storing third-party trading keys introduces high security risk. Any vulnerability or DB exposure compromises users' brokerage accounts.
 *   **Increased Complexity:** Moving from a synchronous single-file script to an asynchronous, database-driven worker pool increases architectural complexity, making debugging, logging, and error tracing more difficult.
 
+## Timeline & Effort Estimates
+
+Migrating this quant script into a multi-tenant platform is a full-scale fullstack project. Below is an estimated breakdown of the engineering steps:
+
+1. **Phase 1: Database Setup & User Auth (3–5 Days)**
+   * Set up PostgreSQL database tables using SQLAlchemy/Alembic migrations (User, BrokerCredential, Setting, TradeRecord).
+   * Implement AES-256 symmetric encryption helpers for keys.
+   * Write FastAPI login, signup, and JWT session endpoints.
+2. **Phase 2: Distributed Job Queue Integration (5–7 Days)**
+   * Install Celery/Redis background worker instances.
+   * Refactor rebalancing and compliance-checking routines to fetch custom user configurations and run dynamically in parallel worker pools.
+3. **Phase 3: Front-end SaaS UI Construction (4–6 Days)**
+   * Add login/registration screens in React.
+   * Build API credential setup forms and risk-limit configurators.
+   * Scoped dashboard views: ensure charts, holdings, and trade logs only query the active user's data.
+4. **Phase 4: Multi-tenant Tests & Concurrency Audits (3–4 Days)**
+   * Add unit tests asserting secure data isolation (preventing User A from viewing/modifying User B's state).
+   * Test connection timeouts, rate-limits on FMP/Alpaca APIs under high concurrency.
+5. **Phase 5: Cloud Deployment & Infrastructure (2–3 Days)**
+   * Deploy PostgreSQL, Redis, backend FastAPI endpoints, worker pools, and React client container on cloud hosting services.
+
+*   **Total Duration:** **17–25 Days** (approximately **3–4 weeks** of full-time dedicated engineering effort).
+*   **Skill Requirements:** High-level fullstack engineering. Developers will need experience in Python (FastAPI), Celery/Redis (asynchronous queues), SQLAlchemy (database schemas), cryptography standards, and React.
+
+
