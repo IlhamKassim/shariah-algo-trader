@@ -10,6 +10,7 @@ import { Compare } from "./pages/Compare";
 import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
+import { Learn } from "./pages/Learn";
 import { api } from "./lib/api";
 
 const NAV = [
@@ -19,6 +20,7 @@ const NAV = [
   { to: "/activity", label: "Activity", end: false },
   { to: "/compare", label: "Compare", end: false },
   { to: "/day-trader", label: "Day Trader", end: false },
+  { to: "/learn", label: "Learn", end: false },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -45,6 +47,10 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/day-trader": {
     title: "Day Trader",
     sub: "Gap & Go intraday positions, fills and scanner config",
+  },
+  "/learn": {
+    title: "Learn",
+    sub: "Understanding factor investing, strategy logic, and Shariah compliance",
   },
 };
 
@@ -255,6 +261,7 @@ export default function App() {
                   <Route path="/activity" element={<Activity />} />
                   <Route path="/compare" element={<Compare />} />
                   <Route path="/day-trader" element={<DayTrader />} />
+                  <Route path="/learn" element={<Learn />} />
                 </Routes>
               </main>
             </div>
