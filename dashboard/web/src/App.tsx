@@ -11,6 +11,7 @@ import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Learn } from "./pages/Learn";
+import { Settings } from "./pages/Settings";
 import { api } from "./lib/api";
 
 const NAV = [
@@ -21,6 +22,7 @@ const NAV = [
   { to: "/compare", label: "Compare", end: false },
   { to: "/day-trader", label: "Day Trader", end: false },
   { to: "/learn", label: "Learn", end: false },
+  { to: "/settings", label: "Settings", end: false },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -51,6 +53,10 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/learn": {
     title: "Learn",
     sub: "Understanding factor investing, strategy logic, and Shariah compliance",
+  },
+  "/settings": {
+    title: "Settings Profile",
+    sub: "Manage Alpaca API credentials, ETF targets, factor weights, and user authentication",
   },
 };
 
@@ -163,9 +169,19 @@ function Topbar() {
                 <LogOut size={12} />
               </button>
             )}
-            <div className="w-7 h-7 rounded-full bg-card-border flex items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                `w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
+                  isActive
+                    ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
+                    : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
+                }`
+              }
+              title="User Profile & Settings"
+            >
               IK
-            </div>
+            </NavLink>
           </div>
         </div>
         
@@ -198,9 +214,19 @@ function Topbar() {
                 LOGOUT
               </button>
             )}
-            <div className="hidden md:flex w-7 h-7 rounded-full bg-card-border items-center justify-center text-[11px] font-semibold text-muted select-none shrink-0">
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                `hidden md:flex w-7 h-7 rounded-full items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
+                  isActive
+                    ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
+                    : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
+                }`
+              }
+              title="User Profile & Settings"
+            >
               IK
-            </div>
+            </NavLink>
           </div>
         </div>
       </div>
@@ -262,6 +288,7 @@ export default function App() {
                   <Route path="/compare" element={<Compare />} />
                   <Route path="/day-trader" element={<DayTrader />} />
                   <Route path="/learn" element={<Learn />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </main>
             </div>

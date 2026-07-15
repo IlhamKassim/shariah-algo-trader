@@ -171,3 +171,32 @@ def test_google_callback(mock_get, mock_post, client):
 
     app.dependency_overrides.clear()
 
+
+def test_verify_password_endpoint(client):
+    class MockConfigVerify:
+        def __init__(self):
+            self.alpaca_api_key = "test-key"
+            self.alpaca_api_secret = "test-secret"
+            self.alpaca_base_url = "https://paper-api.alpaca.markets"
+            self.etf_symbol = "SPUS"
+            self.top_n = 20
+            self.dashboard_password = "verifypassword"
+            self.dashboard_session_secret = "test-secret-key"
+            self.google_client_id = None
+            self.google_client_secret = None
+            self.google_redirect_uri = None
+            self.allowed_google_emails = set()
+
+    app.dependency_overrides[get_config] = lambda: MockConfigVerify()
+
+    # 1. Verification with wrong password
+    response = client.post("/api/auth/verify", json={"password": "wrongpassword"})
+    assert response.status_code == 401
+
+    # 2. Verification with correct password
+    response = client.post("/api/auth/verify", json={"password": "verifypassword"})
+    assert response.status_code == 200
+    assert response.json() == {"status": "success"}
+
+    app.dependency_overrides.clear()
+

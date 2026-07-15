@@ -136,3 +136,36 @@ class DayTraderResponse(BaseModel):
     min_price: float
     min_adv: float
     watchlist_size: int
+
+
+class SettingsResponse(BaseModel):
+    alpaca_api_key: str
+    alpaca_api_secret_masked: str
+    alpaca_base_url: str
+    etf_symbol: str
+    top_n: int
+    etf_symbols: list[str]
+    sector_cap: float
+    drift_threshold: float
+    dashboard_password_masked: str
+    google_client_id: Optional[str] = None
+    google_client_secret_masked: Optional[str] = None
+    google_redirect_uri: Optional[str] = None
+    allowed_google_emails: list[str] = []
+
+
+class SettingsUpdateRequest(BaseModel):
+    alpaca_api_key: Optional[str] = None
+    alpaca_api_secret: Optional[str] = None
+    alpaca_base_url: Optional[str] = None
+    etf_symbol: Optional[str] = None
+    top_n: Optional[int] = None
+    etf_symbols: Optional[list[str]] = None
+    sector_cap: Optional[float] = None
+    drift_threshold: Optional[float] = None
+    dashboard_password: Optional[str] = None
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: Optional[str] = None
+    allowed_google_emails: Optional[list[str]] = None
+

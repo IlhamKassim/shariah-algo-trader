@@ -244,3 +244,12 @@ async def google_callback(
         return RedirectResponse(
             f"/login?error=auth_exception&detail={urllib.parse.quote(str(exc))}"
         )
+
+
+@router.post("/api/auth/verify")
+def verify_password(payload: LoginRequest, cfg: Config = Depends(get_config)):
+    if not cfg.dashboard_password:
+        return {"status": "success"}
+    if payload.password != cfg.dashboard_password:
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    return {"status": "success"}

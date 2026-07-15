@@ -139,6 +139,39 @@ export interface AuthStatus {
   authenticated: boolean;
 }
 
+export interface SettingsResponse {
+  alpaca_api_key: string;
+  alpaca_api_secret_masked: string;
+  alpaca_base_url: string;
+  etf_symbol: string;
+  top_n: number;
+  etf_symbols: string[];
+  sector_cap: number;
+  drift_threshold: number;
+  dashboard_password_masked: string;
+  google_client_id: string | null;
+  google_client_secret_masked: string | null;
+  google_redirect_uri: string | null;
+  allowed_google_emails: string[];
+}
+
+export interface SettingsUpdateRequest {
+  alpaca_api_key?: string;
+  alpaca_api_secret?: string;
+  alpaca_base_url?: string;
+  etf_symbol?: string;
+  top_n?: number;
+  etf_symbols?: string[];
+  sector_cap?: number;
+  drift_threshold?: number;
+  dashboard_password?: string;
+  google_client_id?: string | null;
+  google_client_secret?: string | null;
+  google_redirect_uri?: string | null;
+  allowed_google_emails?: string[];
+}
+
+
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
@@ -173,5 +206,18 @@ export const api = {
     }),
   logout: () =>
     apiFetch<{ status: string }>("/api/auth/logout", { method: "POST" }),
+  getSettings: () => apiFetch<SettingsResponse>("/api/settings"),
+  updateSettings: (settings: SettingsUpdateRequest) =>
+    apiFetch<{ status: string }>("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    }),
+  verifyPassword: (password: string) =>
+    apiFetch<{ status: string }>("/api/auth/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    }),
 };
 

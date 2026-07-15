@@ -24,6 +24,7 @@ from dashboard.api.routers import (
     day_trader,
     performance,
     portfolio,
+    settings,
     status,
     universe,
 )
@@ -79,6 +80,7 @@ app.include_router(compliance.router, dependencies=[Depends(verify_auth)])
 app.include_router(performance.router, dependencies=[Depends(verify_auth)])
 app.include_router(compare.router, dependencies=[Depends(verify_auth)])
 app.include_router(day_trader.router, dependencies=[Depends(verify_auth)])
+app.include_router(settings.router, dependencies=[Depends(verify_auth)])
 
 
 class SPAStaticFiles(StaticFiles):
