@@ -47,10 +47,13 @@ def parse_nport_xml(xml_content: str) -> Optional[tuple[str, dict[str, float]]]:
         # Not SPUS, skip
         return None
 
-    # Get Report Date (repPdEnd)
-    rep_date_el = find_element_by_tag_suffix(root, "repPdEnd")
+    # Get Report Date (repPdDate primarily, fallback to repPdEnd)
+    rep_date_el = find_element_by_tag_suffix(root, "repPdDate")
     if rep_date_el is None or not rep_date_el.text:
-        logger.warning("Filing has no reporting period end date (repPdEnd)")
+        rep_date_el = find_element_by_tag_suffix(root, "repPdEnd")
+        
+    if rep_date_el is None or not rep_date_el.text:
+        logger.warning("Filing has no reporting period date (repPdDate or repPdEnd)")
         return None
     report_date = rep_date_el.text.strip()
 

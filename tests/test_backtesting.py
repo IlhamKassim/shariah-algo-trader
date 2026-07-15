@@ -47,6 +47,33 @@ def test_parse_nport_xml():
     assert holdings["AAPL"] == pytest.approx(0.0743)
     assert holdings["MSFT"] == pytest.approx(0.0850)
 
+def test_parse_nport_xml_repPdDate():
+    # Valid N-PORT XML with correct seriesId S000067283 (SPUS) and repPdDate
+    xml_data = """<?xml version="1.0" encoding="UTF-8"?>
+    <nportFiling>
+        <seriesId>S000067283</seriesId>
+        <repPdDate>2024-08-31</repPdDate>
+        <repPdEnd>2024-11-30</repPdEnd>
+        <formData>
+            <invstOrSecs>
+                <invstOrSec>
+                    <name>APPLE INC</name>
+                    <pctVal>7.43</pctVal>
+                    <identifiers>
+                        <ticker value="AAPL"/>
+                    </identifiers>
+                </invstOrSec>
+            </invstOrSecs>
+        </formData>
+    </nportFiling>
+    """
+    res = parse_nport_xml(xml_data)
+    assert res is not None
+    date, holdings = res
+    assert date == "2024-08-31"  # repPdDate should take precedence over repPdEnd
+    assert "AAPL" in holdings
+    assert holdings["AAPL"] == pytest.approx(0.0743)
+
 def test_parse_nport_xml_wrong_series():
     # Invalid seriesId
     xml_data = """<?xml version="1.0" encoding="UTF-8"?>
