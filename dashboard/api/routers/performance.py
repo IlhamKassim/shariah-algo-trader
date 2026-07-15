@@ -43,12 +43,13 @@ def _fetch_benchmark(ticker: str, start_date: datetime.date, end_date: datetime.
         progress=False,
     )
     if bench_raw.empty:
-        series = pd.Series(dtype=float)
-    else:
-        bench_close = bench_raw["Close"]
-        if isinstance(bench_close, pd.DataFrame):
-            bench_close = bench_close.iloc[:, 0]
-        series = bench_close
+        # Don't cache empty results — retry on next request
+        return pd.Series(dtype=float)
+
+    bench_close = bench_raw["Close"]
+    if isinstance(bench_close, pd.DataFrame):
+        bench_close = bench_close.iloc[:, 0]
+    series = bench_close
 
     _bench_cache[key] = (time.monotonic(), series)
     return series
@@ -57,7 +58,17 @@ def _fetch_benchmark(ticker: str, start_date: datetime.date, end_date: datetime.
 def _to_cumulative(raw: pd.Series, equity_index: pd.DatetimeIndex) -> list[float]:
     if raw.empty:
         return [0.0] * len(equity_index)
-    aligned = raw.reindex(equity_index).ffill().dropna()
+    # Normalize both to date-only (no timezone/time component) for alignment
+    raw_daily = raw.copy()
+    raw_daily.index = pd.to_datetime(raw_daily.index).normalize()
+    equity_dates = equity_index.normalize()
+    # Forward-fill across the full calendar range to cover non-trading days
+    full_range = pd.date_range(raw_daily.index.min(), equity_dates.max(), freq="D")
+    raw_daily = raw_daily.reindex(full_range).ffill()
+    # Now align to the equity index dates
+    aligned = raw_daily.reindex(equity_dates).ffill().dropna()
+    if aligned.empty:
+        return [0.0] * len(equity_index)
     returns = aligned.pct_change().fillna(0)
     return ((1 + returns).cumprod() - 1).round(6).tolist()
 
