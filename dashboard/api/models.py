@@ -154,6 +154,7 @@ class SettingsResponse(BaseModel):
     allowed_google_emails: list[str] = []
 
 
+
 class SettingsUpdateRequest(BaseModel):
     alpaca_api_key: Optional[str] = None
     alpaca_api_secret: Optional[str] = None
@@ -168,4 +169,21 @@ class SettingsUpdateRequest(BaseModel):
     google_client_secret: Optional[str] = None
     google_redirect_uri: Optional[str] = None
     allowed_google_emails: Optional[list[str]] = None
+
+
+class NotificationItem(BaseModel):
+    id: str
+    source: str       # "shariah_trader" | "day_trader" | "platform"
+    category: str     # "trade" | "compliance" | "platform"
+    severity: str     # "info" | "warning" | "critical"
+    title: str
+    body: str
+    read: bool
+    created_at: str   # ISO-8601 UTC
+
+
+class NotificationsResponse(BaseModel):
+    items: list[NotificationItem]
+    unread_count: int
+
 

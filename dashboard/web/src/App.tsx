@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { TrendingUp, LogOut } from "lucide-react";
+import {
+  TrendingUp,
+  LogOut,
+  LayoutDashboard,
+  Briefcase,
+  Globe,
+  ScrollText,
+  GitCompareArrows,
+  Zap,
+  BookOpen,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Overview } from "./pages/Overview";
 import { Portfolio } from "./pages/Portfolio";
@@ -9,20 +20,21 @@ import { Activity } from "./pages/Activity";
 import { Compare } from "./pages/Compare";
 import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
 import { api } from "./lib/api";
 
 const NAV = [
-  { to: "/", label: "Overview", end: true },
-  { to: "/portfolio", label: "Portfolio", end: false },
-  { to: "/universe", label: "Universe", end: false },
-  { to: "/activity", label: "Activity", end: false },
-  { to: "/compare", label: "Compare", end: false },
-  { to: "/day-trader", label: "Day Trader", end: false },
-  { to: "/learn", label: "Learn", end: false },
-  { to: "/settings", label: "Settings", end: false },
+  { to: "/", label: "Overview", end: true, icon: LayoutDashboard },
+  { to: "/portfolio", label: "Portfolio", end: false, icon: Briefcase },
+  { to: "/universe", label: "Universe", end: false, icon: Globe },
+  { to: "/activity", label: "Activity", end: false, icon: ScrollText },
+  { to: "/compare", label: "Compare", end: false, icon: GitCompareArrows },
+  { to: "/day-trader", label: "Day Trader", end: false, icon: Zap },
+  { to: "/learn", label: "Learn", end: false, icon: BookOpen },
+  { to: "/settings", label: "Settings", end: false, icon: SlidersHorizontal },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -160,6 +172,7 @@ function Topbar() {
           </div>
           {/* Mobile-only session actions */}
           <div className="flex items-center gap-2 md:hidden">
+            <NotificationBell />
             {auth?.auth_enabled && auth?.authenticated && (
               <button
                 onClick={handleLogout}
@@ -204,6 +217,9 @@ function Topbar() {
             <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap">
               PAPER
             </span>
+            <div className="hidden md:flex">
+              <NotificationBell />
+            </div>
             {auth?.auth_enabled && auth?.authenticated && (
               <button
                 onClick={handleLogout}
@@ -233,7 +249,7 @@ function Topbar() {
 
       {/* Nav tabs */}
       <nav className="flex gap-6 border-b border-divider overflow-x-auto">
-        {NAV.map(({ to, label, end }) => (
+        {NAV.map(({ to, label, end, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -246,6 +262,7 @@ function Topbar() {
               }`
             }
           >
+            <Icon size={13} strokeWidth={1.75} />
             {label}
             {navCounts[to] != null && (
               <span className="font-mono text-[10px] text-faint tabular-nums">{navCounts[to]}</span>

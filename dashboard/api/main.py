@@ -22,6 +22,7 @@ from dashboard.api.routers import (
     compare,
     compliance,
     day_trader,
+    notifications,
     performance,
     portfolio,
     settings,
@@ -29,6 +30,7 @@ from dashboard.api.routers import (
     universe,
 )
 from dashboard.api.routers.universe import schedule_startup_refresh
+from dashboard.api.notifications_seeder import seed_notifications
 
 
 @asynccontextmanager
@@ -37,6 +39,7 @@ async def lifespan(app: FastAPI):
     client = get_alpaca()
     cache = get_universe_cache()
     schedule_startup_refresh(cache, cfg, client)
+    seed_notifications()
     yield
 
 
@@ -80,6 +83,7 @@ app.include_router(compliance.router, dependencies=[Depends(verify_auth)])
 app.include_router(performance.router, dependencies=[Depends(verify_auth)])
 app.include_router(compare.router, dependencies=[Depends(verify_auth)])
 app.include_router(day_trader.router, dependencies=[Depends(verify_auth)])
+app.include_router(notifications.router, dependencies=[Depends(verify_auth)])
 app.include_router(settings.router, dependencies=[Depends(verify_auth)])
 
 

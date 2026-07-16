@@ -28,7 +28,6 @@ export function Settings() {
   const { data: settings, isLoading: loadingSettings, isError } = useQuery({
     queryKey: ["settings"],
     queryFn: api.getSettings,
-    enabled: !isLocked, // Only fetch settings when unlocked/unauth
   });
 
   // State values for forms
@@ -78,7 +77,7 @@ export function Settings() {
     }
   };
 
-  const isLoading = loadingAuth || (!isLocked && loadingSettings);
+  const isLoading = loadingAuth || loadingSettings;
 
   if (isLoading) {
     return (
@@ -89,65 +88,7 @@ export function Settings() {
     );
   }
 
-  if (isLocked) {
-    return (
-      <div className="max-w-md mx-auto mt-12">
-        <Card className="border border-divider bg-sidebar">
-          <CardContent className="pt-6 space-y-4">
-            <div className="text-center space-y-2">
-              <Shield className="w-8 h-8 text-brand-gold mx-auto" />
-              <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Security Verification</h3>
-              <p className="text-[11px] text-muted">
-                Please enter your dashboard password to view and modify configurations.
-              </p>
-            </div>
-            
-            <form onSubmit={handleVerify} className="space-y-4">
-              {verifyError && (
-                <div className="flex items-center gap-2 bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs p-3">
-                  <AlertCircle size={14} />
-                  <span>{verifyError}</span>
-                </div>
-              )}
-              
-              <div className="relative">
-                <input
-                  type={verifyVisible ? "text" : "password"}
-                  value={verifyPasswordVal}
-                  onChange={(e) => setVerifyPasswordVal(e.target.value)}
-                  className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                  placeholder="Enter your dashboard password"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setVerifyVisible(!verifyVisible)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
-                >
-                  {verifyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              
-              <button
-                type="submit"
-                disabled={verifying || !verifyPasswordVal}
-                className="w-full flex items-center justify-center gap-2 bg-brand-gold text-page hover:bg-brand-gold/90 disabled:bg-card-border disabled:text-muted disabled:border-transparent py-2 text-xs font-semibold tracking-wider uppercase transition-colors cursor-pointer"
-              >
-                {verifying ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  "Unlock Settings"
-                )}
-              </button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+
 
   if (isError || !settings) {
     return (
@@ -214,8 +155,62 @@ export function Settings() {
       </div>
 
       {/* Settings Form Container */}
-      <div className="lg:col-span-3">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="lg:col-span-3 relative">
+        {isLocked && (
+          <div className="absolute inset-0 bg-page/30 backdrop-blur-[4px] z-10 flex flex-col items-center justify-start pt-16 px-6 text-center select-none">
+            <div className="bg-sidebar border border-divider p-6 max-w-sm w-full space-y-4 shadow-2xl">
+              <Shield className="w-8 h-8 text-brand-gold mx-auto" />
+              <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Security Verification Required</h3>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Please enter your dashboard password to view, verify, and modify your system configurations.
+              </p>
+              
+              <form onSubmit={handleVerify} className="space-y-4 text-left">
+                {verifyError && (
+                  <div className="flex items-center gap-2 bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs p-3">
+                    <AlertCircle size={14} />
+                    <span>{verifyError}</span>
+                  </div>
+                )}
+                
+                <div className="relative">
+                  <input
+                    type={verifyVisible ? "text" : "password"}
+                    value={verifyPasswordVal}
+                    onChange={(e) => setVerifyPasswordVal(e.target.value)}
+                    className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                    placeholder="Enter dashboard password"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setVerifyVisible(!verifyVisible)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {verifyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={verifying || !verifyPasswordVal}
+                  className="w-full flex items-center justify-center gap-2 bg-brand-gold text-page hover:bg-brand-gold/90 disabled:bg-card-border disabled:text-muted disabled:border-transparent py-2 text-xs font-semibold tracking-wider uppercase transition-colors cursor-pointer"
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Unlock Settings"
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit} className={`space-y-6 transition-all duration-300 ${isLocked ? "blur-[5px] select-none pointer-events-none" : ""}`}>
           <Card className="border border-divider bg-sidebar">
             <CardContent className="pt-6 space-y-6">
               

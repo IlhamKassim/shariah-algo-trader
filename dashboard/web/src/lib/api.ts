@@ -172,6 +172,23 @@ export interface SettingsUpdateRequest {
 }
 
 
+export interface NotificationItem {
+  id: string;
+  source: string;
+  category: string;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  body: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationsResponse {
+  items: NotificationItem[];
+  unread_count: number;
+}
+
+
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
@@ -219,5 +236,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     }),
+  notifications: () => apiFetch<NotificationsResponse>("/api/notifications"),
+  markAllRead: () =>
+    apiFetch<{ status: string }>("/api/notifications/read-all", { method: "PATCH" }),
+  markRead: (id: string) =>
+    apiFetch<{ status: string }>(`/api/notifications/${id}/read`, { method: "PATCH" }),
 };
 
