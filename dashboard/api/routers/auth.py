@@ -57,6 +57,7 @@ class AuthStatusResponse(BaseModel):
     auth_enabled: bool
     password_auth_enabled: bool
     google_auth_enabled: bool
+    clerk_enabled: bool
     authenticated: bool
 
 
@@ -67,6 +68,30 @@ router = APIRouter()
 def get_auth_status(
     request: Request, cfg: Config = Depends(get_config)
 ) -> AuthStatusResponse:
+    if cfg.clerk_enabled:
+        auth_header = request.headers.get("Authorization")
+        authenticated = False
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                import jwt
+                jwt.decode(
+                    token,
+                    cfg.clerk_jwt_verification_key,
+                    algorithms=["RS256"],
+                    options={"verify_aud": False}
+                )
+                authenticated = True
+            except Exception:
+                pass
+        return AuthStatusResponse(
+            auth_enabled=True,
+            password_auth_enabled=False,
+            google_auth_enabled=False,
+            clerk_enabled=True,
+            authenticated=authenticated,
+        )
+
     password_auth_enabled = bool(cfg.dashboard_password)
     google_auth_enabled = bool(
         cfg.google_client_id
@@ -81,6 +106,7 @@ def get_auth_status(
             auth_enabled=False,
             password_auth_enabled=False,
             google_auth_enabled=False,
+            clerk_enabled=False,
             authenticated=True,
         )
 
@@ -90,6 +116,7 @@ def get_auth_status(
         auth_enabled=True,
         password_auth_enabled=password_auth_enabled,
         google_auth_enabled=google_auth_enabled,
+        clerk_enabled=False,
         authenticated=authenticated,
     )
 

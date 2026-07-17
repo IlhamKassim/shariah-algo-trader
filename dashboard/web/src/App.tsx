@@ -24,7 +24,8 @@ import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
-import { api } from "./lib/api";
+import { api, setTokenProvider } from "./lib/api";
+import { useAuth } from "@clerk/clerk-react";
 
 const NAV = [
   { to: "/", label: "Overview", end: true, icon: LayoutDashboard },
@@ -136,10 +137,14 @@ function Topbar() {
     refetchOnWindowFocus: false,
   });
 
+  const { signOut } = useAuth();
+
   const handleLogout = async () => {
     try {
       if (isDemo) {
         localStorage.removeItem("shariah_demo_mode");
+      } else if (auth?.clerk_enabled) {
+        await signOut();
       } else {
         await api.logout();
       }
@@ -299,6 +304,14 @@ function PageHeading() {
 }
 
 export default function App() {
+  const { getToken, isLoaded } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded) {
+      setTokenProvider(getToken);
+    }
+  }, [getToken, isLoaded]);
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

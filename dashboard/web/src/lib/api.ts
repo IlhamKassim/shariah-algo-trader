@@ -136,6 +136,7 @@ export interface AuthStatus {
   auth_enabled: boolean;
   password_auth_enabled: boolean;
   google_auth_enabled: boolean;
+  clerk_enabled: boolean;
   authenticated: boolean;
 }
 
@@ -272,8 +273,24 @@ const getPerformanceDates = (): string[] => {
   return dates;
 };
 
+let getAuthToken: (() => Promise<string | null>) | null = null;
+
+export const setTokenProvider = (fn: () => Promise<string | null>) => {
+  getAuthToken = fn;
+};
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init);
+  const headers = new Headers(init?.headers);
+  if (getAuthToken) {
+    const token = await getAuthToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+  const res = await fetch(path, {
+    ...init,
+    headers,
+  });
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
   return res.json();
 }
@@ -472,6 +489,7 @@ export const api = {
         auth_enabled: true,
         password_auth_enabled: true,
         google_auth_enabled: false,
+        clerk_enabled: false,
         authenticated: true,
       });
     }

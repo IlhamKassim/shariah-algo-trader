@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 import { api } from "../lib/api";
 
 interface ProtectedRouteProps {
@@ -8,14 +9,18 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { data: auth, isLoading } = useQuery({
+  const { data: auth, isLoading: loadingAuth } = useQuery({
     queryKey: ["authStatus"],
     queryFn: api.authStatus,
     retry: false,
     refetchOnWindowFocus: false,
   });
 
-  if (isLoading) {
+  const { isSignedIn, isLoaded } = useAuth();
+  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
+  const showLoading = loadingAuth || (auth?.clerk_enabled && !isLoaded);
+
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-page flex items-center justify-center font-mono">
         <div className="flex flex-col items-center gap-3">
@@ -26,7 +31,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (auth?.auth_enabled && !auth.authenticated) {
+  if (isDemo) {
+    return <>{children}</>;
+  }
+
+  if (auth?.clerk_enabled) {
+    if (!isSignedIn) {
+      return <Navigate to="/login" replace />;
+    }
+  } else if (auth?.auth_enabled && !auth.authenticated) {
     return <Navigate to="/login" replace />;
   }
 

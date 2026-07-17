@@ -12,6 +12,8 @@ dependencies = [
     "requests>=2.34.2",
     "uvicorn[standard]>=0.30",
     "yfinance>=0.2.0",
+    "PyJWT>=2.8.0",
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]

@@ -1,3 +1,4 @@
+import jwt
 from functools import lru_cache
 from fastapi import Request, HTTPException, Depends
 
@@ -17,6 +18,26 @@ def get_alpaca() -> AlpacaClient:
 
 
 def verify_auth(request: Request, cfg: Config = Depends(get_config)):
+    if cfg.clerk_enabled:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(
+                token,
+                cfg.clerk_jwt_verification_key,
+                algorithms=["RS256"],
+                options={"verify_aud": False}
+            )
+            request.state.user = payload
+            return True
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token has expired")
+        except jwt.InvalidTokenError as e:
+            raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
     if not cfg.dashboard_password:
         return None
 

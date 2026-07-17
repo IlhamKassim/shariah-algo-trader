@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { api } from "../lib/api";
+import { SignIn, useAuth } from "@clerk/clerk-react";
 
 export function Login() {
   const [password, setPassword] = useState("");
@@ -19,12 +20,20 @@ export function Login() {
     refetchOnWindowFocus: false,
   });
 
+  const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
+
   // Redirect to home if already authenticated
   useEffect(() => {
-    if (auth && (!auth.auth_enabled || auth.authenticated)) {
-      navigate("/", { replace: true });
+    if (auth) {
+      if (auth.clerk_enabled) {
+        if (clerkLoaded && isSignedIn) {
+          navigate("/", { replace: true });
+        }
+      } else if (!auth.auth_enabled || auth.authenticated) {
+        navigate("/", { replace: true });
+      }
     }
-  }, [auth, navigate]);
+  }, [auth, navigate, clerkLoaded, isSignedIn]);
 
   // Read URL query errors
   useEffect(() => {
@@ -134,7 +143,7 @@ export function Login() {
 
           <div className="p-6 space-y-5">
             {/* Feedback Message */}
-            {error && (
+            {error && !auth?.clerk_enabled && (
               <div className="bg-[#1A1211] border border-brand-red/30 p-3 flex items-start gap-2.5">
                 <ShieldAlert size={14} className="text-brand-red shrink-0 mt-0.5" />
                 <div className="flex-1 text-[10px] font-semibold text-brand-red uppercase tracking-wider leading-relaxed">
@@ -143,79 +152,114 @@ export function Login() {
               </div>
             )}
 
-            {/* Google OAuth Login Button */}
-            {auth?.google_auth_enabled && (
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="w-full bg-[#1A1813] hover:bg-[#25221A] text-brand-gold font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-divider hover:border-brand-gold/40 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.527a5.99 5.99 0 0 1 5.991-6c1.554 0 2.96.593 4.025 1.564l3.199-3.199C19.24 3.01 16.78 1.927 13.99 1.927a9.99 9.99 0 0 0-9.99 10a9.99 9.99 0 0 0 9.99 10c5.56 0 9.873-3.9 9.873-10a8.7 8.7 0 0 0-.153-1.642H12.24z" />
-                </svg>
-                SIGN IN WITH GOOGLE CONSOLE
-              </button>
-            )}
-
-            {/* Divider if both are enabled */}
-            {auth?.google_auth_enabled && auth?.password_auth_enabled && (
-              <div className="relative flex items-center justify-center py-2">
-                <div className="border-t border-divider w-full"></div>
-                <span className="absolute bg-[#0C0B09] px-3.5 text-[8px] text-faint font-bold tracking-widest uppercase">
-                  OR
-                </span>
+            {auth?.clerk_enabled ? (
+              <div className="flex justify-center">
+                <SignIn
+                  routing="path"
+                  path="/login"
+                  appearance={{
+                    variables: {
+                      colorPrimary: "#D1A92E",
+                      colorBackground: "#0C0B09",
+                      colorText: "#ECE5D5",
+                      colorTextSecondary: "#8C8577",
+                      colorInputBackground: "#12100D",
+                      colorInputText: "#ECE5D5",
+                      colorBorder: "#29241B",
+                      fontFamily: '"IBM Plex Mono", monospace',
+                      borderRadius: "0px",
+                    },
+                    elements: {
+                      card: "border-0 shadow-none bg-transparent w-full",
+                      headerTitle: "text-primary tracking-wider uppercase font-bold text-[14px]",
+                      headerSubtitle: "text-[10px] text-brand-gold tracking-[0.08em] uppercase font-mono mt-1",
+                      socialButtonsIconButton: "border border-divider rounded-none bg-[#1A1813] hover:bg-[#25221A] text-brand-gold",
+                      formButtonPrimary: "bg-brand-gold hover:bg-brand-gold/80 text-page rounded-none font-bold uppercase tracking-wider text-[11px] py-3 cursor-pointer",
+                      formFieldInput: "bg-[#12100D] border border-divider text-primary rounded-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20",
+                      footerActionLink: "text-brand-gold hover:text-brand-gold/80",
+                      dividerText: "text-faint bg-[#0C0B09]",
+                      dividerLine: "bg-divider",
+                    }
+                  }}
+                />
               </div>
-            )}
-
-            {/* Password Login Form */}
-            {auth?.password_auth_enabled && (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Input Group */}
-                <div className="space-y-2">
-                  <label 
-                    htmlFor="password" 
-                    className="text-[10px] font-semibold text-muted uppercase tracking-[0.08em] flex items-center gap-1.5"
+            ) : (
+              <>
+                {/* Google OAuth Login Button */}
+                {auth?.google_auth_enabled && (
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="w-full bg-[#1A1813] hover:bg-[#25221A] text-brand-gold font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-divider hover:border-brand-gold/40 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
                   >
-                    <Lock size={11} className="text-brand-gold" /> Enter Console Key
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full bg-[#12100D] border border-divider text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20 text-primary transition-all rounded-none placeholder:text-faint font-sans tracking-widest"
-                      disabled={isSubmitting}
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-faint hover:text-muted transition-colors focus:outline-none"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-                </div>
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.527a5.99 5.99 0 0 1 5.991-6c1.554 0 2.96.593 4.025 1.564l3.199-3.199C19.24 3.01 16.78 1.927 13.99 1.927a9.99 9.99 0 0 0-9.99 10a9.99 9.99 0 0 0 9.99 10c5.56 0 9.873-3.9 9.873-10a8.7 8.7 0 0 0-.153-1.642H12.24z" />
+                    </svg>
+                    SIGN IN WITH GOOGLE CONSOLE
+                  </button>
+                )}
 
-                {/* Action Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-brand-gold text-page font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-brand-gold hover:bg-transparent hover:text-brand-gold transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border border-page border-t-transparent animate-spin shrink-0" />
-                      AUTHENTICATING...
-                    </>
-                  ) : (
-                    "INITIATE CONNECTION"
-                  )}
-                </button>
-              </form>
+                {/* Divider if both are enabled */}
+                {auth?.google_auth_enabled && auth?.password_auth_enabled && (
+                  <div className="relative flex items-center justify-center py-2">
+                    <div className="border-t border-divider w-full"></div>
+                    <span className="absolute bg-[#0C0B09] px-3.5 text-[8px] text-faint font-bold tracking-widest uppercase">
+                      OR
+                    </span>
+                  </div>
+                )}
+
+                {/* Password Login Form */}
+                {auth?.password_auth_enabled && (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Input Group */}
+                    <div className="space-y-2">
+                      <label 
+                        htmlFor="password" 
+                        className="text-[10px] font-semibold text-muted uppercase tracking-[0.08em] flex items-center gap-1.5"
+                      >
+                        <Lock size={11} className="text-brand-gold" /> Enter Console Key
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full bg-[#12100D] border border-divider text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20 text-primary transition-all rounded-none placeholder:text-faint font-sans tracking-widest"
+                          disabled={isSubmitting}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-faint hover:text-muted transition-colors focus:outline-none"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-brand-gold text-page font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-brand-gold hover:bg-transparent hover:text-brand-gold transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border border-page border-t-transparent animate-spin shrink-0" />
+                          AUTHENTICATING...
+                        </>
+                      ) : (
+                        "INITIATE CONNECTION"
+                      )}
+                    </button>
+                  </form>
+                )}
+              </>
             )}
 
             <div className="relative flex items-center justify-center py-1">

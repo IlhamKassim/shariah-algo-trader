@@ -56,4 +56,8 @@ class Config:
             if e.strip()
         }
 
+        # Clerk Authentication
+        self.clerk_jwt_verification_key: str | None = os.environ.get("CLERK_JWT_VERIFICATION_KEY")
+        self.clerk_enabled: bool = bool(self.clerk_jwt_verification_key)
+
 
