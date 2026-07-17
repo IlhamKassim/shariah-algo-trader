@@ -89,6 +89,12 @@ export function Login() {
     window.location.href = "/api/auth/google/login";
   };
 
+  const handleDemoLogin = async () => {
+    localStorage.setItem("shariah_demo_mode", "true");
+    await queryClient.invalidateQueries();
+    navigate("/", { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-page flex flex-col items-center justify-center px-4 font-mono select-none">
       {/* Decorative background grids/details */}
@@ -211,6 +217,18 @@ export function Login() {
                 </button>
               </form>
             )}
+
+            <div className="relative flex items-center justify-center py-1">
+              <div className="border-t border-divider w-full"></div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="w-full bg-transparent hover:bg-brand-gold/5 text-muted hover:text-brand-gold font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-divider hover:border-brand-gold/30 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              NEW HERE? EXPLORE DEMO CONSOLE
+            </button>
           </div>
         </div>
 

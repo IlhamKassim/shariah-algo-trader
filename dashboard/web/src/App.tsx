@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   TrendingUp,
   LogOut,
@@ -74,8 +74,10 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
 
 function Topbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isDayTraderPage = location.pathname === "/day-trader";
   const [time, setTime] = useState(new Date());
+  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000);
@@ -136,8 +138,13 @@ function Topbar() {
 
   const handleLogout = async () => {
     try {
-      await api.logout();
-      await queryClient.invalidateQueries({ queryKey: ["authStatus"] });
+      if (isDemo) {
+        localStorage.removeItem("shariah_demo_mode");
+      } else {
+        await api.logout();
+      }
+      await queryClient.invalidateQueries();
+      navigate("/login", { replace: true });
     } catch (err) {
       console.error("Logout failed:", err);
     }
@@ -177,7 +184,7 @@ function Topbar() {
               <button
                 onClick={handleLogout}
                 className="text-muted hover:text-brand-red p-1.5 border border-divider hover:border-brand-red/30 transition-colors cursor-pointer"
-                title="Logout session"
+                title={isDemo ? "Exit demo console" : "Logout session"}
               >
                 <LogOut size={12} />
               </button>
@@ -214,9 +221,15 @@ function Topbar() {
             </span>
           </div>
           <div className="flex items-center gap-2 md:ml-1">
-            <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap">
-              PAPER
-            </span>
+            {isDemo ? (
+              <span className="border border-brand-blue text-brand-blue text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap animate-pulse">
+                DEMO MODE
+              </span>
+            ) : (
+              <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap">
+                PAPER
+              </span>
+            )}
             <div className="hidden md:flex">
               <NotificationBell />
             </div>
@@ -224,10 +237,10 @@ function Topbar() {
               <button
                 onClick={handleLogout}
                 className="hidden md:flex text-muted hover:text-brand-red px-2.5 py-1 border border-divider hover:border-brand-red/30 transition-colors items-center gap-1.5 text-[10px] font-semibold tracking-wider cursor-pointer"
-                title="Logout session"
+                title={isDemo ? "Exit demo console" : "Logout session"}
               >
                 <LogOut size={12} />
-                LOGOUT
+                {isDemo ? "EXIT DEMO" : "LOGOUT"}
               </button>
             )}
             <NavLink
