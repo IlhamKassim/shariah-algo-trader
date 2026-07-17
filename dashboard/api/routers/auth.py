@@ -75,9 +75,10 @@ def get_auth_status(
             token = auth_header.split(" ")[1]
             try:
                 import jwt
+                key = cfg.clerk_jwt_verification_key.replace("\\n", "\n")
                 jwt.decode(
                     token,
-                    cfg.clerk_jwt_verification_key,
+                    key,
                     algorithms=["RS256"],
                     options={"verify_aud": False}
                 )

@@ -25,9 +25,10 @@ def verify_auth(request: Request, cfg: Config = Depends(get_config)):
 
         token = auth_header.split(" ")[1]
         try:
+            key = cfg.clerk_jwt_verification_key.replace("\\n", "\n")
             payload = jwt.decode(
                 token,
-                cfg.clerk_jwt_verification_key,
+                key,
                 algorithms=["RS256"],
                 options={"verify_aud": False}
             )
