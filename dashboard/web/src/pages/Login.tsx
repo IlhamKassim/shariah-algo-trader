@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { api } from "../lib/api";
-import { SignIn, useAuth } from "@clerk/clerk-react";
+import { SignIn, useAuth } from "@clerk/react";
 
 export function Login() {
   const [password, setPassword] = useState("");
@@ -108,13 +108,13 @@ export function Login() {
     <div className="min-h-screen bg-page flex flex-col items-center justify-center px-4 font-mono select-none">
       {/* Decorative background grids/details */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-5">
-        <div 
+        <div
           className="w-full h-full bg-[linear-gradient(to_right,#29241B_1px,transparent_1px),linear-gradient(to_bottom,#29241B_1px,transparent_1px)]"
           style={{ backgroundSize: "40px 40px" }}
         />
       </div>
 
-      <div className="w-full max-w-[400px] z-10">
+      <div className="w-full max-w-[390px] z-10">
         {/* Brand/System Header */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-12 h-12 flex items-center justify-center bg-brand-gold hover:rotate-12 transition-transform duration-300 shadow-md">
@@ -153,35 +153,48 @@ export function Login() {
             )}
 
             {auth?.clerk_enabled ? (
-              <div className="flex justify-center">
-                <SignIn
-                  routing="path"
-                  path="/login"
-                  appearance={{
-                    variables: {
-                      colorPrimary: "#D1A92E",
-                      colorBackground: "#0C0B09",
-                      colorText: "#ECE5D5",
-                      colorTextSecondary: "#8C8577",
-                      colorInputBackground: "#12100D",
-                      colorInputText: "#ECE5D5",
-                      colorBorder: "#29241B",
-                      fontFamily: '"IBM Plex Mono", monospace',
-                      borderRadius: "0px",
-                    },
-                    elements: {
-                      card: "border-0 shadow-none bg-transparent w-full",
-                      headerTitle: "text-primary tracking-wider uppercase font-bold text-[14px]",
-                      headerSubtitle: "text-[10px] text-brand-gold tracking-[0.08em] uppercase font-mono mt-1",
-                      socialButtonsIconButton: "border border-divider rounded-none bg-[#1A1813] hover:bg-[#25221A] text-brand-gold",
-                      formButtonPrimary: "bg-brand-gold hover:bg-brand-gold/80 text-page rounded-none font-bold uppercase tracking-wider text-[11px] py-3 cursor-pointer",
-                      formFieldInput: "bg-[#12100D] border border-divider text-primary rounded-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20",
-                      footerActionLink: "text-brand-gold hover:text-brand-gold/80",
-                      dividerText: "text-faint bg-[#0C0B09]",
-                      dividerLine: "bg-divider",
-                    }
-                  }}
-                />
+              <div className="flex justify-center min-h-[340px] items-center relative w-full">
+                {!clerkLoaded && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0C0B09] z-20">
+                    <div className="w-6 h-6 border border-brand-gold border-t-transparent animate-spin" />
+                    <span className="text-[9px] text-muted tracking-wider font-mono">INITIALIZING SECURE PORTAL...</span>
+                  </div>
+                )}
+                <div className={`w-full transition-opacity duration-300 ${clerkLoaded ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                  <SignIn
+                    appearance={{
+                      variables: {
+                        colorPrimary: "#D1A92E",
+                        colorBackground: "#0C0B09",
+                        colorForeground: "#ECE5D5",
+                        colorMutedForeground: "#8C8577",
+                        colorInput: "#12100D",
+                        colorInputForeground: "#ECE5D5",
+                        colorBorder: "#4C4739",
+                        fontFamily: '"IBM Plex Mono", monospace',
+                        borderRadius: "0px",
+                      },
+                      elements: {
+                        rootBox: "w-full flex justify-center m-0 max-w-full",
+                        cardBox: "w-full shadow-none border-0 m-0 max-w-full bg-transparent",
+                        card: "border-0 shadow-none bg-transparent w-full p-0 py-6 m-0",
+                        main: "w-full m-0 p-0",
+                        headerTitle: "tracking-wider uppercase font-bold text-[14px] text-[#ECE5D5]",
+                        socialButtonsRoot: "w-full m-0 p-0",
+                        socialButtons: "w-full m-0 p-0",
+                        socialButtonsBlockButton: "border border-[#4C4739] rounded-none bg-[#1A1813] hover:bg-[#25221A] text-[#ECE5D5] transition-colors duration-200 w-full flex justify-center items-center",
+                        socialButtonsBlockButtonText: "text-[#ECE5D5] font-semibold font-mono text-[11px] uppercase tracking-wider w-full text-center",
+                        lastAuthenticationStrategyBadge: "bg-[#29241B] text-[#D1A92E] border border-[#4C4739] rounded-none font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 absolute right-4",
+                        formButtonPrimary: "bg-brand-gold hover:bg-brand-gold/80 text-page rounded-none font-bold uppercase tracking-wider text-[11px] py-3 cursor-pointer transition-colors duration-200 w-full",
+                        formFieldInput: "bg-[#12100D] border border-[#4C4739] text-[#ECE5D5] rounded-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20 w-full",
+                        formFieldLabel: "text-[#ECE5D5] font-mono text-[10px] uppercase tracking-wider",
+                        footerActionLink: "text-brand-gold hover:text-brand-gold/80",
+                        dividerText: "text-[#8C8577] font-mono text-[10px] uppercase tracking-widest",
+                        dividerLine: "bg-[#4C4739]",
+                      }
+                    }}
+                  />
+                </div>
               </div>
             ) : (
               <>
@@ -214,8 +227,8 @@ export function Login() {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Input Group */}
                     <div className="space-y-2">
-                      <label 
-                        htmlFor="password" 
+                      <label
+                        htmlFor="password"
                         className="text-[10px] font-semibold text-muted uppercase tracking-[0.08em] flex items-center gap-1.5"
                       >
                         <Lock size={11} className="text-brand-gold" /> Enter Console Key

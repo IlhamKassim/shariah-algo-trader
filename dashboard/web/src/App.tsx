@@ -25,7 +25,7 @@ import { Login } from "./pages/Login";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
 import { api, setTokenProvider } from "./lib/api";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/react";
 
 const NAV = [
   { to: "/", label: "Overview", end: true, icon: LayoutDashboard },
