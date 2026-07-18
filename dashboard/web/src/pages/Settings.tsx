@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Save, Key, Sliders, Shield, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { api } from "../lib/api";
@@ -6,6 +7,12 @@ import type { SettingsUpdateRequest } from "../lib/api";
 import { Card, CardContent } from "../components/ui/Card";
 
 export function Settings() {
+  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
+
+  if (isDemo) {
+    return <Navigate to="/" replace />;
+  }
+
   const queryClient = useQueryClient();
 
   // Auth Status checking

@@ -7,6 +7,8 @@ export default {
       fontFamily: {
         sans: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
         mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        playfair: ['"Playfair Display"', "serif"],
+        inter: ["Inter", "sans-serif"],
       },
       colors: {
         page: "#0C0B09",

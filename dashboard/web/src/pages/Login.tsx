@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert, ArrowLeft } from "lucide-react";
 import { api } from "../lib/api";
 import { SignIn, useAuth } from "@clerk/react";
+import { ConnectionOverlay } from "../components/ConnectionOverlay";
 
 export function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionMode, setConnectionMode] = useState("SECURE PORT 8000");
+  const [pendingTarget, setPendingTarget] = useState<"demo" | "auth" | null>(null);
+  const [isNavigatingToLanding, setIsNavigatingToLanding] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -29,7 +35,7 @@ export function Login() {
         if (clerkLoaded && isSignedIn) {
           navigate("/", { replace: true });
         }
-      } else if (!auth.auth_enabled || auth.authenticated) {
+      } else if (auth.auth_enabled && auth.authenticated) {
         navigate("/", { replace: true });
       }
     }
@@ -58,10 +64,10 @@ export function Login() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-page flex items-center justify-center font-mono text-primary">
+      <div className="min-h-screen bg-[#0C0B09] flex items-center justify-center font-mono text-[#ECE5D5]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border border-brand-gold border-t-transparent animate-spin" />
-          <span className="text-xs text-muted tracking-wider">LOADING SECURE INSTANCE...</span>
+          <div className="w-8 h-8 border border-[#D1A92E] border-t-transparent animate-spin" />
+          <span className="text-xs text-[#8C8577] tracking-wider uppercase">LOADING SECURE INSTANCE...</span>
         </div>
       </div>
     );
@@ -79,34 +85,72 @@ export function Login() {
 
     try {
       await api.login(password);
-      // Invalidate the auth status to trigger a refetch
-      await queryClient.invalidateQueries({ queryKey: ["authStatus"] });
-      navigate("/", { replace: true });
+      setConnectionMode("SECURE PORT 8000");
+      setPendingTarget("auth");
+      setIsConnecting(true);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError("Invalid credentials. Access Denied.");
       } else {
         setError("An unexpected authentication error occurred.");
       }
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    // Redirect the browser directly to the FastAPI google login route
     window.location.href = "/api/auth/google/login";
   };
 
-  const handleDemoLogin = async () => {
-    localStorage.setItem("shariah_demo_mode", "true");
+  const handleDemoLogin = () => {
+    setConnectionMode("DEMO CONSOLE");
+    setPendingTarget("demo");
+    setIsConnecting(true);
+  };
+
+  const handleNavigateToLanding = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setIsNavigatingToLanding(true);
+    setTimeout(() => {
+      navigate("/landing");
+    }, 220);
+  };
+
+  const handleCompleteConnection = async () => {
+    if (pendingTarget === "demo") {
+      localStorage.setItem("shariah_demo_mode", "true");
+    }
     await queryClient.invalidateQueries();
-    navigate("/", { replace: true });
+    window.scrollTo(0, 0);
+    navigate("/");
   };
 
   return (
-    <div className="min-h-screen bg-page flex flex-col items-center justify-center px-4 font-mono select-none">
-      {/* Decorative background grids/details */}
+    <div className="min-h-screen bg-[#0C0B09] text-[#ECE5D5] flex flex-col items-center justify-center px-4 font-mono select-none relative overflow-hidden animate-fadeIn">
+      {/* Top Page Transition Loader Bar */}
+      {isNavigatingToLanding && (
+        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[#29241B] overflow-hidden">
+          <div className="h-full bg-[#D1A92E] w-full transition-all duration-200 ease-out animate-pulse" />
+        </div>
+      )}
+
+      {isConnecting && (
+        <ConnectionOverlay
+          modeName={connectionMode}
+          onComplete={handleCompleteConnection}
+        />
+      )}
+      {/* Top navigation back link */}
+      <div className="absolute top-6 left-6 z-20">
+        <button
+          onClick={handleNavigateToLanding}
+          className="inline-flex items-center gap-2 text-[11px] text-[#8C8577] hover:text-[#D1A92E] transition-colors tracking-wider uppercase cursor-pointer"
+        >
+          <ArrowLeft size={14} /> Back to ShariahTrading.my
+        </button>
+      </div>
+
+      {/* Decorative background grid */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-5">
         <div
           className="w-full h-full bg-[linear-gradient(to_right,#29241B_1px,transparent_1px),linear-gradient(to_bottom,#29241B_1px,transparent_1px)]"
@@ -114,39 +158,39 @@ export function Login() {
         />
       </div>
 
-      <div className="w-full max-w-[390px] z-10">
-        {/* Brand/System Header */}
+      <div className="w-full max-w-[400px] z-10 py-12">
+        {/* Brand Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 flex items-center justify-center bg-brand-gold hover:rotate-12 transition-transform duration-300 shadow-md">
-            <TrendingUp size={22} className="text-page" strokeWidth={2.5} />
+          <div className="w-12 h-12 flex items-center justify-center bg-[#D1A92E] hover:rotate-12 transition-transform duration-300 shadow-md">
+            <TrendingUp size={22} className="text-[#0C0B09]" strokeWidth={2.5} />
           </div>
-          <h1 className="text-[14px] font-bold text-primary tracking-[0.15em] uppercase mt-4 text-center">
-            SHARIAH ALGO TRADER
+          <h1 className="text-[15px] font-bold text-[#ECE5D5] tracking-[0.15em] uppercase mt-4 text-center">
+            SHARIAHTRADING
           </h1>
-          <p className="text-[9px] text-brand-gold tracking-[0.08em] uppercase mt-1">
+          <p className="text-[9px] text-[#D1A92E] tracking-[0.08em] uppercase mt-1">
             Secure Portfolio Console
           </p>
         </div>
 
         {/* Login Box */}
-        <div className="bg-card border border-divider shadow-[0_4px_30px_rgba(0,0,0,0.5)] hover:border-brand-gold/20 transition-colors duration-500 rounded-none overflow-hidden">
+        <div className="bg-[#0C0B09] border border-[#29241B] shadow-[0_4px_30px_rgba(0,0,0,0.5)] hover:border-[#D1A92E]/20 transition-colors duration-500 rounded-none overflow-hidden">
           {/* Header Row */}
-          <div className="bg-[#100E0B] border-b border-divider px-5 py-3 flex items-center justify-between">
+          <div className="bg-[#100E0B] border-b border-[#29241B] px-5 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-brand-gold/60" />
-              <span className="text-[10px] font-bold text-muted tracking-wider">SYSTEM SIGN IN</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#D1A92E]/60" />
+              <span className="text-[10px] font-bold text-[#8C8577] tracking-wider">SYSTEM SIGN IN</span>
             </div>
-            <span className="text-[9px] text-faint font-semibold tracking-wider uppercase border border-divider px-1.5 py-0.5">
+            <span className="text-[9px] text-[#4C4739] font-semibold tracking-wider uppercase border border-[#29241B] px-1.5 py-0.5">
               SECURE PORT 8000
             </span>
           </div>
 
           <div className="p-6 space-y-5">
-            {/* Feedback Message */}
+            {/* Error Feedback Message */}
             {error && !auth?.clerk_enabled && (
-              <div className="bg-[#1A1211] border border-brand-red/30 p-3 flex items-start gap-2.5">
-                <ShieldAlert size={14} className="text-brand-red shrink-0 mt-0.5" />
-                <div className="flex-1 text-[10px] font-semibold text-brand-red uppercase tracking-wider leading-relaxed">
+              <div className="bg-[#1A1211] border border-[#D16A5B]/30 p-3 flex items-start gap-2.5">
+                <ShieldAlert size={14} className="text-[#D16A5B] shrink-0 mt-0.5" />
+                <div className="flex-1 text-[10px] font-semibold text-[#D16A5B] uppercase tracking-wider leading-relaxed">
                   {error}
                 </div>
               </div>
@@ -156,8 +200,8 @@ export function Login() {
               <div className="flex justify-center min-h-[340px] items-center relative w-full">
                 {!clerkLoaded && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0C0B09] z-20">
-                    <div className="w-6 h-6 border border-brand-gold border-t-transparent animate-spin" />
-                    <span className="text-[9px] text-muted tracking-wider font-mono">INITIALIZING SECURE PORTAL...</span>
+                    <div className="w-6 h-6 border border-[#D1A92E] border-t-transparent animate-spin" />
+                    <span className="text-[9px] text-[#8C8577] tracking-wider font-mono">INITIALIZING SECURE PORTAL...</span>
                   </div>
                 )}
                 <div className={`w-full transition-opacity duration-300 ${clerkLoaded ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
@@ -177,20 +221,12 @@ export function Login() {
                       elements: {
                         rootBox: "w-full flex justify-center m-0 max-w-full",
                         cardBox: "w-full shadow-none border-0 m-0 max-w-full bg-transparent",
-                        card: "border-0 shadow-none bg-transparent w-full p-0 py-6 m-0",
+                        card: "border-0 shadow-none bg-transparent w-full p-0 py-4 m-0",
                         main: "w-full m-0 p-0",
                         headerTitle: "tracking-wider uppercase font-bold text-[14px] text-[#ECE5D5]",
-                        socialButtonsRoot: "w-full m-0 p-0",
-                        socialButtons: "w-full m-0 p-0",
-                        socialButtonsBlockButton: "border border-[#4C4739] rounded-none bg-[#1A1813] hover:bg-[#25221A] text-[#ECE5D5] transition-colors duration-200 w-full flex justify-center items-center",
-                        socialButtonsBlockButtonText: "text-[#ECE5D5] font-semibold font-mono text-[11px] uppercase tracking-wider w-full text-center",
-                        lastAuthenticationStrategyBadge: "bg-[#29241B] text-[#D1A92E] border border-[#4C4739] rounded-none font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 absolute right-4",
-                        formButtonPrimary: "bg-brand-gold hover:bg-brand-gold/80 text-page rounded-none font-bold uppercase tracking-wider text-[11px] py-3 cursor-pointer transition-colors duration-200 w-full",
-                        formFieldInput: "bg-[#12100D] border border-[#4C4739] text-[#ECE5D5] rounded-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20 w-full",
-                        formFieldLabel: "text-[#ECE5D5] font-mono text-[10px] uppercase tracking-wider",
-                        footerActionLink: "text-brand-gold hover:text-brand-gold/80",
-                        dividerText: "text-[#8C8577] font-mono text-[10px] uppercase tracking-widest",
-                        dividerLine: "bg-[#4C4739]",
+                        socialButtonsBlockButton: "border border-[#4C4739] rounded-none bg-[#1A1813] hover:bg-[#25221A] text-[#ECE5D5] transition-colors w-full flex justify-center items-center",
+                        formButtonPrimary: "bg-[#D1A92E] hover:bg-[#D1A92E]/80 text-[#0C0B09] rounded-none font-bold uppercase tracking-wider text-[11px] py-3 cursor-pointer w-full",
+                        formFieldInput: "bg-[#12100D] border border-[#4C4739] text-[#ECE5D5] rounded-none w-full",
                       }
                     }}
                   />
@@ -203,7 +239,7 @@ export function Login() {
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
-                    className="w-full bg-[#1A1813] hover:bg-[#25221A] text-brand-gold font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-divider hover:border-brand-gold/40 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
+                    className="w-full bg-[#1A1813] hover:bg-[#25221A] text-[#D1A92E] font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-[#29241B] hover:border-[#D1A92E]/40 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
                   >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.527a5.99 5.99 0 0 1 5.991-6c1.554 0 2.96.593 4.025 1.564l3.199-3.199C19.24 3.01 16.78 1.927 13.99 1.927a9.99 9.99 0 0 0-9.99 10a9.99 9.99 0 0 0 9.99 10c5.56 0 9.873-3.9 9.873-10a8.7 8.7 0 0 0-.153-1.642H12.24z" />
@@ -215,8 +251,8 @@ export function Login() {
                 {/* Divider if both are enabled */}
                 {auth?.google_auth_enabled && auth?.password_auth_enabled && (
                   <div className="relative flex items-center justify-center py-2">
-                    <div className="border-t border-divider w-full"></div>
-                    <span className="absolute bg-[#0C0B09] px-3.5 text-[8px] text-faint font-bold tracking-widest uppercase">
+                    <div className="border-t border-[#29241B] w-full" />
+                    <span className="absolute bg-[#0C0B09] px-3.5 text-[8px] text-[#4C4739] font-bold tracking-widest uppercase">
                       OR
                     </span>
                   </div>
@@ -229,9 +265,9 @@ export function Login() {
                     <div className="space-y-2">
                       <label
                         htmlFor="password"
-                        className="text-[10px] font-semibold text-muted uppercase tracking-[0.08em] flex items-center gap-1.5"
+                        className="text-[10px] font-semibold text-[#8C8577] uppercase tracking-[0.08em] flex items-center gap-1.5"
                       >
-                        <Lock size={11} className="text-brand-gold" /> Enter Console Key
+                        <Lock size={11} className="text-[#D1A92E]" /> Enter Console Key
                       </label>
                       <div className="relative">
                         <input
@@ -240,14 +276,14 @@ export function Login() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••••••"
-                          className="w-full bg-[#12100D] border border-divider text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-brand-gold/60 focus:ring-1 focus:ring-brand-gold/20 text-primary transition-all rounded-none placeholder:text-faint font-sans tracking-widest"
+                          className="w-full bg-[#12100D] border border-[#29241B] text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-[#D1A92E]/60 focus:ring-1 focus:ring-[#D1A92E]/20 text-[#ECE5D5] transition-all rounded-none placeholder:text-[#4C4739] font-sans tracking-widest"
                           disabled={isSubmitting}
                           autoFocus
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-faint hover:text-muted transition-colors focus:outline-none"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4C4739] hover:text-[#8C8577] transition-colors focus:outline-none"
                           tabIndex={-1}
                         >
                           {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -259,11 +295,11 @@ export function Login() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full bg-brand-gold text-page font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-brand-gold hover:bg-transparent hover:text-brand-gold transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#D1A92E] text-[#0C0B09] font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-[#D1A92E] hover:bg-transparent hover:text-[#D1A92E] transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="w-3.5 h-3.5 border border-page border-t-transparent animate-spin shrink-0" />
+                          <div className="w-3.5 h-3.5 border border-[#0C0B09] border-t-transparent animate-spin shrink-0" />
                           AUTHENTICATING...
                         </>
                       ) : (
@@ -276,13 +312,13 @@ export function Login() {
             )}
 
             <div className="relative flex items-center justify-center py-1">
-              <div className="border-t border-divider w-full"></div>
+              <div className="border-t border-[#29241B] w-full" />
             </div>
 
             <button
               type="button"
               onClick={handleDemoLogin}
-              className="w-full bg-transparent hover:bg-brand-gold/5 text-muted hover:text-brand-gold font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-divider hover:border-brand-gold/30 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-transparent hover:bg-[#D1A92E]/5 text-[#8C8577] hover:text-[#D1A92E] font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-[#29241B] hover:border-[#D1A92E]/30 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
             >
               NEW HERE? EXPLORE DEMO CONSOLE
             </button>
@@ -290,12 +326,11 @@ export function Login() {
         </div>
 
         {/* Footer Notes */}
-        <div className="mt-6 flex flex-col items-center gap-1 text-[9px] text-faint tracking-wider text-center uppercase">
+        <div className="mt-6 flex flex-col items-center gap-1 text-[9px] text-[#4C4739] tracking-wider text-center uppercase font-mono">
           <span>Long-only · No leverage · Halal Screener Console</span>
-          <span>ESTABLISHED 2026 SHARIAH-ALGO-TRADER</span>
+          <span>ESTABLISHED 2026 SHARIAHTRADING</span>
         </div>
       </div>
     </div>
   );
 }
-

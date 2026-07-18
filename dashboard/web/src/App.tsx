@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   TrendingUp,
   LogOut,
@@ -22,6 +22,7 @@ import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
+import { Landing } from "./pages/Landing";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
 import { api, setTokenProvider } from "./lib/api";
@@ -137,7 +138,8 @@ function Topbar() {
     refetchOnWindowFocus: false,
   });
 
-  const { signOut } = useAuth();
+  const { signOut, isSignedIn, isLoaded: clerkLoaded } = useAuth();
+  const showLogout = isDemo || auth?.authenticated || (clerkLoaded && isSignedIn);
 
   const handleLogout = async () => {
     try {
@@ -149,29 +151,31 @@ function Topbar() {
         await api.logout();
       }
       await queryClient.invalidateQueries();
-      navigate("/login", { replace: true });
+      navigate("/landing", { replace: true });
     } catch (err) {
       console.error("Logout failed:", err);
+      navigate("/landing", { replace: true });
     }
   };
 
   const navCounts: Record<string, number | undefined> = {
     "/portfolio": positions?.length,
     "/universe": universe?.stocks.length,
-  };
+  };  
+  const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/settings") : NAV;
 
   return (
     <header className="border-b border-divider bg-sidebar shrink-0 px-6">
       {/* Brand row */}
       <div className="min-h-14 py-3 md:py-0 md:h-14 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center justify-between w-full md:w-auto gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 select-none">
             <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-brand-gold">
               <TrendingUp size={15} className="text-page" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold text-primary tracking-[0.02em] whitespace-nowrap">
-                SHARIAH ALGO TRADER
+                SHARIAHTRADING
               </span>
               <span
                 className={`text-[9px] font-medium tracking-[0.03em] whitespace-nowrap ${
@@ -185,28 +189,30 @@ function Topbar() {
           {/* Mobile-only session actions */}
           <div className="flex items-center gap-2 md:hidden">
             <NotificationBell />
-            {auth?.auth_enabled && auth?.authenticated && (
+            {showLogout && (
               <button
                 onClick={handleLogout}
-                className="text-muted hover:text-brand-red p-1.5 border border-divider hover:border-brand-red/30 transition-colors cursor-pointer"
+                className="text-muted hover:text-brand-red p-1.5 border border-divider hover:border-brand-red/30 transition-colors flex items-center justify-center text-xs font-semibold cursor-pointer"
                 title={isDemo ? "Exit demo console" : "Logout session"}
               >
-                <LogOut size={12} />
+                <LogOut size={14} />
               </button>
             )}
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                `w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
-                  isActive
-                    ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
-                    : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
-                }`
-              }
-              title="User Profile & Settings"
-            >
-              IK
-            </NavLink>
+            {!isDemo && (
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
+                    isActive
+                      ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
+                      : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
+                  }`
+                }
+                title="User Profile & Settings"
+              >
+                IK
+              </NavLink>
+            )}
           </div>
         </div>
         
@@ -238,7 +244,7 @@ function Topbar() {
             <div className="hidden md:flex">
               <NotificationBell />
             </div>
-            {auth?.auth_enabled && auth?.authenticated && (
+            {showLogout && (
               <button
                 onClick={handleLogout}
                 className="hidden md:flex text-muted hover:text-brand-red px-2.5 py-1 border border-divider hover:border-brand-red/30 transition-colors items-center gap-1.5 text-[10px] font-semibold tracking-wider cursor-pointer"
@@ -248,26 +254,28 @@ function Topbar() {
                 {isDemo ? "EXIT DEMO" : "LOGOUT"}
               </button>
             )}
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                `hidden md:flex w-7 h-7 rounded-full items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
-                  isActive
-                    ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
-                    : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
-                }`
-              }
-              title="User Profile & Settings"
-            >
-              IK
-            </NavLink>
+            {!isDemo && (
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `hidden md:flex w-7 h-7 rounded-full items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
+                    isActive
+                      ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
+                      : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
+                  }`
+                }
+                title="User Profile & Settings"
+              >
+                IK
+              </NavLink>
+            )}
           </div>
         </div>
       </div>
 
       {/* Nav tabs */}
       <nav className="flex gap-6 border-b border-divider overflow-x-auto">
-        {NAV.map(({ to, label, end, icon: Icon }) => (
+        {visibleNav.map(({ to, label, end, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -303,8 +311,23 @@ function PageHeading() {
   );
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const mainEl = document.querySelector("main");
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+    }
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   const { getToken, isLoaded } = useAuth();
+  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
   useEffect(() => {
     if (isLoaded) {
@@ -313,7 +336,10 @@ export default function App() {
   }, [getToken, isLoaded]);
 
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/landing" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="*"
@@ -331,7 +357,7 @@ export default function App() {
                   <Route path="/compare" element={<Compare />} />
                   <Route path="/day-trader" element={<DayTrader />} />
                   <Route path="/learn" element={<Learn />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings" element={isDemo ? <Navigate to="/" replace /> : <Settings />} />
                 </Routes>
               </main>
             </div>
@@ -339,5 +365,6 @@ export default function App() {
         }
       />
     </Routes>
-  );
+  </>
+);
 }

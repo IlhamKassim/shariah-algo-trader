@@ -16,11 +16,26 @@ The strategy scoring rank is computed using an equal-weighted combination of fou
 
 ---
 
-## 🖥️ Live Dashboard Preview
+## 🖼️ Live Platform & Interface Previews
 
-Here is a visual mockup of the dark-gold monospaced trading dashboard console:
+### 🌐 Public Editorial Website (`shariahtrading.my`)
+Modern light-theme editorial layout featuring the 4-Factor Shariah scoring framework (Momentum, Quality, Low Volatility, Value), compliance rules, and direct console access gates.
 
-![Shariah Algo Trader Console](docs/images/dashboard_preview.png)
+![ShariahTrading Public Landing Page](docs/images/landing_preview.png)
+
+---
+
+### 💻 Trading Console Overview Dashboard (`app.shariahtrading.my`)
+Institutional pitch-black & gold monospaced console tracking equity performance, factor allocation, live NYSE compliance status, and SPUS universe constituents.
+
+![Shariah Algo Trader Console Overview](docs/images/dashboard_preview.png)
+
+---
+
+### 📊 Portfolio & Strategy Management
+Real-time view of active long-only spot equity positions, composite factor z-score rankings, and automated monthly rebalance schedules.
+
+![Portfolio & Strategy Management](docs/images/portfolio_preview.png)
 
 ---
 
