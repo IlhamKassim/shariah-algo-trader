@@ -160,7 +160,9 @@ shariah-algo-trader/
 │   │   └── static/         # Compiled React production bundle
 │   └── web/                # React + Vite + TypeScript source
 ├── tests/                  # Pytest unit testing suites
-├── docs/                   # Documentation and diagrams
+├── docs/                   # Documentation, diagrams, and project wiki pitch
+│   ├── concept-pitch-wiki.md # Project Pitch, Value Proposition & System Architecture
+│   └── multi-broker-support.md # Broker Matrix & OpenD Gateway Architecture Roadmap
 ├── pyproject.toml          # uv python project metadata
 └── README.md               # Visual systems overview
 ```
