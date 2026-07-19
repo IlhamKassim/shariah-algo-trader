@@ -104,6 +104,16 @@ export function Overview() {
               value: complianceValue,
               sub: complianceSub,
             },
+            {
+              label: "Fee Drag & Cost",
+              loading: loadingAccount,
+              value: account ? formatCurrency(account.estimated_fees ?? 0) : "—",
+              sub: (
+                <span className="block text-faint">
+                  {account?.fee_status_label ?? "Ultra-Low Drag (<0.05%)"}
+                </span>
+              ),
+            },
           ]}
         />
       </Hero>

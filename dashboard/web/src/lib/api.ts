@@ -14,6 +14,9 @@ export interface AccountResponse {
   portfolio_value: number;
   dayl_pl: number;
   dayl_pl_pct: number;
+  estimated_fees?: number;
+  fee_drag_pct?: number;
+  fee_status_label?: string;
 }
 
 export interface PositionResponse {

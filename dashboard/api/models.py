@@ -20,6 +20,9 @@ class AccountResponse(BaseModel):
     portfolio_value: float
     dayl_pl: float
     dayl_pl_pct: float
+    estimated_fees: float = 0.0
+    fee_drag_pct: float = 0.0
+    fee_status_label: str = "Ultra-Low Drag (<0.05%)"
 
 
 class PositionResponse(BaseModel):
@@ -103,6 +106,9 @@ class DayTraderAccountResponse(BaseModel):
     dayl_pl: float
     dayl_pl_pct: float
     available: bool
+    estimated_fees: float = 0.0
+    fee_drag_pct: float = 0.0
+    fee_status_label: str = "Ultra-Low Drag (<0.05%)"
 
 
 class DayTraderPositionResponse(BaseModel):

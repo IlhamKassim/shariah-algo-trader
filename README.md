@@ -54,6 +54,7 @@ Real-time view of active long-only spot equity positions, composite factor z-sco
   - **Password Protection**: Restricts API endpoints behind standard console key password logins.
   - **Google OAuth2 Sign-In**: Authenticates sessions via Google, restricted to a whitelisted set of administrator emails.
   - **Outbound Tunneling Ready**: Fully compatible with Cloudflare Zero Trust Tunnels for secure exposure without open incoming ports.
+- **Multi-Broker Architecture Roadmap**: Designed with an abstract broker interface supporting **Alpaca** (default), **Moomoo** (Malaysia/SG/HK/US via `moomoo-api`), and **Webull**. See [Multi-Broker Support Documentation](docs/multi-broker-support.md) for regional broker details and fee analyses.
 
 ---
 

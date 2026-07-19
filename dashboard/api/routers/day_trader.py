@@ -70,6 +70,9 @@ def get_day_trader() -> DayTraderResponse:
             dayl_pl=round(dayl_pl, 2),
             dayl_pl_pct=round(dayl_pl_pct, 4),
             available=True,
+            estimated_fees=0.0,
+            fee_drag_pct=0.0,
+            fee_status_label="Ultra-Low Drag (<0.05%)",
         )
 
         # Open positions
