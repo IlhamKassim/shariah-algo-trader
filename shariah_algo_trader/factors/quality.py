@@ -74,10 +74,22 @@ def compute_quality_factor(tickers: set[str]) -> dict[str, float]:
 
 
 def _get(df: pd.DataFrame, *keys: str) -> float | None:
-    """Return the most recent value for the first matching row label."""
+    """Return the most recent non-NA numeric value for the first matching row label."""
     for key in keys:
         if key in df.index:
-            val = df.loc[key].iloc[0]
-            if pd.notna(val):
-                return float(val)
+            item = df.loc[key]
+            if isinstance(item, pd.DataFrame):
+                item = item.iloc[0]
+            if isinstance(item, pd.Series):
+                for val in item:
+                    if pd.notna(val):
+                        try:
+                            return float(val)
+                        except (ValueError, TypeError):
+                            continue
+            elif pd.notna(item):
+                try:
+                    return float(item)
+                except (ValueError, TypeError):
+                    pass
     return None

@@ -9,6 +9,7 @@ dist/
 build/
 .pytest_cache/
 day_trader/.runtime/
+.geminirules
 
 # Backtesting
 shariah_algo_trader/backtesting/.cache/

@@ -68,14 +68,15 @@ router = APIRouter()
 def get_auth_status(
     request: Request, cfg: Config = Depends(get_config)
 ) -> AuthStatusResponse:
-    if cfg.clerk_enabled:
+    if getattr(cfg, "clerk_enabled", False):
         auth_header = request.headers.get("Authorization")
         authenticated = False
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
             try:
                 import jwt
-                key = cfg.clerk_jwt_verification_key.replace("\\n", "\n")
+                raw_key = getattr(cfg, "clerk_jwt_verification_key", None) or ""
+                key = raw_key.replace("\\n", "\n")
                 jwt.decode(
                     token,
                     key,

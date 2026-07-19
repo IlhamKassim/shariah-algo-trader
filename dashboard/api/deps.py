@@ -18,14 +18,15 @@ def get_alpaca() -> AlpacaClient:
 
 
 def verify_auth(request: Request, cfg: Config = Depends(get_config)):
-    if cfg.clerk_enabled:
+    if getattr(cfg, "clerk_enabled", False):
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
         token = auth_header.split(" ")[1]
         try:
-            key = cfg.clerk_jwt_verification_key.replace("\\n", "\n")
+            raw_key = getattr(cfg, "clerk_jwt_verification_key", None) or ""
+            key = raw_key.replace("\\n", "\n")
             payload = jwt.decode(
                 token,
                 key,

@@ -25,6 +25,8 @@ def test_auth_status_disabled_by_default(client):
             self.google_client_secret = None
             self.google_redirect_uri = None
             self.allowed_google_emails = set()
+            self.clerk_jwt_verification_key = None
+            self.clerk_enabled = False
 
     app.dependency_overrides[get_config] = lambda: MockConfig()
 
@@ -53,6 +55,8 @@ def test_auth_flow(client):
             self.google_client_secret = None
             self.google_redirect_uri = None
             self.allowed_google_emails = set()
+            self.clerk_jwt_verification_key = None
+            self.clerk_enabled = False
 
     app.dependency_overrides[get_config] = lambda: MockConfigWithAuth()
 
@@ -113,6 +117,8 @@ def test_google_login_redirect(client):
             self.google_client_secret = "google-secret"
             self.google_redirect_uri = "http://localhost:8000/api/auth/google/callback"
             self.allowed_google_emails = {"allowed@example.com"}
+            self.clerk_jwt_verification_key = None
+            self.clerk_enabled = False
 
     app.dependency_overrides[get_config] = lambda: MockConfigGoogleAuth()
 
@@ -141,6 +147,8 @@ def test_google_callback(mock_get, mock_post, client):
             self.google_client_secret = "google-secret"
             self.google_redirect_uri = "http://localhost:8000/api/auth/google/callback"
             self.allowed_google_emails = {"allowed@example.com"}
+            self.clerk_jwt_verification_key = None
+            self.clerk_enabled = False
 
     app.dependency_overrides[get_config] = lambda: MockConfigGoogleAuth()
 
@@ -186,6 +194,8 @@ def test_verify_password_endpoint(client):
             self.google_client_secret = None
             self.google_redirect_uri = None
             self.allowed_google_emails = set()
+            self.clerk_jwt_verification_key = None
+            self.clerk_enabled = False
 
     app.dependency_overrides[get_config] = lambda: MockConfigVerify()
 

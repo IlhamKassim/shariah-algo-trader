@@ -68,6 +68,9 @@ def rank_by_factor_score(
     for ticker in ranked:
         if len(selected) >= top_n:
             break
+        if ticker not in sectors:
+            missing = [t for t in ranked if t not in sectors]
+            sectors.update(_fetch_sectors(missing))
         sector = sectors.get(ticker, "Unknown")
         # Tickers with unknown sector data are never capped
         if sector != "Unknown" and sector_counts.get(sector, 0) >= max_per_sector:
