@@ -5,8 +5,10 @@ All public functions acquire a module-level lock so they're safe to call from
 FastAPI request handlers and background threads concurrently.
 """
 
+import datetime
 import sqlite3
 import threading
+import uuid
 from pathlib import Path
 
 _DB_PATH = Path(__file__).parent.parent.parent / "data" / "notifications.db"
@@ -24,8 +26,12 @@ def _connect() -> sqlite3.Connection:
 
 # ── Schema ────────────────────────────────────────────────────────────────────
 
+_initialized = False
+
+
 def init_db() -> None:
-    """Create the notifications table and index on first run."""
+    """Create the notifications and audit_logs tables and indexes on first run."""
+    global _initialized
     with _lock:
         conn = _connect()
         try:
@@ -45,9 +51,78 @@ def init_db() -> None:
                 CREATE INDEX IF NOT EXISTS idx_notif_created
                 ON notifications (created_at DESC)
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    id          TEXT PRIMARY KEY,
+                    event_type  TEXT NOT NULL,
+                    actor       TEXT NOT NULL,
+                    ip_address  TEXT NOT NULL,
+                    details     TEXT NOT NULL,
+                    created_at  TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_audit_created
+                ON audit_logs (created_at DESC)
+            """)
             conn.commit()
+            _initialized = True
         finally:
             conn.close()
+
+
+def _ensure_db_initialized() -> None:
+    if not _initialized:
+        init_db()
+
+
+# ── Audit Log Helpers ────────────────────────────────────────────────────────
+
+def log_audit_event(
+    event_type: str,
+    actor: str,
+    ip_address: str,
+    details: str,
+) -> str:
+    """Record a security or administrative event in the audit_logs table."""
+    _ensure_db_initialized()
+    event_id = str(uuid.uuid4())
+    created_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute(
+                """
+                INSERT INTO audit_logs (id, event_type, actor, ip_address, details, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (event_id, event_type, actor, ip_address, details, created_at),
+            )
+            conn.commit()
+            return event_id
+        finally:
+            conn.close()
+
+
+def fetch_audit_logs(limit: int = 50) -> list[sqlite3.Row]:
+    """Return the most recent *limit* audit log entries, newest first."""
+    _ensure_db_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, event_type, actor, ip_address, details, created_at
+                FROM audit_logs
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        finally:
+            conn.close()
+
+
 
 
 # ── Write helpers ─────────────────────────────────────────────────────────────

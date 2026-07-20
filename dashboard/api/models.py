@@ -145,7 +145,7 @@ class DayTraderResponse(BaseModel):
 
 
 class SettingsResponse(BaseModel):
-    alpaca_api_key: str
+    alpaca_api_key_masked: str
     alpaca_api_secret_masked: str
     alpaca_base_url: str
     etf_symbol: str
@@ -154,7 +154,7 @@ class SettingsResponse(BaseModel):
     sector_cap: float
     drift_threshold: float
     dashboard_password_masked: str
-    google_client_id: Optional[str] = None
+    google_client_id_masked: Optional[str] = None
     google_client_secret_masked: Optional[str] = None
     google_redirect_uri: Optional[str] = None
     allowed_google_emails: list[str] = []
@@ -162,6 +162,7 @@ class SettingsResponse(BaseModel):
 
 
 class SettingsUpdateRequest(BaseModel):
+    current_password: Optional[str] = None
     alpaca_api_key: Optional[str] = None
     alpaca_api_secret: Optional[str] = None
     alpaca_base_url: Optional[str] = None
@@ -175,6 +176,7 @@ class SettingsUpdateRequest(BaseModel):
     google_client_secret: Optional[str] = None
     google_redirect_uri: Optional[str] = None
     allowed_google_emails: Optional[list[str]] = None
+
 
 
 class NotificationItem(BaseModel):

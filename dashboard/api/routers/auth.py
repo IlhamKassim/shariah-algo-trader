@@ -8,10 +8,22 @@ from fastapi.responses import RedirectResponse
 import httpx
 from pydantic import BaseModel
 
+from dashboard.api.db import log_audit_event
 from dashboard.api.deps import get_config
 from shariah_algo_trader.config import Config
 
+import logging
+
 _FALLBACK_SECRET = secrets.token_hex(32)
+logger = logging.getLogger(__name__)
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
 
 
 def _get_secret(cfg: Config) -> str:
@@ -20,26 +32,32 @@ def _get_secret(cfg: Config) -> str:
 
 def generate_session_token(cfg: Config, max_age: int = 7 * 24 * 3600) -> str:
     expiry = int(time.time()) + max_age
+    nonce = secrets.token_hex(16)
     secret = _get_secret(cfg)
-    msg = f"{expiry}"
+    msg = f"{expiry}:{nonce}"
     signature = hmac.new(
         secret.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256
     ).hexdigest()
-    return f"{expiry}.{signature}"
+    return f"{expiry}.{nonce}.{signature}"
 
 
 def verify_session_token(token: str, cfg: Config) -> bool:
     try:
         parts = token.split(".")
-        if len(parts) != 2:
+        if len(parts) == 3:
+            expiry_str, nonce, signature = parts
+            msg = f"{expiry_str}:{nonce}"
+        elif len(parts) == 2:
+            expiry_str, signature = parts
+            msg = f"{expiry_str}"
+        else:
             return False
-        expiry_str, signature = parts
+
         expiry = int(expiry_str)
         if time.time() > expiry:
             return False  # Session expired
 
         secret = _get_secret(cfg)
-        msg = f"{expiry}"
         expected_sig = hmac.new(
             secret.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256
         ).hexdigest()
@@ -47,6 +65,7 @@ def verify_session_token(token: str, cfg: Config) -> bool:
         return hmac.compare_digest(signature, expected_sig)
     except Exception:
         return False
+
 
 
 class LoginRequest(BaseModel):
@@ -134,9 +153,19 @@ def login(
         return {"status": "ok", "message": "Auth disabled"}
 
     if body.password != cfg.dashboard_password:
+        ip = _client_ip(request)
+        log_audit_event("AUTH_LOGIN_FAILURE", "anonymous", ip, "Failed password login attempt")
+        try:
+            from dashboard.api.email_service import send_security_alert_email
+            send_security_alert_email("AUTH_LOGIN_FAILURE", "anonymous", ip, "Failed password login attempt on trading dashboard")
+        except Exception:
+            pass
         raise HTTPException(status_code=401, detail="Incorrect password")
 
+
+    log_audit_event("AUTH_LOGIN_SUCCESS", "dashboard_user", _client_ip(request), "Successful password login")
     max_age = 7 * 24 * 3600  # 7 days
+
     token = generate_session_token(cfg, max_age=max_age)
 
     # Use secure cookies if running on HTTPS
@@ -164,7 +193,7 @@ def logout(response: Response):
 
 
 @router.get("/api/auth/google/login")
-def google_login(cfg: Config = Depends(get_config)):
+def google_login(request: Request, cfg: Config = Depends(get_config)):
     google_auth_enabled = bool(
         cfg.google_client_id and cfg.google_client_secret and cfg.google_redirect_uri
     )
@@ -173,18 +202,33 @@ def google_login(cfg: Config = Depends(get_config)):
             status_code=400, detail="Google authentication is not configured."
         )
 
+    state = secrets.token_urlsafe(32)
     params = {
         "client_id": cfg.google_client_id,
         "redirect_uri": cfg.google_redirect_uri,
         "response_type": "code",
         "scope": "openid email profile",
         "prompt": "select_account",
+        "state": state,
     }
     url = (
         "https://accounts.google.com/o/oauth2/v2/auth?"
         + urllib.parse.urlencode(params)
     )
-    return RedirectResponse(url)
+    is_secure = (
+        request.headers.get("x-forwarded-proto") == "https"
+        or request.url.scheme == "https"
+    )
+    redirect_resp = RedirectResponse(url)
+    redirect_resp.set_cookie(
+        key="oauth_state",
+        value=state,
+        max_age=600,  # 10 minutes
+        httponly=True,
+        samesite="lax",
+        secure=is_secure,
+    )
+    return redirect_resp
 
 
 @router.get("/api/auth/google/callback")
@@ -192,6 +236,7 @@ async def google_callback(
     request: Request,
     response: Response,
     code: str | None = None,
+    state: str | None = None,
     error: str | None = None,
     cfg: Config = Depends(get_config),
 ):
@@ -199,6 +244,11 @@ async def google_callback(
         return RedirectResponse(f"/login?error={urllib.parse.quote(error)}")
     if not code:
         return RedirectResponse("/login?error=missing_code")
+
+    # Verify anti-CSRF state token
+    cookie_state = request.cookies.get("oauth_state")
+    if not state or not cookie_state or not hmac.compare_digest(state, cookie_state):
+        return RedirectResponse("/login?error=invalid_state")
 
     google_auth_enabled = bool(
         cfg.google_client_id
@@ -267,12 +317,13 @@ async def google_callback(
                 samesite="lax",
                 secure=is_secure,
             )
+            redirect_resp.delete_cookie(key="oauth_state")
             return redirect_resp
 
     except Exception as exc:
-        return RedirectResponse(
-            f"/login?error=auth_exception&detail={urllib.parse.quote(str(exc))}"
-        )
+        logger.exception("Google OAuth callback exception: %s", exc)
+        return RedirectResponse("/login?error=auth_exception")
+
 
 
 @router.post("/api/auth/verify")

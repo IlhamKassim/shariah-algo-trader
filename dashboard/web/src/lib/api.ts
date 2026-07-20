@@ -144,7 +144,7 @@ export interface AuthStatus {
 }
 
 export interface SettingsResponse {
-  alpaca_api_key: string;
+  alpaca_api_key_masked: string;
   alpaca_api_secret_masked: string;
   alpaca_base_url: string;
   etf_symbol: string;
@@ -153,13 +153,15 @@ export interface SettingsResponse {
   sector_cap: number;
   drift_threshold: number;
   dashboard_password_masked: string;
-  google_client_id: string | null;
+  google_client_id_masked: string | null;
   google_client_secret_masked: string | null;
   google_redirect_uri: string | null;
   allowed_google_emails: string[];
 }
 
+
 export interface SettingsUpdateRequest {
+  current_password?: string;
   alpaca_api_key?: string;
   alpaca_api_secret?: string;
   alpaca_base_url?: string;
@@ -174,6 +176,7 @@ export interface SettingsUpdateRequest {
   google_redirect_uri?: string | null;
   allowed_google_emails?: string[];
 }
+
 
 
 export interface NotificationItem {
@@ -200,8 +203,9 @@ const isDemo = () => localStorage.getItem("shariah_demo_mode") === "true";
 // Simulated in-memory states for Demo mode
 let isMockComputing = false;
 let demoSettings: SettingsResponse = {
-  alpaca_api_key: "AKDEMO1234567890",
+  alpaca_api_key_masked: "••••••••••••",
   alpaca_api_secret_masked: "************DEMO",
+
   alpaca_base_url: "https://paper-api.alpaca.markets",
   etf_symbol: "SPUS",
   top_n: 15,
@@ -209,8 +213,9 @@ let demoSettings: SettingsResponse = {
   sector_cap: 0.25,
   drift_threshold: 0.05,
   dashboard_password_masked: "********",
-  google_client_id: null,
+  google_client_id_masked: null,
   google_client_secret_masked: null,
+
   google_redirect_uri: null,
   allowed_google_emails: [],
 };

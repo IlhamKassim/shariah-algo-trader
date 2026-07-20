@@ -12,6 +12,7 @@ from dashboard.api.deps import get_alpaca, get_config, verify_auth
 from dashboard.api.hardening import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
+    build_auth_limiter,
     build_default_limiter,
     build_refresh_limiter,
 )
@@ -36,11 +37,22 @@ from dashboard.api.notifications_seeder import seed_notifications
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cfg = get_config()
+
+    # Fail fast if running in production without any authentication method configured
+    is_production = os.environ.get("ENVIRONMENT", "").lower() == "production" or bool(os.environ.get("RENDER"))
+    password_auth = bool(cfg.dashboard_password)
+    google_auth = bool(cfg.google_client_id and cfg.google_client_secret)
+    clerk_auth = getattr(cfg, "clerk_enabled", False)
+
+    if is_production and not (password_auth or google_auth or clerk_auth):
+        raise RuntimeError("FATAL: Server running in production mode but no authentication mechanism (Password, Google OAuth, or Clerk) is configured!")
+
     client = get_alpaca()
     cache = get_universe_cache()
     schedule_startup_refresh(cache, cfg, client)
     seed_notifications()
     yield
+
 
 
 app = FastAPI(
@@ -57,11 +69,17 @@ _ALLOWED_ORIGINS = [
     *[o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()],
 ]
 
+auth_limiter = build_auth_limiter()
 app.add_middleware(
     RateLimitMiddleware,
     default_limiter=build_default_limiter(),
-    route_limiters={("POST", "/api/universe/refresh"): build_refresh_limiter()},
+    route_limiters={
+        ("POST", "/api/universe/refresh"): build_refresh_limiter(),
+        ("POST", "/api/auth/login"): auth_limiter,
+        ("POST", "/api/auth/verify"): auth_limiter,
+    },
 )
+
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,

@@ -27,21 +27,31 @@ def verify_auth(request: Request, cfg: Config = Depends(get_config)):
         try:
             raw_key = getattr(cfg, "clerk_jwt_verification_key", None) or ""
             key = raw_key.replace("\\n", "\n")
-            payload = jwt.decode(
-                token,
-                key,
-                algorithms=["RS256"],
-                options={"verify_aud": False}
-            )
+            expected_aud = getattr(cfg, "clerk_jwt_audience", None)
+            decode_options = {"verify_aud": True} if expected_aud else {"verify_aud": False}
+            decode_kwargs = {"algorithms": ["RS256"], "options": decode_options}
+            if expected_aud:
+                decode_kwargs["audience"] = expected_aud
+            payload = jwt.decode(token, key, **decode_kwargs)
             request.state.user = payload
             return True
+
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token has expired")
         except jwt.InvalidTokenError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
-    if not cfg.dashboard_password:
-        return None
+    password_auth_enabled = bool(cfg.dashboard_password)
+    google_auth_enabled = bool(
+        cfg.google_client_id
+        and cfg.google_client_secret
+        and cfg.google_redirect_uri
+        and cfg.allowed_google_emails
+    )
+    auth_enabled = password_auth_enabled or google_auth_enabled
+
+    if not auth_enabled:
+        return True
 
     # Import locally to avoid circular dependencies
     from dashboard.api.routers.auth import verify_session_token
@@ -51,3 +61,4 @@ def verify_auth(request: Request, cfg: Config = Depends(get_config)):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     return True
+

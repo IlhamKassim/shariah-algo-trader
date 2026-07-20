@@ -40,8 +40,10 @@ export function Settings() {
   // State values for forms
   const [keyVisible, setKeyVisible] = useState(false);
   const [passVisible, setPassVisible] = useState(false);
+  const [googleIdVisible, setGoogleIdVisible] = useState(false);
   const [googleSecretVisible, setGoogleSecretVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"broker" | "strategy" | "auth">("broker");
+
 
   // Form states (controlled inputs)
   const [formData, setFormData] = useState<Partial<SettingsUpdateRequest>>({});
@@ -110,7 +112,7 @@ export function Settings() {
   }
 
   // Helper values
-  const currentAlpacaKey = formData.alpaca_api_key ?? settings.alpaca_api_key;
+  const currentAlpacaKey = formData.alpaca_api_key ?? settings.alpaca_api_key_masked;
   const currentAlpacaSecret = formData.alpaca_api_secret ?? settings.alpaca_api_secret_masked;
   const currentAlpacaUrl = formData.alpaca_base_url ?? settings.alpaca_base_url;
 
@@ -121,15 +123,20 @@ export function Settings() {
   const currentDriftThreshold = formData.drift_threshold ?? settings.drift_threshold;
 
   const currentPassword = formData.dashboard_password ?? settings.dashboard_password_masked;
-  const currentGoogleId = formData.google_client_id ?? settings.google_client_id;
+  const currentGoogleId = formData.google_client_id ?? settings.google_client_id_masked;
   const currentGoogleSecret = formData.google_client_secret ?? settings.google_client_secret_masked;
+
   const currentGoogleRedirect = formData.google_redirect_uri ?? settings.google_redirect_uri;
   const currentGoogleEmails = formData.allowed_google_emails ?? settings.allowed_google_emails;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate(formData);
+    updateMutation.mutate({
+      ...formData,
+      current_password: verifyPasswordVal,
+    });
   };
+
 
   const tabs = [
     { id: "broker", label: "Broker Credentials", icon: Key },
@@ -426,14 +433,24 @@ export function Settings() {
                           <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
                             Google Client ID
                           </label>
-                          <input
-                            type="text"
-                            value={currentGoogleId ?? ""}
-                            onChange={(e) => handleInputChange("google_client_id", e.target.value || null)}
-                            className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                            placeholder="Enter Google Client ID"
-                          />
+                          <div className="relative">
+                            <input
+                              type={googleIdVisible ? "text" : "password"}
+                              value={currentGoogleId ?? ""}
+                              onChange={(e) => handleInputChange("google_client_id", e.target.value || null)}
+                              className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                              placeholder="Enter Google Client ID"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setGoogleIdVisible(!googleIdVisible)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {googleIdVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
                         </div>
+
 
                         <div>
                           <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">

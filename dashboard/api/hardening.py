@@ -96,3 +96,8 @@ def build_default_limiter() -> _FixedWindowLimiter:
 
 def build_refresh_limiter() -> _FixedWindowLimiter:
     return _FixedWindowLimiter(max_requests=2, window_seconds=60)
+
+
+def build_auth_limiter() -> _FixedWindowLimiter:
+    return _FixedWindowLimiter(max_requests=5, window_seconds=60)
+

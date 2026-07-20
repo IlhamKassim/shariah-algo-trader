@@ -72,7 +72,29 @@ def send_email(subject: str, html_body: str) -> bool:
         return False
 
 
+def send_security_alert_email(event_type: str, actor: str, ip_address: str, details: str) -> bool:
+    """Send an immediate HTML alert email when a security event occurs."""
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    subject = f"🚨 Security Alert: {event_type} on Shariah Algo Trader"
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #dc2626; margin-top: 0;">⚠️ Security Event Detected</h2>
+        <p>A security-relevant event was recorded on your application instance:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f1f5f9;">Event Type:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{event_type}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f1f5f9;">Actor / User:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{actor}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f1f5f9;">IP Address:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;"><code>{ip_address}</code></td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f1f5f9;">Details:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{details}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f1f5f9;">Timestamp:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{now_str}</td></tr>
+        </table>
+        <p style="font-size: 12px; color: #64748b; margin-top: 20px;">If this activity was not initiated by you, please verify your server configuration and update your environment credentials immediately.</p>
+    </div>
+    """
+    return send_email(subject, html_body)
+
+
 def send_immediate_alert(title: str, body: str, severity: str, timestamp: str) -> bool:
+
     """Format and send an immediate, premium HTML email for warning/critical events in a clean editorial layout."""
     # Source / Category labels
     source_label = "Platform"
