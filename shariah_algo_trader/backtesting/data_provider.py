@@ -146,6 +146,6 @@ class DataProvider:
                 logger.warning("%s: FMP income statement API returned status %d", ticker, inc_res.status_code)
                 
         except Exception as exc:
-            logger.error("%s: FMP API request failed: %s", ticker, exc)
+            logger.error("%s: FMP API request failed: %s", ticker, type(exc).__name__)
             
         return balance_sheets, income_statements

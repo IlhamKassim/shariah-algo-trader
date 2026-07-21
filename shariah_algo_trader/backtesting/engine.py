@@ -42,10 +42,19 @@ class BacktestEngine:
 
     def _save_profiles(self):
         try:
+            os.makedirs(CACHE_DIR, exist_ok=True)
             with open(PROFILES_CACHE_FILE, "w") as f:
                 json.dump(self.profiles, f, indent=2)
         except Exception as exc:
             logger.warning("Failed to save profiles cache: %s", exc)
+
+    def _price_on(self, prices_df: pd.DataFrame, ticker: str, today: pd.Timestamp) -> float:
+        """Return the price for ticker on today, backfilling to the latest known price if missing."""
+        price = float(prices_df.loc[today, ticker])
+        if pd.isna(price):
+            price_series = prices_df[ticker].loc[:today].dropna()
+            price = float(price_series.iloc[-1]) if not price_series.empty else 0.0
+        return price
 
     def get_sector(self, ticker: str) -> str:
         if ticker in self.profiles:
@@ -149,31 +158,31 @@ class BacktestEngine:
                 # Calculate current market value of holdings
                 total_asset_value = 0.0
                 for ticker, shares in portfolio_holdings.items():
-                    price = float(prices_df.loc[today, ticker])
+                    price = self._price_on(prices_df, ticker, today)
                     total_asset_value += shares * price
-                    
+
                 portfolio_value = total_asset_value + cash
-                
+
                 # Rebalance trades
                 new_holdings = {}
                 trade_volume = 0.0
-                
+
                 for ticker in selected_tickers:
                     target_val = portfolio_value * new_weights[ticker]
-                    price = float(prices_df.loc[today, ticker])
+                    price = self._price_on(prices_df, ticker, today)
                     target_shares = target_val / price if price > 0 else 0
-                    
+
                     old_shares = portfolio_holdings.get(ticker, 0.0)
                     trade_shares = abs(target_shares - old_shares)
                     trade_volume += trade_shares * price
-                    
+
                     new_holdings[ticker] = target_shares
-                    
+
                 # Calculate transaction fees
                 tx_fee = trade_volume * self.transaction_cost_pct
-                cash = portfolio_value - sum(new_holdings[t] * float(prices_df.loc[today, t]) for t in new_holdings) - tx_fee
+                cash = portfolio_value - sum(new_holdings[t] * self._price_on(prices_df, t, today) for t in new_holdings) - tx_fee
                 portfolio_holdings = new_holdings
-                portfolio_value = sum(portfolio_holdings[t] * float(prices_df.loc[today, t]) for t in portfolio_holdings) + cash
+                portfolio_value = sum(portfolio_holdings[t] * self._price_on(prices_df, t, today) for t in portfolio_holdings) + cash
                 
                 logger.info("Rebalanced completed. Holdings: %d stocks. Portfolio value: $%.2f. Tx Fee: $%.2f", len(portfolio_holdings), portfolio_value, tx_fee)
                 rebalance_log.append({
@@ -187,11 +196,7 @@ class BacktestEngine:
                 # Update today's portfolio value based on price changes
                 total_asset_value = 0.0
                 for ticker, shares in portfolio_holdings.items():
-                    price = float(prices_df.loc[today, ticker])
-                    if pd.isna(price):
-                        # Handle missing/stale prices by backfilling
-                        price_series = prices_df[ticker].loc[:today].dropna()
-                        price = float(price_series.iloc[-1]) if not price_series.empty else 0.0
+                    price = self._price_on(prices_df, ticker, today)
                     total_asset_value += shares * price
                 portfolio_value = total_asset_value + cash
                 

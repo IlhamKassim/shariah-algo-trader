@@ -43,7 +43,7 @@ export function Overview() {
     : null;
 
   const complianceValue = compliance?.compliant ? (
-    <span className="text-brand-green">Compliant</span>
+    <span className="text-brand-green">Screened</span>
   ) : (
     <span className="text-brand-red">
       {compliance?.violations.length ?? 0} Violation{compliance?.violations.length !== 1 ? "s" : ""}
@@ -52,7 +52,7 @@ export function Overview() {
   const complianceSub = (
     <>
       {compliance?.held_count ?? 0} held · {compliance?.universe_size ?? 0} in universe
-      <span className="block mt-0.5 text-faint">AAOIFI screens · No interest income</span>
+      <span className="block mt-0.5 text-faint">Debt-ratio screen · Universe pre-screened by SPUS</span>
       {compliance && !compliance.compliant && compliance.violations.length > 0 && (
         <span className="block mt-0.5 text-brand-red">
           {compliance.violations.join(", ")}
@@ -99,7 +99,7 @@ export function Overview() {
               sub: cashPct != null ? `${cashPct}% of book` : undefined,
             },
             {
-              label: "Shariah Compliance",
+              label: "Shariah Screen",
               loading: loadingCompliance,
               value: complianceValue,
               sub: complianceSub,

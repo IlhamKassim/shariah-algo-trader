@@ -144,9 +144,10 @@ export function Compare() {
               tickFormatter={(v) => v.slice(5)}
             />
             <YAxis
+              domain={[(min: number) => min * 0.995, (max: number) => max * 1.005]}
               tick={{ fill: CHART.tickText, fontSize: 10 }}
               tickFormatter={(v) =>
-                `$${(v / 1000).toFixed(0)}k`
+                `$${(v / 1000).toFixed(1)}k`
               }
               width={52}
             />
