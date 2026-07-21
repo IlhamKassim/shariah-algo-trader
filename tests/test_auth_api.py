@@ -127,6 +127,8 @@ def test_google_login_redirect(client):
     location = response.headers.get("location")
     assert "accounts.google.com" in location
     assert "client_id=google-id" in location
+    assert "state=" in location
+    assert "oauth_state" in response.cookies
 
     app.dependency_overrides.clear()
 
@@ -165,19 +167,27 @@ def test_google_callback(mock_get, mock_post, client):
     mock_get_res.json.return_value = {"email": "allowed@example.com"}
     mock_get.return_value = mock_get_res
 
-    # 1. Success path
-    response = client.get("/api/auth/google/callback?code=mockcode", follow_redirects=False)
+    # 1. Invalid state (missing cookie or mismatch)
+    response = client.get("/api/auth/google/callback?code=mockcode&state=badstate", follow_redirects=False)
+    assert response.status_code == 307
+    assert "error=invalid_state" in response.headers.get("location")
+
+    # 2. Success path with matching state cookie
+    client.cookies.set("oauth_state", "validstate")
+    response = client.get("/api/auth/google/callback?code=mockcode&state=validstate", follow_redirects=False)
     assert response.status_code == 307
     assert response.headers.get("location") == "/"
     assert "session_token" in response.cookies
 
-    # 2. Email not whitelisted path
+    # 3. Email not whitelisted path
+    client.cookies.set("oauth_state", "validstate")
     mock_get_res.json.return_value = {"email": "unauthorized@example.com"}
-    response = client.get("/api/auth/google/callback?code=mockcode", follow_redirects=False)
+    response = client.get("/api/auth/google/callback?code=mockcode&state=validstate", follow_redirects=False)
     assert response.status_code == 307
     assert "error=unauthorized_email" in response.headers.get("location")
 
     app.dependency_overrides.clear()
+
 
 
 def test_verify_password_endpoint(client):

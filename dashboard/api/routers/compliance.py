@@ -37,7 +37,7 @@ def get_compliance(
             last_checked=None,
         )
 
-    eligible = {s["symbol"] for s in cache.stocks}
+    eligible = cache.raw_universe if cache.raw_universe else {s["symbol"] for s in cache.stocks}
     violations = sorted(held - eligible)
 
     return ComplianceResponse(

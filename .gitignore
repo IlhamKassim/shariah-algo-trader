@@ -10,6 +10,7 @@ build/
 .pytest_cache/
 day_trader/.runtime/
 .geminirules
+.agents
 
 # Backtesting
 shariah_algo_trader/backtesting/.cache/

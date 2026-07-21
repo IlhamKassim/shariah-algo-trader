@@ -65,6 +65,7 @@ def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None
             for idx, ticker in enumerate(all_ranked)
         ]
         cache.stocks = stocks
+        cache.raw_universe = universe
         cache.last_computed_at = datetime.now(tz=timezone.utc)
     finally:
         cache.computing = False

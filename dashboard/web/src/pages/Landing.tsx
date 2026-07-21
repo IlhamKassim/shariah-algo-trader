@@ -3,33 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectionOverlay } from "../components/ConnectionOverlay";
-import { ObsidianCanvasBackground } from "../components/ObsidianCanvasBackground";
 import { InteractiveAlgoTerminal } from "../components/InteractiveAlgoTerminal";
+import { ContainerScroll } from "../components/ContainerScroll";
+import { MeshDriftShaderBackground } from "../components/MeshDriftShaderBackground";
 import {
-  TrendingUp,
-  ShieldCheck,
-  Zap,
-  Activity,
   X,
   ChevronDown,
   ChevronUp,
-  Sliders,
-  ArrowRight,
-  Building2,
-  BarChart3,
-  Lock,
-  Scale,
-  RefreshCw,
-  FileCheck2,
-  DollarSign,
+  Search,
 } from "lucide-react";
 
 export function Landing() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isNavigatingToLogin, setIsNavigatingToLogin] = useState(false);
-  const [connectionMode, setConnectionMode] = useState("INTERACTIVE BROKERS");
+  const [connectionMode, setConnectionMode] = useState("ALPACA PAPER");
   const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -82,15 +72,30 @@ export function Landing() {
     },
   ];
 
-  return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950 relative overflow-x-hidden antialiased">
-      {/* Precision Financial Ambient Background */}
-      <ObsidianCanvasBackground />
+  const universeStocks = [
+    { ticker: "AAPL", name: "Apple Inc.", status: "Compliant", change: "+1.24%", price: "$224.50", compliant: true, spark: [50, 66, 33, 75, 100] },
+    { ticker: "NVDA", name: "NVIDIA Corp.", status: "Compliant", change: "+3.55%", price: "$121.15", compliant: true, spark: [25, 50, 66, 83, 100] },
+    { ticker: "JPM", name: "JPMorgan Chase", status: "Restricted", reason: "Core business violation", compliant: false },
+    { ticker: "MSFT", name: "Microsoft Corp.", status: "Compliant", change: "+0.82%", price: "$440.32", compliant: true, spark: [66, 75, 50, 66, 75] },
+    { ticker: "GOOGL", name: "Alphabet Inc.", status: "Compliant", change: "+1.12%", price: "$182.40", compliant: true, spark: [40, 55, 70, 60, 90] },
+    { ticker: "BAC", name: "Bank of America", status: "Restricted", reason: "Interest banking prohibited", compliant: false },
+    { ticker: "AMZN", name: "Amazon.com Inc.", status: "Compliant", change: "+1.45%", price: "$186.20", compliant: true, spark: [30, 45, 60, 80, 95] },
+  ];
 
+  const filteredStocks = universeStocks.filter(
+    (s) =>
+      s.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-transparent text-white font-sans overflow-x-hidden antialiased selection:bg-[#ffdca1] selection:text-black relative z-10">
+      {/* Animated WebGL Mesh Drift Shader Background */}
+      <MeshDriftShaderBackground />
       {/* Top Transition Loader */}
       {isNavigatingToLogin && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-slate-950 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-emerald-500 to-amber-400 w-full transition-all duration-200 ease-out animate-pulse" />
+        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[#1a1a1a] overflow-hidden">
+          <div className="h-full bg-[#ffdca1] w-full transition-all duration-200 ease-out animate-pulse" />
         </div>
       )}
 
@@ -102,522 +107,527 @@ export function Landing() {
         />
       )}
 
-      {/* Top Live Ticker Status Ribbon */}
-      <div className="w-full bg-slate-950/90 border-b border-slate-800/80 py-2 px-4 z-50 relative text-[11px] font-mono text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-              NYSE OPEN
+      {/* Top Navigation Bar */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-black/90 backdrop-blur-md border-b border-[#333333]">
+        <div className="max-w-screen-2xl mx-auto flex justify-between items-center px-4 sm:px-12 py-4">
+          <div className="flex items-center gap-12">
+            <span className="text-[18px] font-playfair tracking-wider text-white uppercase font-normal">
+              SHARIAHTRADING
             </span>
-            <span className="text-slate-600">|</span>
-            <span>DAILY AAOIFI AUDIT COMPLETE (09:30 AM ET)</span>
-            <span className="text-slate-600 hidden md:inline">|</span>
-            <span className="hidden md:inline text-slate-300">SPUS CONSTITUENT SYNC: VERIFIED</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-slate-400">
-            <span className="hidden sm:inline">100% LONG SPOT EQUITIES</span>
-            <span className="text-amber-400 font-semibold flex items-center gap-1">
-              <ShieldCheck size={13} /> ZERO MARGIN / NO RIBA
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Institutional Header Navigation */}
-      <header className="w-full bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-40">
-        <div className="flex justify-between items-center px-6 md:px-12 h-20 max-w-7xl mx-auto">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-3.5 select-none">
-            <div className="w-10 h-10 bg-slate-900 border border-emerald-500/40 rounded-xl flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/50">
-              <TrendingUp size={22} strokeWidth={2.2} className="text-emerald-400" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg md:text-xl text-slate-100 tracking-tight">
-                  SHARIAH<span className="text-amber-400">ALGO</span>
-                </span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 font-bold">
-                  PRO
-                </span>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400 tracking-wider">
-                QUANTITATIVE ETHICAL TRADING
-              </span>
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#compliance" className="text-white border-b border-white pb-1 font-mono text-[11px] uppercase tracking-widest">
+                Compliance
+              </a>
+              <a href="#universe" className="text-[#a39d96] hover:text-white transition-colors duration-200 font-mono text-[11px] uppercase tracking-widest">
+                Universe
+              </a>
+              <a href="#terminal" className="text-[#a39d96] hover:text-white transition-colors duration-200 font-mono text-[11px] uppercase tracking-widest">
+                Terminal
+              </a>
+              <a href="#faqs" className="text-[#a39d96] hover:text-white transition-colors duration-200 font-mono text-[11px] uppercase tracking-widest">
+                FAQs
+              </a>
             </div>
           </div>
-
-          {/* Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold uppercase tracking-wider text-slate-300">
-            <a href="#screener" className="hover:text-emerald-400 transition-colors">
-              Terminal Screener
-            </a>
-            <a href="#methodology" className="hover:text-emerald-400 transition-colors">
-              AAOIFI Rules
-            </a>
-            <a href="#factor-model" className="hover:text-emerald-400 transition-colors">
-              4-Factor Engine
-            </a>
-            <a href="#performance" className="hover:text-emerald-400 transition-colors">
-              Backtest Alpha
-            </a>
-            <a href="#faqs" className="hover:text-emerald-400 transition-colors">
-              FAQs
-            </a>
-          </nav>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-6">
             <button
               onClick={handleNavigateToLogin}
-              className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-slate-100 px-3.5 py-2 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+              className="text-white px-3 py-1 font-mono text-[11px] uppercase tracking-widest hover:text-[#a39d96] transition-colors cursor-pointer"
             >
-              Sign In
+              Login
             </button>
             <button
               onClick={() => setShowBrokerModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 hover:from-emerald-500 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-950/60 hover:shadow-emerald-900/80 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
+              className="border border-white text-white px-6 py-2 hover:bg-white hover:text-black transition-all duration-300 font-mono text-[11px] uppercase tracking-widest cursor-pointer"
             >
-              <Building2 size={15} />
-              Connect Broker Gateway
+              Start Trading
             </button>
           </div>
         </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="relative z-10 pt-16 pb-12 px-6 max-w-7xl mx-auto text-center">
-        {/* Top Compliance Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-xs font-mono mb-6 backdrop-blur-md shadow-md shadow-emerald-950/40 uppercase tracking-wider"
-        >
-          <ShieldCheck size={14} className="text-amber-400" />
-          <span>AAOIFI STANDARD NO. 21 · 100% LONG SPOT EQUITIES · ZERO MARGIN</span>
-        </motion.div>
-
-        {/* Hero Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-100 tracking-tight leading-[1.12] max-w-5xl mx-auto"
-        >
-          Quantitative Spot Equities Built for <br />
-          <span className="bg-gradient-to-r from-emerald-400 via-amber-300 to-emerald-500 bg-clip-text text-transparent">
-            Shariah-Compliant Investors.
-          </span>
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-6 text-base md:text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed font-normal"
-        >
-          Automating daily AAOIFI No. 21 financial screening, 4-factor momentum scoring, and automated compliance exit liquidations. Strictly 100% long-only spot equity execution with Interactive Brokers & Alpaca.
-        </motion.p>
-
-        {/* Hero CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-8 flex flex-wrap items-center justify-center gap-4"
-        >
-          <button
-            onClick={() => setShowBrokerModal(true)}
-            className="px-7 py-3.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-emerald-950/80 hover:shadow-emerald-900 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
-          >
-            <Building2 size={16} />
-            Connect Interactive Brokers / Alpaca
-            <ArrowRight size={16} />
-          </button>
-
-          <button
-            onClick={() => handleStartConnection("DEMO CONSOLE")}
-            className="px-7 py-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold text-xs uppercase tracking-widest rounded-xl border border-slate-700/80 transition-all flex items-center gap-2 cursor-pointer backdrop-blur-md transform hover:-translate-y-0.5"
-          >
-            <Zap size={16} className="text-amber-400" />
-            Launch Demo Sandbox
-          </button>
-        </motion.div>
-
-        {/* Key Metrics Strip */}
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
-          <div className="p-4 bg-slate-900/80 border border-slate-800/80 rounded-xl backdrop-blur-md">
-            <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Permissibility</div>
-            <div className="text-xl font-bold text-emerald-400 mt-1 font-mono">100% Spot</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Zero Margin or Derivatives</div>
-          </div>
-
-          <div className="p-4 bg-slate-900/80 border border-slate-800/80 rounded-xl backdrop-blur-md">
-            <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Max Debt / Asset</div>
-            <div className="text-xl font-bold text-amber-400 mt-1 font-mono">&lt; 33.0%</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">AAOIFI No. 21 Threshold</div>
-          </div>
-
-          <div className="p-4 bg-slate-900/80 border border-slate-800/80 rounded-xl backdrop-blur-md">
-            <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Compliance Audit</div>
-            <div className="text-xl font-bold text-slate-100 mt-1 font-mono">Daily Open</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">09:30 AM ET NYSE Sync</div>
-          </div>
-
-          <div className="p-4 bg-slate-900/80 border border-slate-800/80 rounded-xl backdrop-blur-md">
-            <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Factor Model</div>
-            <div className="text-xl font-bold text-emerald-400 mt-1 font-mono">Top 20</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Rebalanced Monthly</div>
-          </div>
-        </div>
-
-        {/* Embedded Interactive Algo Terminal Showcase */}
-        <div id="screener" className="mt-14 relative">
-          <div className="text-center mb-4">
-            <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest font-semibold flex items-center justify-center gap-1.5">
-              <Activity size={14} /> LIVE QUANTITATIVE TERMINAL DEMO
-            </span>
-          </div>
-          <InteractiveAlgoTerminal />
-        </div>
-      </section>
-
-      {/* AAOIFI Methodology & Screening Matrix */}
-      <section id="methodology" className="relative z-10 py-20 px-6 max-w-7xl mx-auto border-t border-slate-800/80">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-mono mb-3">
-            <Scale size={13} /> AAOIFI GOVERNANCE FRAMEWORK
-          </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-100 tracking-tight">
-            Institutional Standard No. 21 Compliance Rules
-          </h2>
-          <p className="mt-3 text-slate-400 text-sm leading-relaxed">
-            Every security in our universe undergoes multi-layered screening against Accounting and Auditing Organization for Islamic Financial Institutions standards.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Rule Card 1 */}
-          <div className="p-6 bg-slate-900/70 border border-slate-800/90 rounded-2xl backdrop-blur-md hover:border-emerald-500/40 transition-all">
-            <div className="w-11 h-11 bg-slate-950 border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-400 mb-5">
-              <FileCheck2 size={22} />
+        {/* Live Scrolling Ticker Bar */}
+        <div className="w-full bg-[#111111]/80 border-t border-[#333333] overflow-hidden py-1.5 flex items-center">
+          <div className="flex whitespace-nowrap animate-ticker font-mono text-[10px] uppercase tracking-widest text-[#a39d96]">
+            <div className="flex items-center gap-8 px-8">
+              <span>AAPL <span className="text-[#ffdca1]">+1.2%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>MSFT <span className="text-[#ffdca1]">+0.8%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>JPM <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>NVDA <span className="text-[#ffdca1]">+3.5%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>TSLA <span className="text-[#ffdca1]">+0.4%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>GOOGL <span className="text-[#ffdca1]">+1.1%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>META <span className="text-[#ffdca1]">+0.9%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>BAC <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
             </div>
-            <h3 className="text-lg font-bold text-slate-100 mb-2">1. Business Screening</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-normal">
-              100% business activity verification excluding conventional banking, interest, gambling, weapons, alcohol, and pork products.
-            </p>
-            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-emerald-400 font-semibold">
-              Threshold: 100% Halal Revenue
-            </div>
-          </div>
-
-          {/* Rule Card 2 */}
-          <div className="p-6 bg-slate-900/70 border border-slate-800/90 rounded-2xl backdrop-blur-md hover:border-amber-500/40 transition-all">
-            <div className="w-11 h-11 bg-slate-950 border border-amber-500/30 rounded-xl flex items-center justify-center text-amber-400 mb-5">
-              <Scale size={22} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-100 mb-2">2. Debt-to-Asset Cap</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-normal">
-              Total interest-bearing debt divided by total market capitalization (or 36-month average market cap) must remain strictly under 33%.
-            </p>
-            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-amber-400 font-semibold">
-              Cap: Max 33.0% Total Debt
-            </div>
-          </div>
-
-          {/* Rule Card 3 */}
-          <div className="p-6 bg-slate-900/70 border border-slate-800/90 rounded-2xl backdrop-blur-md hover:border-cyan-500/40 transition-all">
-            <div className="w-11 h-11 bg-slate-950 border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-400 mb-5">
-              <DollarSign size={22} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-100 mb-2">3. Cash & Interest Cap</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-normal">
-              Cash and interest-bearing securities divided by market capitalization must remain under 33% to prevent trading pure monetary assets.
-            </p>
-            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-cyan-400 font-semibold">
-              Cap: Max 33.0% Cash Securities
-            </div>
-          </div>
-
-          {/* Rule Card 4 */}
-          <div className="p-6 bg-slate-900/70 border border-slate-800/90 rounded-2xl backdrop-blur-md hover:border-rose-500/40 transition-all">
-            <div className="w-11 h-11 bg-slate-950 border border-rose-500/30 rounded-xl flex items-center justify-center text-rose-400 mb-5">
-              <RefreshCw size={22} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-100 mb-2">4. Instant Liquidation</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-normal">
-              If an equity fails financial ratios due to balance sheet shifts, the engine executes a mandatory compliance liquidation on the next open.
-            </p>
-            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-rose-400 font-semibold">
-              Execution: Next Market Open
+            <div className="flex items-center gap-8 px-8">
+              <span>AAPL <span className="text-[#ffdca1]">+1.2%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>MSFT <span className="text-[#ffdca1]">+0.8%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>JPM <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>NVDA <span className="text-[#ffdca1]">+3.5%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>TSLA <span className="text-[#ffdca1]">+0.4%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>GOOGL <span className="text-[#ffdca1]">+1.1%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>META <span className="text-[#ffdca1]">+0.9%</span></span>
+              <span className="w-1 h-1 bg-[#333333] rounded-full" />
+              <span>BAC <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
             </div>
           </div>
         </div>
-      </section>
+      </nav>
 
-      {/* Multi-Factor Alpha & Backtest Visualization Section */}
-      <section id="factor-model" className="relative z-10 py-20 px-6 max-w-7xl mx-auto border-t border-slate-800/80">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left Description Column */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 text-xs font-mono">
-              <Sliders size={13} /> QUANTITATIVE FACTOR ENGINE
-            </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-100 tracking-tight leading-tight">
-              Beyond Passive Indexing: Systematic Multi-Factor Alpha
-            </h2>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Standard Shariah ETFs (like SPUS or HLAL) use market-cap weighting, causing heavy over-concentration in top mega-caps. Our quantitative model ranks compliant equities across 4 proven factor dimensions:
-            </p>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center justify-center mt-0.5">
-                  1
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-200">Momentum Factor (12-1 Month Relative Return)</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">Selects equities demonstrating robust persistent medium-term price trends.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs font-bold flex items-center justify-center mt-0.5">
-                  2
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-200">Quality Factor (Return on Equity & Free Cash Flow)</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">Prioritizes high ROE, strong balance sheet health, and operational profitability.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs font-bold flex items-center justify-center mt-0.5">
-                  3
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-200">Low Volatility & Value Factors</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">Controls downside drawdown risk while maintaining favorable earnings yield valuation.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Metrics Comparison Card */}
-          <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+      <main className="pt-40 md:pt-48">
+        {/* Editorial Hero Grid */}
+        <section className="px-4 sm:px-12 max-w-screen-2xl mx-auto mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 border-none">
+            {/* Main Hero Text Block */}
+            <div className="lg:col-span-8 bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between min-h-[520px] md:min-h-[600px]">
               <div>
-                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                  <BarChart3 size={18} className="text-emerald-400" />
-                  Strategy Backtest Performance (2019 - Present)
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Historical simulation comparing Shariah Multi-Factor vs SPUS & S&P 500</p>
+                <div className="mb-8 inline-flex items-center gap-2 pb-2 border-b border-[#333333]">
+                  <span className="font-mono text-[11px] text-[#a39d96] uppercase tracking-widest">
+                    AAOIFI Compliant Ecosystem
+                  </span>
+                </div>
+                <h1 className="font-playfair text-[48px] sm:text-[64px] lg:text-[88px] mb-8 text-white leading-none font-normal">
+                  The Future of<br />
+                  <span className="italic text-[#a39d96]">Ethical</span> Investing.
+                </h1>
+                <p className="font-sans text-lg text-[#a39d96] mb-12 leading-relaxed max-w-2xl border-l-2 border-[#ffdca1]/50 pl-6">
+                  Institutional-grade algorithmic trading infrastructure designed strictly for Shariah-compliant portfolios. Automated screening, zero leverage, and purified returns.
+                </p>
               </div>
-              <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-mono font-semibold">
-                Monthly Rebalanced
-              </span>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => handleStartConnection("ALPACA PAPER")}
+                  className="bg-white text-black font-medium px-8 py-3 font-mono text-[11px] uppercase tracking-widest hover:bg-[#a39d96] transition-all cursor-pointer text-center"
+                >
+                  Open Account
+                </button>
+                <button
+                  onClick={() => setShowBrokerModal(true)}
+                  className="border border-[#333333] text-white font-medium px-8 py-3 font-mono text-[11px] uppercase tracking-widest hover:border-white transition-all cursor-pointer text-center"
+                >
+                  View Gateway
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {/* Metric 1: CAGR */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-mono">
-                  <span className="text-slate-300">Annualized Return (CAGR)</span>
-                  <span className="text-emerald-400 font-bold">+21.4% (Shariah Multi-Factor)</span>
+            {/* Right Side Widgets */}
+            <div className="lg:col-span-4 flex flex-col gap-4">
+              {/* System Status Widget */}
+              <div className="bg-black/70 border border-[#333333] p-8 flex-1 flex flex-col justify-center">
+                <div className="flex justify-between items-center mb-6 border-b border-[#333333] pb-2">
+                  <span className="font-mono text-[10px] text-[#a39d96] tracking-widest uppercase">
+                    System Status
+                  </span>
+                  <span className="flex items-center gap-2 font-mono text-[10px] text-[#ffdca1] uppercase tracking-widest">
+                    <span className="w-2 h-2 rounded-full bg-[#ffdca1] animate-pulse" />
+                    Live
+                  </span>
                 </div>
-                <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800 flex">
-                  <div className="h-full bg-emerald-500 w-[78%]" title="Shariah Algo: 21.4%" />
-                  <div className="h-full bg-amber-500/70 w-[60%]" title="SPUS ETF: 16.2%" />
-                  <div className="h-full bg-slate-600/50 w-[50%]" title="S&P 500: 13.8%" />
+                <div className="mb-4">
+                  <span className="font-playfair text-[32px] text-white block">100% Halal</span>
+                  <span className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest">
+                    Portfolio Purity
+                  </span>
                 </div>
-                <div className="flex justify-between text-[10px] font-mono text-slate-500">
-                  <span>Shariah Multi-Factor: 21.4%</span>
-                  <span>SPUS ETF: 16.2%</span>
-                  <span>S&P 500: 13.8%</span>
+                <div className="space-y-3 mt-6">
+                  <div className="flex justify-between items-center font-mono text-[10px] uppercase tracking-widest">
+                    <span className="text-[#a39d96]">Engine</span>
+                    <span className="text-white">AAOIFI_V2</span>
+                  </div>
+                  <div className="flex justify-between items-center font-mono text-[10px] uppercase tracking-widest">
+                    <span className="text-[#a39d96]">Latency</span>
+                    <span className="text-white">12ms</span>
+                  </div>
+                  <div className="flex justify-between items-center font-mono text-[10px] uppercase tracking-widest">
+                    <span className="text-[#a39d96]">Last Scan</span>
+                    <span className="text-white">Just Now</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Metric 2: Sharpe Ratio */}
-              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-800 text-center font-mono">
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400 uppercase">Sharpe Ratio</div>
-                  <div className="text-base font-bold text-emerald-400 mt-1">1.28</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">vs 1.02 SPUS</div>
+              {/* Market Sentiment Widget */}
+              <div className="bg-black/70 border border-[#333333] p-8 flex-1 flex flex-col justify-center">
+                <div className="flex justify-between items-center mb-6 border-b border-[#333333] pb-2">
+                  <span className="font-mono text-[10px] text-[#a39d96] tracking-widest uppercase">
+                    Halal Universe Sentiment
+                  </span>
                 </div>
-
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400 uppercase">Max Drawdown</div>
-                  <div className="text-base font-bold text-slate-200 mt-1">-16.4%</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">vs -22.1% SPUS</div>
+                <div className="flex items-end gap-2 h-20 mb-6">
+                  <div className="w-1/6 bg-[#ffdca1]/20 h-[30%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#ffdca1]/40 h-[50%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#ffdca1]/60 h-[40%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#ffdca1]/30 h-[70%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#ffdca1]/80 h-[60%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#ffdca1] h-[90%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
                 </div>
-
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400 uppercase">AAOIFI Pass Rate</div>
-                  <div className="text-base font-bold text-amber-400 mt-1">100.0%</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Zero Breach</div>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="font-playfair text-[20px] text-white block">+2.4%</span>
+                    <span className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest">
+                      7 Day Avg
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] border border-[#ffdca1] text-[#ffdca1] px-2 py-1 tracking-widest uppercase">
+                    Bullish
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Broker Gateway Setup Banner */}
-      <section className="relative z-10 py-16 px-6 max-w-5xl mx-auto text-center">
-        <div className="p-10 bg-slate-900/90 border border-slate-800/80 rounded-3xl backdrop-blur-xl relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 left-1/3 right-1/3 h-px bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
-          <h2 className="text-2xl md:text-4xl font-extrabold text-slate-100">
-            Ready to Automate Your Shariah Strategy?
-          </h2>
-          <p className="mt-3 text-xs md:text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Connect your Interactive Brokers or Alpaca Securities account and deploy automated spot equity trading in minutes.
-          </p>
+        {/* Platform Interface Showcase */}
+        <section id="terminal">
+          <ContainerScroll
+            titleComponent={
+              <div className="flex flex-col items-center">
+                <span className="font-mono text-[11px] text-[#ffdca1] uppercase tracking-[0.3em] mb-3">
+                  Interactive Algorithmic Terminal
+                </span>
+                <h2 className="font-playfair text-[36px] sm:text-[56px] md:text-[68px] font-normal leading-tight text-white">
+                  Unleash the power of<br />
+                  <span className="italic text-[#a39d96]">Algorithmic Compliance.</span>
+                </h2>
+              </div>
+            }
+          >
+            <InteractiveAlgoTerminal />
+          </ContainerScroll>
+        </section>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <button
-              onClick={() => setShowBrokerModal(true)}
-              className="px-8 py-4 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-950/80 hover:shadow-emerald-900 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Building2 size={16} />
-              Connect Broker Gateway
-            </button>
-            <button
-              onClick={() => handleStartConnection("DEMO CONSOLE")}
-              className="px-8 py-4 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs uppercase tracking-widest rounded-xl border border-slate-800 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Zap size={16} className="text-amber-400" />
-              Launch Paper Demo
-            </button>
+        {/* Compliance Section (Grid Based) */}
+        <section id="compliance" className="py-16 px-4 sm:px-12 max-w-screen-2xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 border-none">
+            <div className="lg:col-span-5 bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between min-h-[480px]">
+              <div>
+                <div className="text-[#a39d96] font-mono text-[11px] mb-6 uppercase tracking-widest flex items-center gap-3">
+                  <span className="w-8 h-[1px] bg-[#a39d96]" />
+                  Compliance-as-a-Service
+                </div>
+                <h2 className="font-playfair text-[36px] sm:text-[48px] mb-8 leading-tight text-white font-normal">
+                  Screening that evolves<br />
+                  <span className="italic text-[#a39d96]">with the market.</span>
+                </h2>
+                <p className="text-[#a39d96] mb-8 font-sans text-base leading-relaxed">
+                  Our proprietary engine runs daily scans against AAOIFI and S&P Shariah standards. We don't just flag; we automate the purification process for fractional shares.
+                </p>
+              </div>
+              <div className="border border-[#333333] p-6 bg-[#111111]/30">
+                <div className="font-mono text-[10px] text-[#a39d96] tracking-widest uppercase mb-4">
+                  Active Screening Parameters
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs text-white border-b border-[#333333]/60 pb-2">
+                    <span>Debt / Total Assets</span>
+                    <span className="text-[#ffdca1] font-mono font-semibold">&lt; 33%</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-white border-b border-[#333333]/60 pb-2">
+                    <span>Cash / Total Assets</span>
+                    <span className="text-[#ffdca1] font-mono font-semibold">&lt; 33%</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-white">
+                    <span>Non-compliant Income</span>
+                    <span className="text-[#ffdca1] font-mono font-semibold">&lt; 5%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Feature 1 */}
+              <div className="bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between">
+                <div>
+                  <div className="font-playfair text-[40px] text-white/20 mb-6 border-b border-[#333333] pb-2 inline-block">
+                    01
+                  </div>
+                  <h4 className="font-playfair text-[24px] text-white mb-3">Automated Screening</h4>
+                  <p className="text-[#a39d96] font-sans text-sm leading-relaxed">
+                    Daily balance sheet scans to ensure debt-to-equity ratios remain strictly below the 33% threshold, executing seamlessly in the background.
+                  </p>
+                </div>
+                <div className="mt-8 border-t border-[#333333] pt-6 flex justify-between items-end">
+                  <div>
+                    <div className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest mb-1">
+                      Debt/Equity Ratio
+                    </div>
+                    <div className="font-playfair text-white text-[28px]">28.4%</div>
+                  </div>
+                  <div className="w-1/2 h-[2px] bg-[#333333] relative">
+                    <div className="absolute top-0 left-0 h-full bg-[#ffdca1] w-[85%]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between">
+                <div>
+                  <div className="font-playfair text-[40px] text-white/20 mb-6 border-b border-[#333333] pb-2 inline-block">
+                    02
+                  </div>
+                  <h4 className="font-playfair text-[24px] text-white mb-3">Dividend Purification</h4>
+                  <p className="text-[#a39d96] font-sans text-sm leading-relaxed">
+                    Automatic calculation and precise redirection of non-compliant income to verified charitable organizations, maintaining portfolio purity.
+                  </p>
+                </div>
+                <div className="mt-8 border-t border-[#333333] pt-6">
+                  <div className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest mb-2">
+                    Purification Queue
+                  </div>
+                  <div className="flex items-center justify-between border border-[#333333] p-3 bg-[#111111]/40">
+                    <span className="text-xs text-white font-mono">MSFT Div</span>
+                    <span className="text-xs text-[#a39d96]">→</span>
+                    <span className="text-xs text-[#ffdca1] font-mono">Charity</span>
+                    <span className="font-mono text-[8px] bg-[#111111] text-[#ffdca1] px-2 py-0.5 uppercase border border-[#ffdca1]/30">
+                      Pending
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQ Accordion Section */}
-      <section id="faqs" className="relative z-10 py-20 px-6 max-w-4xl mx-auto border-t border-slate-800/80">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-100">Frequently Asked Questions</h2>
-          <p className="text-xs text-slate-400 mt-2 font-mono uppercase tracking-wider">
-            Clear Answers on AAOIFI Screening, Execution, and Compliance
-          </p>
-        </div>
+        {/* Universe Interactive Preview */}
+        <section id="universe" className="py-16 border-y border-[#333333] bg-[#050505]">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-12">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-16 gap-8">
+              <div className="max-w-2xl">
+                <h2 className="font-playfair text-[48px] sm:text-[64px] mb-4 leading-none font-normal">The Universe</h2>
+                <p className="text-[#a39d96] font-sans text-lg">
+                  Explore thousands of vetted equities. Our engine filters the noise so you focus on performance.
+                </p>
+              </div>
+              <div className="w-full lg:w-auto border-b border-white pb-2 flex items-center gap-3">
+                <Search size={16} className="text-[#a39d96]" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter Ticker..."
+                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-lg w-full lg:w-64 p-0 text-white placeholder:text-[#333333] font-mono"
+                />
+              </div>
+            </div>
 
-        <div className="space-y-3">
-          {faqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className="bg-slate-900/70 border border-slate-800/80 rounded-xl overflow-hidden backdrop-blur-md transition-colors"
-            >
-              <button
-                onClick={() => toggleFaq(idx)}
-                className="w-full p-5 text-left flex justify-between items-center text-sm font-semibold text-slate-200 hover:text-emerald-400 transition-colors cursor-pointer"
+            {/* Minimal List View */}
+            <div className="flex flex-col border-t border-[#333333]">
+              {filteredStocks.map((stock) => (
+                <div
+                  key={stock.ticker}
+                  className={`group flex flex-col sm:flex-row justify-between items-start sm:items-center py-6 border-b border-[#333333] px-3 transition-colors ${
+                    stock.compliant ? "hover:bg-[#111111]/50 cursor-pointer" : "opacity-50 grayscale"
+                  }`}
+                >
+                  <div className="flex items-center gap-8 w-full sm:w-1/3">
+                    <span className={`font-playfair text-[28px] sm:text-[32px] ${stock.compliant ? "group-hover:italic transition-all" : "line-through text-[#a39d96]"}`}>
+                      {stock.ticker}
+                    </span>
+                    {stock.compliant ? (
+                      <span className="font-mono text-[10px] border border-[#333333] px-2 py-1 tracking-widest uppercase text-[#a39d96]">
+                        Compliant
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[10px] border border-[#ffb4ab]/50 text-[#ffb4ab] px-2 py-1 tracking-widest uppercase">
+                        Restricted
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-[#a39d96] font-sans text-base w-full sm:w-1/3 mt-3 sm:mt-0">
+                    {stock.name}
+                  </div>
+
+                  <div className="flex items-end justify-between sm:justify-end w-full sm:w-1/3 mt-3 sm:mt-0 text-right">
+                    {stock.compliant ? (
+                      <>
+                        <div className="hidden md:flex items-end h-7 gap-[3px] mr-6">
+                          {stock.spark?.map((h, i) => (
+                            <div
+                              key={i}
+                              style={{ height: `${h}%` }}
+                              className="w-[3px] bg-[#ffdca1]/60 group-hover:bg-[#ffdca1] transition-colors"
+                            />
+                          ))}
+                        </div>
+                        <span className="font-mono text-sm text-[#ffdca1] mr-6">{stock.change}</span>
+                        <span className="font-playfair text-[22px] text-white font-mono">{stock.price}</span>
+                      </>
+                    ) : (
+                      <span className="font-mono text-xs text-[#ffb4ab]/80 italic">
+                        {stock.reason}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQs Section */}
+        <section id="faqs" className="py-16 px-4 sm:px-12 max-w-4xl mx-auto border-t border-[#333333]">
+          <div className="text-center mb-16">
+            <h2 className="font-playfair text-[40px] sm:text-[48px] mb-2 font-normal">Engine Mechanics & Compliance FAQs</h2>
+            <p className="text-[#a39d96] font-sans text-base">
+              Technical answers regarding AAOIFI screening, leverage restrictions, and factor execution.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <div
+                key={index}
+                className="border border-[#333333] bg-[#111111]/30 transition-colors overflow-hidden"
               >
-                <span>{faq.q}</span>
-                {activeFaq === idx ? (
-                  <ChevronUp size={18} className="text-emerald-400 flex-shrink-0 ml-4" />
-                ) : (
-                  <ChevronDown size={18} className="text-slate-400 flex-shrink-0 ml-4" />
-                )}
-              </button>
-              {activeFaq === idx && (
-                <div className="px-5 pb-5 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3.5 font-normal">
-                  {faq.a}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
+                <button
+                  onClick={() => toggleFaq(index)}
+                  className="w-full text-left p-5 font-playfair text-lg text-white flex justify-between items-center gap-4 hover:bg-[#111111]/60 transition-colors cursor-pointer"
+                >
+                  <span>{faq.q}</span>
+                  {activeFaq === index ? (
+                    <ChevronUp size={18} className="text-[#ffdca1] shrink-0" />
+                  ) : (
+                    <ChevronDown size={18} className="text-[#a39d96] shrink-0" />
+                  )}
+                </button>
 
-      {/* Institutional Footer */}
-      <footer className="relative z-10 border-t border-slate-800/80 py-10 px-6 text-center text-xs text-slate-500 font-mono">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>SHARIAHTRADING © {new Date().getFullYear()} · Spot Equity Halal Quantitative Engine</span>
+                <AnimatePresence>
+                  {activeFaq === index && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="px-5 pb-5 text-[#a39d96] font-sans text-sm leading-relaxed border-t border-[#333333]/40 pt-4"
+                    >
+                      {faq.a}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
           </div>
-          <div>AAOIFI Standard No. 21 Compliant · 100% Long-Only Spot Equities</div>
+        </section>
+
+        {/* Final Call to Action */}
+        <section className="py-16 border-t border-[#333333] bg-[#050505]">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-12 flex flex-col items-center text-center">
+            <h2 className="font-playfair text-[56px] sm:text-[80px] md:text-[96px] mb-8 leading-none font-normal">
+              Ready to deploy.
+            </h2>
+            <p className="text-[#a39d96] mb-12 font-sans max-w-2xl text-lg">
+              Join 500+ institutional and retail investors building the future of ethical finance. Get started in minutes.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto">
+              <button
+                onClick={() => handleStartConnection("ALPACA PAPER")}
+                className="bg-white text-black font-medium px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:bg-[#a39d96] transition-all cursor-pointer"
+              >
+                Start Trading Now
+              </button>
+              <button
+                onClick={() => setShowBrokerModal(true)}
+                className="border border-[#333333] text-white font-medium px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:border-white transition-all cursor-pointer"
+              >
+                Schedule Demo
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Editorial Footer */}
+      <footer className="border-t border-[#333333] bg-black pt-16">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-12 flex flex-col lg:flex-row justify-between items-start gap-12 pb-16">
+          <div className="max-w-sm">
+            <span className="font-playfair text-[24px] text-white uppercase tracking-widest mb-6 block border-b border-[#333333] pb-3">
+              SHARIAHTRADING
+            </span>
+            <p className="text-[#a39d96] font-sans text-sm mb-8 leading-relaxed">
+              Leading the transition to a debt-free, ethical investment landscape. Fully AAOIFI compliant.
+            </p>
+            <div className="flex gap-8 text-[#a39d96]">
+              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-white">Global</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-white">Press</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-white">Journal</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-16 gap-y-8 font-mono text-[11px] uppercase tracking-widest">
+            <div>
+              <h5 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Platform</h5>
+              <ul className="space-y-4 text-white">
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#compliance">Compliance Policy</a></li>
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#universe">Universe Stats</a></li>
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#terminal">Terminal Docs</a></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Legal</h5>
+              <ul className="space-y-4 text-white">
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#">Terms of Service</a></li>
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#">Privacy</a></li>
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#">Risk Disclosure</a></li>
+              </ul>
+            </div>
+          </div>
         </div>
       </footer>
 
-      {/* Interactive Broker Gateway Setup Modal */}
-      <AnimatePresence>
-        {showBrokerModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative text-slate-100"
+      {/* Broker Connection Modal */}
+      {showBrokerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+          <div className="bg-black border border-[#333333] p-6 md:p-8 max-w-md w-full relative">
+            <button
+              onClick={() => setShowBrokerModal(false)}
+              className="absolute top-4 right-4 text-[#a39d96] hover:text-white cursor-pointer"
             >
+              <X size={20} />
+            </button>
+
+            <h3 className="font-playfair text-2xl mb-2 text-white">Connect Trading Gateway</h3>
+            <p className="text-[#a39d96] text-sm font-sans mb-6">
+              Select your broker environment to sync AAOIFI compliance rules and factor strategy execution.
+            </p>
+
+            <div className="space-y-3">
               <button
-                onClick={() => setShowBrokerModal(false)}
-                className="absolute right-4 top-4 text-slate-400 hover:text-slate-100 p-1 cursor-pointer"
+                onClick={() => handleStartConnection("ALPACA PAPER")}
+                className="w-full text-left p-4 border border-[#333333] hover:border-[#ffdca1] bg-[#111111]/40 hover:bg-[#111111]/80 transition-all cursor-pointer flex justify-between items-center"
               >
-                <X size={18} />
+                <div>
+                  <div className="font-mono text-xs uppercase tracking-widest text-white">Alpaca Paper Trading</div>
+                  <div className="text-xs text-[#a39d96] font-mono">Zero-risk simulated environment</div>
+                </div>
+                <span className="font-mono text-[10px] text-[#ffdca1] border border-[#ffdca1]/40 px-2 py-0.5 uppercase">Instant</span>
               </button>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-950/80 border border-emerald-800 rounded-xl flex items-center justify-center text-emerald-400">
-                  <Building2 size={20} />
-                </div>
+              <button
+                onClick={() => handleStartConnection("INTERACTIVE BROKERS")}
+                className="w-full text-left p-4 border border-[#333333] hover:border-[#ffdca1] bg-[#111111]/40 hover:bg-[#111111]/80 transition-all cursor-pointer flex justify-between items-center"
+              >
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100">Broker Gateway Setup</h3>
-                  <p className="text-xs text-slate-400 font-mono">Select execution API target</p>
+                  <div className="font-mono text-xs uppercase tracking-widest text-white">Interactive Brokers API</div>
+                  <div className="text-xs text-[#a39d96] font-mono">Live Institutional execution gateway</div>
                 </div>
-              </div>
-
-              <div className="space-y-3 my-5">
-                <button
-                  onClick={() => handleStartConnection("INTERACTIVE BROKERS (IBKR)")}
-                  className="w-full p-4 bg-slate-950 border border-emerald-500/40 hover:border-emerald-400 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-slate-100 flex items-center gap-2">
-                      Interactive Brokers (IBKR TWS API)
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono">
-                        INSTITUTIONAL
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Automated spot equity execution & portfolio sync</div>
-                  </div>
-                  <ArrowRight size={16} className="text-emerald-400 group-hover:translate-x-1 transition-transform" />
-                </button>
-
-                <button
-                  onClick={() => handleStartConnection("ALPACA SECURITIES")}
-                  className="w-full p-4 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-slate-100">Alpaca Securities API</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Commission-free equity trading API</div>
-                  </div>
-                  <ArrowRight size={16} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
-                </button>
-
-                <button
-                  onClick={() => handleStartConnection("DEMO CONSOLE")}
-                  className="w-full p-4 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5 font-mono">
-                      <Zap size={14} /> Demo Console (Sandbox Mode)
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Instant browser simulation with paper funds</div>
-                  </div>
-                  <ArrowRight size={16} className="text-amber-400 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-
-              <div className="text-[11px] text-slate-500 text-center font-mono flex items-center justify-center gap-1">
-                <Lock size={12} className="text-emerald-400" />
-                Encrypted Local Authentication · Zero Third-Party Custody
-              </div>
-            </motion.div>
+                <span className="font-mono text-[10px] text-[#a39d96] border border-[#333333] px-2 py-0.5 uppercase">OAuth</span>
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

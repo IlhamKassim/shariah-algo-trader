@@ -43,7 +43,11 @@ def _fetch_benchmark(ticker: str, start_date: datetime.date, end_date: datetime.
         progress=False,
     )
     if bench_raw.empty:
-        # Don't cache empty results — retry on next request
+        # Fallback to any previously cached series for this ticker if available
+        for (t, _, _), (_, cached_series) in _bench_cache.items():
+            if t == ticker and not cached_series.empty:
+                logger.warning("Empty response fetching %s, using fallback cached benchmark series", ticker)
+                return cached_series
         return pd.Series(dtype=float)
 
     bench_close = bench_raw["Close"]
