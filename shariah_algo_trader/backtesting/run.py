@@ -32,13 +32,15 @@ def main():
     parser.add_argument("--start-date", type=str, default="2024-01-01", help="Backtest start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", type=str, default="2026-06-01", help="Backtest end date (YYYY-MM-DD)")
     parser.add_argument("--top-n", type=int, default=20, help="Number of holdings in portfolio")
-    parser.add_argument("--sector-cap", type=float, default=0.20, help="Sector cap percentage (0.20 = 20%)")
+    parser.add_argument("--sector-cap", type=float, default=0.20, help="Sector cap percentage (0.20 = 20%%)")
     parser.add_argument("--initial-capital", type=float, default=100000.0, help="Initial cash allocation")
     parser.add_argument("--tx-cost", type=float, default=25.0, help="Transaction cost in basis points (bps)")
     parser.add_argument("--compare", action="store_true", help="Compare 4-factor vs 3-factor strategy")
     parser.add_argument("--tickers", type=str, default="", help="Comma-separated list of tickers to restrict the backtest (recommended for free FMP keys)")
+    parser.add_argument("--output-dir", type=str, default=".", help="Directory to save backtest result JSON files")
 
     args = parser.parse_args()
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # Override universe if custom tickers are provided
     if args.tickers:
@@ -73,7 +75,7 @@ def main():
         print_metrics_table(res_4f["metrics"], "4-Factor Strategy (Standard)")
         
         # Save results
-        out_path = os.path.join(os.path.dirname(__file__), "results_4f.json")
+        out_path = os.path.join(args.output_dir, "results_4f.json")
         with open(out_path, "w") as f:
             json.dump({
                 "metrics": res_4f["metrics"],
@@ -95,7 +97,7 @@ def main():
             print_metrics_table(res_3f["metrics"], "3-Factor Strategy (No Low-Vol)")
             
             # Save results
-            out_path = os.path.join(os.path.dirname(__file__), "results_3f.json")
+            out_path = os.path.join(args.output_dir, "results_3f.json")
             with open(out_path, "w") as f:
                 json.dump({
                     "metrics": res_3f["metrics"],

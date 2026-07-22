@@ -29,6 +29,17 @@ def find_element_by_tag_suffix(root: ET.Element, suffix: str) -> Optional[ET.Ele
 def find_all_elements_by_tag_suffix(root: ET.Element, suffix: str) -> list[ET.Element]:
     return [el for el in root.iter() if el.tag.split("}")[-1] == suffix]
 
+def is_amendment_filing(xml_content: str) -> bool:
+    """Detect whether an N-PORT XML submission is an amendment (N-PORT-P/A) rather than an original (N-PORT-P)."""
+    try:
+        root = ET.fromstring(xml_content)
+    except Exception:
+        return False
+    submission_el = find_element_by_tag_suffix(root, "submissionType")
+    if submission_el is not None and submission_el.text:
+        return submission_el.text.strip().upper().endswith("/A")
+    return False
+
 def parse_nport_xml(xml_content: str) -> Optional[tuple[str, dict[str, float]]]:
     """Parse Form N-PORT XML content.
     
@@ -47,11 +58,14 @@ def parse_nport_xml(xml_content: str) -> Optional[tuple[str, dict[str, float]]]:
         # Not SPUS, skip
         return None
 
-    # Get Report Date (repPdDate primarily, fallback to repPdEnd)
+    # Get Report Date (repPdDate = the actual as-of date of this holdings snapshot;
+    # repPdEnd is the fund's fiscal year end, which is constant across filings and
+    # does not identify which snapshot this is. Fall back to repPdEnd only if
+    # repPdDate is absent from the filing.)
     rep_date_el = find_element_by_tag_suffix(root, "repPdDate")
     if rep_date_el is None or not rep_date_el.text:
         rep_date_el = find_element_by_tag_suffix(root, "repPdEnd")
-        
+
     if rep_date_el is None or not rep_date_el.text:
         logger.warning("Filing has no reporting period date (repPdDate or repPdEnd)")
         return None
@@ -104,7 +118,8 @@ def load_universe_history() -> dict[str, list[str]]:
     
     # 1. Parse local XML filings in data/filings/
     if os.path.exists(FILINGS_DIR):
-        for fname in os.listdir(FILINGS_DIR):
+        parsed_filings = []
+        for fname in sorted(os.listdir(FILINGS_DIR)):
             if fname.endswith(".xml"):
                 fpath = os.path.join(FILINGS_DIR, fname)
                 try:
@@ -113,16 +128,25 @@ def load_universe_history() -> dict[str, list[str]]:
                     parsed = parse_nport_xml(content)
                     if parsed:
                         report_date, holdings = parsed
-                        logger.info("Parsed local N-PORT filing for date %s, found %d tickers", report_date, len(holdings))
-                        # Save to cache
-                        cache_path = os.path.join(UNIVERSE_CACHE_DIR, f"{report_date}.json")
-                        with open(cache_path, "w") as f_out:
-                            json.dump(holdings, f_out, indent=2)
+                        parsed_filings.append((is_amendment_filing(content), fname, report_date, holdings))
                 except Exception as exc:
                     logger.error("Failed to parse local XML filing %s: %s", fname, exc)
 
+        # Write originals before amendments (sorted by filename within each group) so that if two
+        # filings share a report date, the amendment's cache write is the final, authoritative one
+        # regardless of filename or filesystem listing order.
+        parsed_filings.sort(key=lambda item: (item[0], item[1]))
+        for is_amendment, fname, report_date, holdings in parsed_filings:
+            logger.info(
+                "Parsed local N-PORT filing for date %s (%s), found %d tickers",
+                report_date, "amendment" if is_amendment else "original", len(holdings)
+            )
+            cache_path = os.path.join(UNIVERSE_CACHE_DIR, f"{report_date}.json")
+            with open(cache_path, "w") as f_out:
+                json.dump(holdings, f_out, indent=2)
+
     # 2. Load cached holdings files
-    for fname in os.listdir(UNIVERSE_CACHE_DIR):
+    for fname in sorted(os.listdir(UNIVERSE_CACHE_DIR)):
         if fname.endswith(".json") and fname != "fallback.json":
             report_date = fname[:-5] # remove '.json'
             cache_path = os.path.join(UNIVERSE_CACHE_DIR, fname)

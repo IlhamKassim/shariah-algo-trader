@@ -14,9 +14,8 @@ day_trader/.runtime/
 
 # Backtesting
 shariah_algo_trader/backtesting/.cache/
-shariah_algo_trader/backtesting/results_*.json
+results_*.json
 
 # Local database and state
 data/
 *.db
-

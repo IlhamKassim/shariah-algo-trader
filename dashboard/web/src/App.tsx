@@ -182,7 +182,7 @@ function Topbar() {
                   isDayTraderPage ? "text-brand-gold" : "text-muted"
                 }`}
               >
-                {isDayTraderPage ? "Benchmark bot · Not Shariah-screened" : "Long-only · No leverage · Halal"}
+                {isDayTraderPage ? "Benchmark bot · Not Shariah-screened" : "Long-only · No leverage · Shariah-screened"}
               </span>
             </div>
           </div>
@@ -215,7 +215,7 @@ function Topbar() {
             )}
           </div>
         </div>
-        
+
         {/* Status block */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 w-full md:w-auto text-muted">
           <div className="flex items-center gap-1.5">

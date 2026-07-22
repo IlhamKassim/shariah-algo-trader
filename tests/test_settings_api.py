@@ -25,7 +25,14 @@ class MockConfig:
         self.google_redirect_uri = None
         self.allowed_google_emails = set()
 
-def test_get_settings(client):
+def test_get_settings(client, monkeypatch):
+    # get_settings() reads secrets straight from os.environ (not cfg) so it never
+    # trusts a possibly-already-masked value on the Config object — mock the real
+    # environment here so this test doesn't depend on the local machine's .env.
+    monkeypatch.setenv("ALPACA_API_SECRET", "test-secret")
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "securepassword")
+    monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
+
     app.dependency_overrides[get_config] = lambda: MockConfig()
 
     from dashboard.api.deps import verify_auth
