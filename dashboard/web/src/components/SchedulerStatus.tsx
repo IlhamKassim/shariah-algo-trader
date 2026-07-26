@@ -33,18 +33,18 @@ export function SchedulerStatus() {
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
           </div>
-        ) : data ? (
+        ) : (
           <div className="space-y-0">
             {/* Status row */}
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <div className="flex items-center gap-1.5">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    data.scheduler_running ? "bg-brand-green" : "bg-brand-red"
+                    data?.scheduler_running ? "bg-brand-green" : "bg-brand-red"
                   }`}
                 />
                 <span className="text-sm font-medium text-primary">
-                  {data.scheduler_running ? "Active" : "Stopped"}
+                  {data?.scheduler_running ? "Active" : "Stopped"}
                 </span>
               </div>
               <span className="text-[11px] text-faint">Fires on NYSE trading days</span>
@@ -54,19 +54,19 @@ export function SchedulerStatus() {
             <div className="pt-3 space-y-2.5">
               <Row
                 label="Last run"
-                value={data.last_started_at ? fmtDate(data.last_started_at) : "—"}
+                value={data?.last_started_at ? fmtDate(data.last_started_at) : "—"}
               />
               <Row
                 label="Next run"
-                value={data.next_fire_at ? fmtDate(data.next_fire_at) : "—"}
+                value={data?.next_fire_at ? fmtDate(data.next_fire_at) : "—"}
                 highlight
               />
               <Row label="Job time" value={jobTime} />
-              <Row label="Universe" value={data.etf_symbol} />
-              <Row label="Top N" value={String(data.top_n)} />
+              <Row label="Universe" value={data?.etf_symbol || "SPUS"} />
+              <Row label="Top N" value={data?.top_n ? String(data.top_n) : "20"} />
             </div>
           </div>
-        ) : null}
+        )}
       </CardContent>
     </Card>
   );

@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/api/portfolio", response_model=list[PositionResponse])
-def get_portfolio(client: AlpacaClient = Depends(get_alpaca)) -> list[PositionResponse]:
+def get_portfolio(client: AlpacaClient | None = Depends(get_alpaca)) -> list[PositionResponse]:
+    if not client:
+        return []
     try:
         positions = client.get("/v2/positions")
     except AlpacaError as exc:

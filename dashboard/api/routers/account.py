@@ -11,7 +11,14 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/api/account", response_model=AccountResponse)
-def get_account(client: AlpacaClient = Depends(get_alpaca)) -> AccountResponse:
+def get_account(client: AlpacaClient | None = Depends(get_alpaca)) -> AccountResponse:
+    if not client:
+        return AccountResponse(
+            equity=0.0, cash=0.0, buying_power=0.0,
+            portfolio_value=0.0, dayl_pl=0.0, dayl_pl_pct=0.0,
+            estimated_fees=0.0, fee_drag_pct=0.0,
+            fee_status_label="Connect Alpaca API in Settings",
+        )
     try:
         data = client.get("/v2/account")
     except AlpacaError as exc:

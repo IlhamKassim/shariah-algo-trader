@@ -17,10 +17,15 @@ router = APIRouter()
 _RISK_FREE_RATE = float(os.environ.get("RISK_FREE_RATE", "0.05"))  # annualised
 
 
-def _portfolio_history(client: AlpacaClient) -> tuple[list[str], list[float]]:
-    data = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
-    timestamps: list[int] = data.get("timestamp", [])
-    equities: list[float] = data.get("equity", [])
+def _portfolio_history(client: AlpacaClient | None) -> tuple[list[str], list[float]]:
+    if not client:
+        return [], []
+    try:
+        data = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
+        timestamps: list[int] = data.get("timestamp", [])
+        equities: list[float] = data.get("equity", [])
+    except AlpacaError:
+        return [], []
 
     dates = [
         datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -82,9 +87,14 @@ def _align_series(
     return common, [map_a[d] for d in common], [map_b[d] for d in common]
 
 
+from fastapi import APIRouter, Depends, Request
+from dashboard.api.deps import get_config
+from shariah_algo_trader.config import Config
+
+
 @router.get("/api/compare", response_model=CompareResponse)
-def get_compare() -> CompareResponse:
-    shariah_client = get_alpaca()
+def get_compare(request: Request, cfg: Config = Depends(get_config)) -> CompareResponse:
+    shariah_client = get_alpaca(request, cfg)
     shariah_dates, shariah_eq = _portfolio_history(shariah_client)
     shariah_dates, shariah_eq = patch_today(shariah_dates, shariah_eq, live_equity(shariah_client))
     shariah_metrics = _compute_metrics("Shariah Algo", shariah_eq)

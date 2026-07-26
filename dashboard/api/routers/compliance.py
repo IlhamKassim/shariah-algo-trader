@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @router.get("/api/compliance", response_model=ComplianceResponse)
 def get_compliance(
-    client: AlpacaClient = Depends(get_alpaca),
+    client: AlpacaClient | None = Depends(get_alpaca),
     cache: UniverseCache = Depends(get_universe_cache),
 ) -> ComplianceResponse:
     """Check current portfolio against the cached eligible universe.
@@ -21,6 +21,14 @@ def get_compliance(
     Uses the universe cache so this endpoint is always fast (<50ms).
     Returns compliant=True when the cache is empty (can't determine violations).
     """
+    if not client:
+        return ComplianceResponse(
+            compliant=True,
+            violations=[],
+            held_count=0,
+            universe_size=len(cache.stocks) if cache.stocks else 0,
+            last_checked=cache.last_computed_at.isoformat() if cache.last_computed_at else None,
+        )
     try:
         positions = client.get("/v2/positions")
         held = {p["symbol"] for p in positions}

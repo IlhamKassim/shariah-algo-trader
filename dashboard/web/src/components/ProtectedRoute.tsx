@@ -1,16 +1,19 @@
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/react";
-import { api } from "../lib/api";
+import { api, setTokenProvider } from "../lib/api";
+import { supabase } from "../lib/supabaseClient";
+import { MfaChallengeModal } from "./auth/MfaChallengeModal";
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { data: auth, isLoading: loadingAuth } = useQuery({
+  const queryClient = useQueryClient();
+  const { data: auth, isLoading: loadingAuth, isError: authError } = useQuery({
     queryKey: ["authStatus"],
     queryFn: api.authStatus,
     retry: false,
@@ -20,11 +23,41 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
   const [timedOut, setTimedOut] = useState(false);
+  const [showMfaChallenge, setShowMfaChallenge] = useState(false);
+
+  // Wire Supabase session token provider
+  useEffect(() => {
+    if (supabase) {
+      setTokenProvider(async () => {
+        if (!supabase) return null;
+        const { data } = await supabase.auth.getSession();
+        return data.session?.access_token || null;
+      });
+
+
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          queryClient.invalidateQueries({ queryKey: ["authStatus"] });
+        }
+      });
+
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
+    }
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (auth?.supabase_enabled && auth?.authenticated && auth?.mfa_required && !auth?.mfa_verified) {
+      setShowMfaChallenge(true);
+    } else {
+      setShowMfaChallenge(false);
+    }
+  }, [auth]);
 
   const clerkPending = auth?.clerk_enabled && !isLoaded;
   const showLoading = !timedOut && (loadingAuth || clerkPending);
 
-  // If Clerk never loads after 6 seconds (wrong key, network issue), stop spinning
   useEffect(() => {
     if (!clerkPending) return;
     const timer = setTimeout(() => setTimedOut(true), 6000);
@@ -46,14 +79,31 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <>{children}</>;
   }
 
-  // If timed out or clerk not enabled, fall through to normal auth check
   if (auth?.clerk_enabled && !timedOut) {
     if (!isSignedIn) {
       return <Navigate to="/login" replace />;
     }
-  } else if (auth?.auth_enabled && !auth.authenticated) {
+  } else if (auth?.auth_enabled && !auth.authenticated && !loadingAuth && !authError) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <MfaChallengeModal
+        isOpen={showMfaChallenge}
+        onSuccess={() => {
+          setShowMfaChallenge(false);
+          queryClient.invalidateQueries({ queryKey: ["authStatus"] });
+        }}
+        onCancel={async () => {
+          setShowMfaChallenge(false);
+          if (supabase) await supabase.auth.signOut();
+          await api.logout();
+          queryClient.invalidateQueries();
+        }}
+      />
+      {children}
+    </>
+  );
 }
+

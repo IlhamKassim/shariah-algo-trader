@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Save, Key, Sliders, Shield, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Save, Key, Sliders, Shield, ShieldCheck, Loader2, CheckCircle2, AlertCircle, Mail, Lock, Flame } from "lucide-react";
 import { api } from "../lib/api";
 import type { SettingsUpdateRequest } from "../lib/api";
 import { Card, CardContent } from "../components/ui/Card";
+import { MfaEnrollModal } from "../components/auth/MfaEnrollModal";
+import { supabase } from "../lib/supabaseClient";
+
 
 export function Settings() {
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
@@ -39,10 +42,25 @@ export function Settings() {
 
   // State values for forms
   const [keyVisible, setKeyVisible] = useState(false);
+  const [liveKeyVisible, setLiveKeyVisible] = useState(false);
   const [passVisible, setPassVisible] = useState(false);
   const [googleIdVisible, setGoogleIdVisible] = useState(false);
   const [googleSecretVisible, setGoogleSecretVisible] = useState(false);
+  const [showMfaEnroll, setShowMfaEnroll] = useState(false);
   const [activeTab, setActiveTab] = useState<"broker" | "strategy" | "auth">("broker");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [sendingReset, setSendingReset] = useState(false);
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user?.email) {
+          setUserEmail(data.user.email);
+        }
+      });
+    }
+  }, []);
+
 
 
   // Form states (controlled inputs)
@@ -112,8 +130,11 @@ export function Settings() {
   }
 
   // Helper values
+  const currentTradingMode = formData.trading_mode ?? settings.trading_mode ?? "paper";
   const currentAlpacaKey = formData.alpaca_api_key ?? settings.alpaca_api_key_masked;
   const currentAlpacaSecret = formData.alpaca_api_secret ?? settings.alpaca_api_secret_masked;
+  const currentAlpacaLiveKey = formData.alpaca_live_api_key ?? settings.alpaca_live_api_key_masked ?? "";
+  const currentAlpacaLiveSecret = formData.alpaca_live_api_secret ?? settings.alpaca_live_api_secret_masked ?? "";
   const currentAlpacaUrl = formData.alpaca_base_url ?? settings.alpaca_base_url;
 
   const currentEtfSymbol = formData.etf_symbol ?? settings.etf_symbol;
@@ -242,64 +263,185 @@ export function Settings() {
                 </div>
               )}
 
-              {/* BROKER SETTINGS */}
+              {/* BROKER & TRADING ENVIRONMENT SETTINGS */}
               {activeTab === "broker" && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="border-b border-divider pb-2">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Alpaca Broker API Setup</h3>
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Trading Environment & Broker API Setup</h3>
                     <p className="text-[10px] text-faint mt-1">
-                      Configure credentials for execution. Make sure transfers are disabled on these keys.
+                      Manage active execution environment (Paper vs Live Real Money) and credentials.
                     </p>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                        Alpaca API Key ID
-                      </label>
-                      <input
-                        type="text"
-                        value={currentAlpacaKey}
-                        onChange={(e) => handleInputChange("alpaca_api_key", e.target.value)}
-                        className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                        placeholder="Enter Alpaca API Key"
-                      />
-                    </div>
+                  {/* ENVIRONMENT SELECTOR CARDS */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-muted">
+                      Active Execution Mode
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div
+                        onClick={() => {
+                          handleInputChange("trading_mode", "paper");
+                          handleInputChange("alpaca_base_url", "https://paper-api.alpaca.markets");
+                        }}
+                        className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                          currentTradingMode === "paper"
+                            ? "border-brand-gold bg-brand-gold/10"
+                            : "border-divider bg-page hover:border-brand-gold/40"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Shield size={16} className="text-brand-gold" />
+                          <div>
+                            <div className="font-mono text-xs font-bold uppercase text-primary">Paper Trading</div>
+                            <div className="text-[10px] text-muted">Simulated · Zero Financial Risk</div>
+                          </div>
+                        </div>
+                        {currentTradingMode === "paper" && (
+                          <span className="text-[10px] font-mono text-brand-gold border border-brand-gold/40 px-2 py-0.5 uppercase font-bold">
+                            Active
+                          </span>
+                        )}
+                      </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                        Alpaca Secret Key
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={keyVisible ? "text" : "password"}
-                          value={currentAlpacaSecret}
-                          onChange={(e) => handleInputChange("alpaca_api_secret", e.target.value)}
-                          className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                          placeholder="Enter secret key payload"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setKeyVisible(!keyVisible)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
-                        >
-                          {keyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
+                      <div
+                        onClick={() => {
+                          handleInputChange("trading_mode", "live");
+                          handleInputChange("alpaca_base_url", "https://api.alpaca.markets");
+                        }}
+                        className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                          currentTradingMode === "live"
+                            ? "border-rose-500 bg-rose-950/20"
+                            : "border-divider bg-page hover:border-rose-500/40"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Flame size={16} className="text-rose-400 animate-pulse" />
+                          <div>
+                            <div className="font-mono text-xs font-bold uppercase text-rose-400">Live Real Money</div>
+                            <div className="text-[10px] text-muted">Real Capital Execution</div>
+                          </div>
+                        </div>
+                        {currentTradingMode === "live" && (
+                          <span className="text-[10px] font-mono text-rose-400 border border-rose-500/40 px-2 py-0.5 uppercase font-bold">
+                            Active Live
+                          </span>
+                        )}
                       </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                        Alpaca Base URL
-                      </label>
-                      <input
-                        type="text"
-                        value={currentAlpacaUrl}
-                        onChange={(e) => handleInputChange("alpaca_base_url", e.target.value)}
-                        className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                        placeholder="https://paper-api.alpaca.markets"
-                      />
+                  {/* PAPER CREDENTIALS */}
+                  <div className="bg-[#12110E] border border-divider rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-divider/50 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Shield size={14} className="text-brand-gold" />
+                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-primary">
+                          Paper Trading Credentials
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-faint">https://paper-api.alpaca.markets</span>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
+                          Paper API Key
+                        </label>
+                        <input
+                          type="text"
+                          value={currentAlpacaKey}
+                          onChange={(e) => handleInputChange("alpaca_api_key", e.target.value)}
+                          className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                          placeholder="PK..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
+                          Paper Secret Key
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={keyVisible ? "text" : "password"}
+                            value={currentAlpacaSecret}
+                            onChange={(e) => handleInputChange("alpaca_api_secret", e.target.value)}
+                            className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                            placeholder="Enter paper secret"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setKeyVisible(!keyVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {keyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* LIVE REAL MONEY CREDENTIALS */}
+                  <div className="bg-[#140D0E] border border-rose-900/30 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-rose-900/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Flame size={14} className="text-rose-400" />
+                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-300">
+                          Live Real Money Credentials
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-rose-400/70">https://api.alpaca.markets</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-rose-200/70 mb-1">
+                          Live API Key ID
+                        </label>
+                        <input
+                          type="text"
+                          value={currentAlpacaLiveKey}
+                          onChange={(e) => handleInputChange("alpaca_live_api_key", e.target.value)}
+                          className="w-full bg-page border border-rose-900/40 text-primary px-3 py-2 text-xs focus:border-rose-500 focus:outline-none transition-colors"
+                          placeholder="AK..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-rose-200/70 mb-1">
+                          Live Secret Key
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={liveKeyVisible ? "text" : "password"}
+                            value={currentAlpacaLiveSecret}
+                            onChange={(e) => handleInputChange("alpaca_live_api_secret", e.target.value)}
+                            className="w-full bg-page border border-rose-900/40 text-primary pl-3 pr-10 py-2 text-xs focus:border-rose-500 focus:outline-none transition-colors"
+                            placeholder="Enter live secret"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setLiveKeyVisible(!liveKeyVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {liveKeyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                      Resolved Alpaca Endpoint URL
+                    </label>
+                    <input
+                      type="text"
+                      value={currentAlpacaUrl}
+                      onChange={(e) => handleInputChange("alpaca_base_url", e.target.value)}
+                      className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors font-mono"
+                      placeholder="https://paper-api.alpaca.markets"
+                    />
                   </div>
                 </div>
               )}
@@ -392,121 +534,207 @@ export function Settings() {
                 </div>
               )}
 
-              {/* AUTH SETTINGS */}
+              {/* AUTH / ACCOUNT SECURITY SETTINGS */}
               {activeTab === "auth" && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="border-b border-divider pb-2">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Access Security & Authentication</h3>
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
+                      {authStatus?.supabase_enabled || authStatus?.clerk_enabled ? "Account Security & 2FA" : "Access Security & Authentication"}
+                    </h3>
                     <p className="text-[10px] text-faint mt-1">
-                      Set console access passwords or setup Google OAuth configs for multi-tenant sign-in.
+                      {authStatus?.supabase_enabled || authStatus?.clerk_enabled
+                        ? "Manage your user profile, multi-factor authentication, and security credentials."
+                        : "Set console access passwords or setup Google OAuth configs for single-tenant sign-in."}
                     </p>
                   </div>
 
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                        Dashboard Sign-in Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={passVisible ? "text" : "password"}
-                          value={currentPassword}
-                          onChange={(e) => handleInputChange("dashboard_password", e.target.value)}
-                          className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                          placeholder="Console password (optional)"
-                        />
+                  {authStatus?.supabase_enabled ? (
+                    <div className="space-y-4">
+                      {/* Authenticated Account Profile */}
+                      <div className="bg-page border border-divider p-4 space-y-3">
+                        <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                          <Mail size={13} className="text-brand-gold" /> Authenticated Account Profile
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <span className="text-[9px] text-faint block uppercase font-mono">User Email Address</span>
+                            <span className="font-mono text-primary font-semibold">{userEmail || "Authenticated User"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-faint block uppercase font-mono">Authentication Provider</span>
+                            <span className="font-mono text-emerald-400 font-semibold flex items-center gap-1">
+                              <CheckCircle2 size={12} /> Supabase Auth Engine (ES256)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Password Reset Section */}
+                      <div className="bg-page border border-divider p-4 space-y-3">
+                        <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                          <Lock size={13} className="text-brand-gold" /> Password Management
+                        </h4>
+                        <p className="text-[11px] text-muted leading-relaxed">
+                          Need to update your account password? Click below to receive a password reset link at your registered email address.
+                        </p>
                         <button
                           type="button"
-                          onClick={() => setPassVisible(!passVisible)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                          disabled={sendingReset || !userEmail}
+                          onClick={async () => {
+                            if (!supabase || !userEmail) return;
+                            setSendingReset(true);
+                            try {
+                              const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+                                redirectTo: `${window.location.origin}/login`,
+                              });
+                              if (error) throw error;
+                              setSuccessMsg(`Password reset link sent to ${userEmail}! Please check your email.`);
+                              setTimeout(() => setSuccessMsg(null), 5000);
+                            } catch (err: any) {
+                              setErrorMsg(err.message || "Failed to send password reset link.");
+                              setTimeout(() => setErrorMsg(null), 5000);
+                            } finally {
+                              setSendingReset(false);
+                            }
+                          }}
+                          className="px-3 py-2 bg-transparent border border-brand-gold/60 text-brand-gold hover:bg-brand-gold hover:text-page text-[10px] font-bold tracking-wider uppercase transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
                         >
-                          {passVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                          {sendingReset ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />
+                              Sending Reset Email...
+                            </>
+                          ) : (
+                            "Send Password Reset Email"
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Multi-Factor Authentication */}
+                      <div className="bg-page border border-divider p-4 space-y-3">
+                        <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <ShieldCheck size={14} /> Multi-Factor Authentication (TOTP 2FA)
+                        </h4>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Protect real-money trading and strategy configurations with 2-Factor Authentication (Google Authenticator / 1Password).
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowMfaEnroll(true)}
+                          className="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer uppercase tracking-wider"
+                        >
+                          <ShieldCheck size={13} />
+                          Configure / Enable TOTP MFA
                         </button>
                       </div>
                     </div>
-
-                    <div className="pt-3 border-t border-divider">
-                      <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3">Google OAuth Configuration</h4>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                            Google Client ID
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={googleIdVisible ? "text" : "password"}
-                              value={currentGoogleId ?? ""}
-                              onChange={(e) => handleInputChange("google_client_id", e.target.value || null)}
-                              className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                              placeholder="Enter Google Client ID"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setGoogleIdVisible(!googleIdVisible)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
-                            >
-                              {googleIdVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                          </div>
-                        </div>
-
-
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                            Google Client Secret
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={googleSecretVisible ? "text" : "password"}
-                              value={currentGoogleSecret ?? ""}
-                              onChange={(e) => handleInputChange("google_client_secret", e.target.value || null)}
-                              className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                              placeholder="Enter Google client secret token"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setGoogleSecretVisible(!googleSecretVisible)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
-                            >
-                              {googleSecretVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                            Google Redirect Callback URI
-                          </label>
+                  ) : (
+                    /* Legacy Single-Tenant Admin Auth Config (Only shown if Supabase/Clerk is not enabled) */
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                          Dashboard Sign-in Password
+                        </label>
+                        <div className="relative">
                           <input
-                            type="text"
-                            value={currentGoogleRedirect ?? ""}
-                            onChange={(e) => handleInputChange("google_redirect_uri", e.target.value || null)}
-                            className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                            placeholder="https://yourdomain.com/api/auth/google/callback"
+                            type={passVisible ? "text" : "password"}
+                            value={currentPassword}
+                            onChange={(e) => handleInputChange("dashboard_password", e.target.value)}
+                            className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                            placeholder="Console password (optional)"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setPassVisible(!passVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {passVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
                         </div>
+                      </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                            Whitelisted Access Email Addresses (Comma-separated)
-                          </label>
-                          <input
-                            type="text"
-                            value={currentGoogleEmails.join(", ")}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "allowed_google_emails",
-                                e.target.value.split(",").map((em) => em.trim())
-                              )
-                            }
-                            className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                            placeholder="user1@gmail.com, user2@gmail.com"
-                          />
+                      <div className="pt-3 border-t border-divider">
+                        <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3">Google OAuth Configuration</h4>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                              Google Client ID
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={googleIdVisible ? "text" : "password"}
+                                value={currentGoogleId ?? ""}
+                                onChange={(e) => handleInputChange("google_client_id", e.target.value || null)}
+                                className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                                placeholder="Enter Google Client ID"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setGoogleIdVisible(!googleIdVisible)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                              >
+                                {googleIdVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                              Google Client Secret
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={googleSecretVisible ? "text" : "password"}
+                                value={currentGoogleSecret ?? ""}
+                                onChange={(e) => handleInputChange("google_client_secret", e.target.value || null)}
+                                className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                                placeholder="Enter Google client secret token"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setGoogleSecretVisible(!googleSecretVisible)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
+                              >
+                                {googleSecretVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                              Google Redirect Callback URI
+                            </label>
+                            <input
+                              type="text"
+                              value={currentGoogleRedirect ?? ""}
+                              onChange={(e) => handleInputChange("google_redirect_uri", e.target.value || null)}
+                              className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                              placeholder="https://yourdomain.com/api/auth/google/callback"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                              Whitelisted Access Email Addresses (Comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={currentGoogleEmails.join(", ")}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  "allowed_google_emails",
+                                  e.target.value.split(",").map((em) => em.trim())
+                                )
+                              }
+                              className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                              placeholder="user1@gmail.com, user2@gmail.com"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -534,7 +762,16 @@ export function Settings() {
             </CardContent>
           </Card>
         </form>
+
+        <MfaEnrollModal
+          isOpen={showMfaEnroll}
+          onClose={() => setShowMfaEnroll(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["authStatus"] });
+          }}
+        />
       </div>
     </div>
   );
 }
+

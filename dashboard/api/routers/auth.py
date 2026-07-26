@@ -77,6 +77,9 @@ class AuthStatusResponse(BaseModel):
     password_auth_enabled: bool
     google_auth_enabled: bool
     clerk_enabled: bool
+    supabase_enabled: bool = False
+    mfa_required: bool = False
+    mfa_verified: bool = False
     authenticated: bool
 
 
@@ -87,6 +90,36 @@ router = APIRouter()
 def get_auth_status(
     request: Request, cfg: Config = Depends(get_config)
 ) -> AuthStatusResponse:
+    if getattr(cfg, "supabase_enabled", False):
+        auth_header = request.headers.get("Authorization")
+        token = None
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+        elif request.cookies.get("sb-access-token"):
+            token = request.cookies.get("sb-access-token")
+
+        authenticated = False
+        mfa_verified = False
+        if token:
+            try:
+                from dashboard.api.deps import _decode_supabase_jwt
+                payload = _decode_supabase_jwt(token, cfg)
+                authenticated = True
+                mfa_verified = (payload.get("aal") == "aal2")
+            except Exception:
+                pass
+
+        return AuthStatusResponse(
+            auth_enabled=True,
+            password_auth_enabled=False,
+            google_auth_enabled=False,
+            clerk_enabled=False,
+            supabase_enabled=True,
+            mfa_required=getattr(cfg, "enforce_mfa", False),
+            mfa_verified=mfa_verified,
+            authenticated=authenticated,
+        )
+
     if getattr(cfg, "clerk_enabled", False):
         auth_header = request.headers.get("Authorization")
         authenticated = False
@@ -110,6 +143,7 @@ def get_auth_status(
             password_auth_enabled=False,
             google_auth_enabled=False,
             clerk_enabled=True,
+            supabase_enabled=False,
             authenticated=authenticated,
         )
 
@@ -128,6 +162,7 @@ def get_auth_status(
             password_auth_enabled=False,
             google_auth_enabled=False,
             clerk_enabled=False,
+            supabase_enabled=False,
             authenticated=True,
         )
 
@@ -138,8 +173,10 @@ def get_auth_status(
         password_auth_enabled=password_auth_enabled,
         google_auth_enabled=google_auth_enabled,
         clerk_enabled=False,
+        supabase_enabled=False,
         authenticated=authenticated,
     )
+
 
 
 @router.post("/api/auth/login")

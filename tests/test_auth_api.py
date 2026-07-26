@@ -220,3 +220,48 @@ def test_verify_password_endpoint(client):
 
     app.dependency_overrides.clear()
 
+
+@patch("dashboard.api.deps._decode_supabase_jwt")
+def test_supabase_auth_status(mock_decode, client):
+    class MockConfigSupabase:
+        def __init__(self):
+            self.alpaca_api_key = "test-key"
+            self.alpaca_api_secret = "test-secret"
+            self.alpaca_base_url = "https://paper-api.alpaca.markets"
+            self.etf_symbol = "SPUS"
+            self.top_n = 20
+            self.dashboard_password = None
+            self.dashboard_session_secret = "test-secret-key"
+            self.google_client_id = None
+            self.google_client_secret = None
+            self.google_redirect_uri = None
+            self.allowed_google_emails = set()
+            self.clerk_jwt_verification_key = None
+            self.clerk_enabled = False
+            self.supabase_url = "https://example.supabase.co"
+            self.supabase_jwt_secret = None
+            self.supabase_jwks_url = "https://example.supabase.co/auth/v1/.well-known/jwks.json"
+            self.supabase_enabled = True
+            self.enforce_mfa = False
+
+    app.dependency_overrides[get_config] = lambda: MockConfigSupabase()
+
+    # Unauthenticated request (no token)
+    response = client.get("/api/auth/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["supabase_enabled"] is True
+    assert data["authenticated"] is False
+
+    # Authenticated request with Bearer token
+    mock_decode.return_value = {"sub": "user_123", "aal": "aal1"}
+    response = client.get("/api/auth/status", headers={"Authorization": "Bearer fake_token"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["supabase_enabled"] is True
+    assert data["authenticated"] is True
+    mock_decode.assert_called_once()
+
+    app.dependency_overrides.clear()
+
+

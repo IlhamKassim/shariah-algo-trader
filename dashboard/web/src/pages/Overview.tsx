@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { Flame } from "lucide-react";
 import { api } from "../lib/api";
 import { formatCurrency, formatPct, plColor } from "../lib/utils";
 import { ActivityFeed } from "../components/ActivityFeed";
@@ -9,8 +10,15 @@ import { PerformanceChart } from "../components/PerformanceChart";
 import { SchedulerStatus } from "../components/SchedulerStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import { Skeleton } from "../components/ui/Skeleton";
+import { OnboardingTutorial } from "../components/OnboardingTutorial";
 
 export function Overview() {
+  const { data: status } = useQuery({
+    queryKey: ["status"],
+    queryFn: api.status,
+    refetchInterval: 30_000,
+  });
+
   const { data: account, isLoading: loadingAccount } = useQuery({
     queryKey: ["account"],
     queryFn: api.account,
@@ -63,6 +71,33 @@ export function Overview() {
 
   return (
     <div className="space-y-6">
+      {status?.is_live && (
+        <div className="bg-gradient-to-r from-rose-950/60 via-red-950/40 to-rose-950/60 border border-rose-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono shadow-[0_0_20px_rgba(244,63,94,0.15)] animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+              <Flame size={18} className="animate-pulse" />
+            </div>
+            <div>
+              <span className="font-bold text-rose-300 uppercase tracking-wider block">
+                🔴 LIVE REAL MONEY TRADING ENVIRONMENT ACTIVE
+              </span>
+              <span className="text-rose-200/70 font-sans text-[11px]">
+                Orders and rebalance triggers are being executed with live capital on <code className="font-mono text-rose-300">https://api.alpaca.markets</code>.
+              </span>
+            </div>
+          </div>
+          <Link
+            to="/settings"
+            className="px-3.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-200 text-[10px] uppercase font-bold tracking-widest rounded transition-all cursor-pointer whitespace-nowrap"
+          >
+            Manage Environment
+          </Link>
+        </div>
+      )}
+
+      {account?.fee_status_label === "Connect Alpaca API in Settings" && (
+        <OnboardingTutorial />
+      )}
       <Hero>
         <HeroStat
           label="Portfolio Value"

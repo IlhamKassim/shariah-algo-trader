@@ -65,26 +65,65 @@ def _sanitize_val(val: str | None) -> str:
     return val.replace("\r", "").replace("\n", "").strip()
 
 
+from dashboard.api.user_store import get_user_settings, save_user_settings
+
+
 @router.get("/api/settings", response_model=SettingsResponse)
-def get_settings(cfg: Config = Depends(get_config)) -> SettingsResponse:
-    # Read raw secrets from environment since they might be hidden/masked in cfg
-    raw_secret = os.environ.get("ALPACA_API_SECRET", "")
+def get_settings(request: Request, cfg: Config = Depends(get_config)) -> SettingsResponse:
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    user_data = get_user_settings(user_id) if user_id else None
+
+    trading_mode = "paper"
+    raw_live_key = ""
+    raw_live_secret = ""
+
+    if user_id:
+        if user_data:
+            trading_mode = user_data.get("trading_mode") or "paper"
+            raw_key = user_data.get("alpaca_api_key") or ""
+            raw_secret = user_data.get("alpaca_api_secret") or ""
+            raw_live_key = user_data.get("alpaca_live_api_key") or ""
+            raw_live_secret = user_data.get("alpaca_live_api_secret") or ""
+            base_url = user_data.get("alpaca_base_url") or ("https://api.alpaca.markets" if trading_mode == "live" else cfg.alpaca_base_url)
+            etf_symbol = user_data.get("etf_symbol") or cfg.etf_symbol
+            top_n = user_data.get("top_n") or cfg.top_n
+            sector_cap = user_data.get("sector_cap") if user_data.get("sector_cap") is not None else cfg.sector_cap
+            drift_threshold = user_data.get("drift_threshold") if user_data.get("drift_threshold") is not None else cfg.drift_threshold
+        else:
+            raw_key = ""
+            raw_secret = ""
+            base_url = cfg.alpaca_base_url
+            etf_symbol = cfg.etf_symbol
+            top_n = cfg.top_n
+            sector_cap = cfg.sector_cap
+            drift_threshold = cfg.drift_threshold
+    else:
+        raw_key = cfg.alpaca_api_key
+        raw_secret = os.environ.get("ALPACA_API_SECRET", "")
+        base_url = cfg.alpaca_base_url
+        etf_symbol = cfg.etf_symbol
+        top_n = cfg.top_n
+        sector_cap = cfg.sector_cap
+        drift_threshold = cfg.drift_threshold
+
     raw_pass = os.environ.get("DASHBOARD_PASSWORD", "")
     raw_google_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
     return SettingsResponse(
-        alpaca_api_key_masked=mask_value(cfg.alpaca_api_key),
+        trading_mode=trading_mode,
+        alpaca_api_key_masked=mask_value(raw_key),
         alpaca_api_secret_masked=mask_value(raw_secret),
-        alpaca_base_url=cfg.alpaca_base_url,
-        etf_symbol=cfg.etf_symbol,
-        top_n=cfg.top_n,
+        alpaca_live_api_key_masked=mask_value(raw_live_key),
+        alpaca_live_api_secret_masked=mask_value(raw_live_secret),
+        alpaca_base_url=base_url,
+        etf_symbol=etf_symbol,
+        top_n=top_n,
         etf_symbols=cfg.etf_symbols,
-        sector_cap=cfg.sector_cap,
-        drift_threshold=cfg.drift_threshold,
+        sector_cap=sector_cap,
+        drift_threshold=drift_threshold,
         dashboard_password_masked=mask_value(raw_pass),
         google_client_id_masked=mask_value(cfg.google_client_id),
         google_client_secret_masked=mask_value(raw_google_secret),
-
         google_redirect_uri=cfg.google_redirect_uri,
         allowed_google_emails=list(cfg.allowed_google_emails),
     )
@@ -96,93 +135,120 @@ def update_settings(
     payload: SettingsUpdateRequest,
     cfg: Config = Depends(get_config)
 ):
-    # Enforce password re-verification (SUDO mode) if password authentication is enabled
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+
+    # Save to user_store if request is bound to a Supabase/auth user_id
+    if user_id:
+        user_updates = {}
+        if payload.trading_mode is not None:
+            if payload.trading_mode not in ("paper", "live"):
+                raise HTTPException(status_code=400, detail="trading_mode must be 'paper' or 'live'")
+            user_updates["trading_mode"] = payload.trading_mode
+        if payload.alpaca_api_key is not None:
+            user_updates["alpaca_api_key"] = _sanitize_val(payload.alpaca_api_key)
+        if payload.alpaca_api_secret is not None and not is_masked(payload.alpaca_api_secret):
+            user_updates["alpaca_api_secret"] = _sanitize_val(payload.alpaca_api_secret)
+        if payload.alpaca_live_api_key is not None:
+            user_updates["alpaca_live_api_key"] = _sanitize_val(payload.alpaca_live_api_key)
+        if payload.alpaca_live_api_secret is not None and not is_masked(payload.alpaca_live_api_secret):
+            user_updates["alpaca_live_api_secret"] = _sanitize_val(payload.alpaca_live_api_secret)
+        if payload.alpaca_base_url is not None:
+            user_updates["alpaca_base_url"] = _sanitize_val(payload.alpaca_base_url)
+        if payload.etf_symbol is not None:
+            user_updates["etf_symbol"] = _sanitize_val(payload.etf_symbol).upper()
+        if payload.top_n is not None:
+            if payload.top_n <= 0:
+                raise HTTPException(status_code=400, detail="TOP_N must be greater than 0")
+            user_updates["top_n"] = payload.top_n
+        if payload.sector_cap is not None:
+            if not (0.0 <= payload.sector_cap <= 1.0):
+                raise HTTPException(status_code=400, detail="SECTOR_CAP must be between 0.0 and 1.0")
+            user_updates["sector_cap"] = payload.sector_cap
+        if payload.drift_threshold is not None:
+            if not (0.0 <= payload.drift_threshold <= 1.0):
+                raise HTTPException(status_code=400, detail="DRIFT_THRESHOLD must be between 0.0 and 1.0")
+            user_updates["drift_threshold"] = payload.drift_threshold
+
+        save_user_settings(user_id, user_updates)
+        log_audit_event("USER_SETTINGS_UPDATE", user_id, _client_ip(request), f"Updated user settings: {list(user_updates.keys())}")
+        return {"status": "success"}
+
+    # Legacy global .env updates fallback if no user_id is present
     if cfg.dashboard_password:
         if not payload.current_password or payload.current_password != cfg.dashboard_password:
             log_audit_event("SUDO_VERIFY_FAILURE", "admin", _client_ip(request), "Failed SUDO mode password re-verification")
             raise HTTPException(status_code=401, detail="Password re-verification (SUDO mode) required to update settings.")
 
     updates = {}
-
-
-
-    # Alpaca key
     if payload.alpaca_api_key is not None:
         updates["ALPACA_API_KEY"] = _sanitize_val(payload.alpaca_api_key)
-        
-    # Alpaca secret (if not masked/empty)
     if payload.alpaca_api_secret is not None and not is_masked(payload.alpaca_api_secret):
         updates["ALPACA_API_SECRET"] = _sanitize_val(payload.alpaca_api_secret)
-
-    # Alpaca base url
     if payload.alpaca_base_url is not None:
         updates["ALPACA_BASE_URL"] = _sanitize_val(payload.alpaca_base_url)
-
-    # ETF Symbol
     if payload.etf_symbol is not None:
         updates["ETF_SYMBOL"] = _sanitize_val(payload.etf_symbol).upper()
-
-    # Top N
     if payload.top_n is not None:
         if payload.top_n <= 0:
             raise HTTPException(status_code=400, detail="TOP_N must be greater than 0")
         updates["TOP_N"] = str(payload.top_n)
-
-    # ETF Symbols (additional list)
     if payload.etf_symbols is not None:
         updates["ETF_SYMBOLS"] = ",".join([_sanitize_val(s).upper() for s in payload.etf_symbols if s and _sanitize_val(s)])
-
-    # Sector Cap
     if payload.sector_cap is not None:
         if not (0.0 <= payload.sector_cap <= 1.0):
             raise HTTPException(status_code=400, detail="SECTOR_CAP must be between 0.0 and 1.0")
         updates["SECTOR_CAP"] = f"{payload.sector_cap:.2f}"
-
-    # Drift Threshold
     if payload.drift_threshold is not None:
         if not (0.0 <= payload.drift_threshold <= 1.0):
             raise HTTPException(status_code=400, detail="DRIFT_THRESHOLD must be between 0.0 and 1.0")
         updates["DRIFT_THRESHOLD"] = f"{payload.drift_threshold:.4f}"
-
-    # Dashboard Password (if not masked/empty)
     if payload.dashboard_password is not None and not is_masked(payload.dashboard_password):
         updates["DASHBOARD_PASSWORD"] = _sanitize_val(payload.dashboard_password)
-
-    # Google Client ID
     if payload.google_client_id is not None:
         updates["GOOGLE_CLIENT_ID"] = _sanitize_val(payload.google_client_id)
-
-    # Google Client Secret (if not masked/empty)
     if payload.google_client_secret is not None and not is_masked(payload.google_client_secret):
         updates["GOOGLE_CLIENT_SECRET"] = _sanitize_val(payload.google_client_secret)
-
-    # Google Redirect URI
     if payload.google_redirect_uri is not None:
         updates["GOOGLE_REDIRECT_URI"] = _sanitize_val(payload.google_redirect_uri)
-
-    # Allowed Google Emails
     if payload.allowed_google_emails is not None:
         updates["ALLOWED_GOOGLE_EMAILS"] = ",".join([_sanitize_val(e).lower() for e in payload.allowed_google_emails if e and _sanitize_val(e)])
-
 
     if updates:
         try:
             update_env_file(ENV_PATH, updates)
             logger.info("Updated .env configurations: %s", list(updates.keys()))
             log_audit_event("SETTINGS_UPDATE", "admin", _client_ip(request), f"Updated configuration keys: {list(updates.keys())}")
-
-            
-            # Apply changes to current os.environ so that load_dotenv reads them
             for k, v in updates.items():
                 os.environ[k] = v
-                
-            # Clear caches so the next API request gets a fresh Config and Alpaca Client
-            get_config.cache_clear()
-            get_alpaca.cache_clear()
-            
+            if hasattr(get_config, "cache_clear"):
+                get_config.cache_clear()
+            if hasattr(get_alpaca, "cache_clear"):
+                get_alpaca.cache_clear()
         except Exception as exc:
             logger.error("Failed to write configurations to .env: %s", exc)
             raise HTTPException(status_code=500, detail="Failed to save settings due to an internal error.")
 
-
     return {"status": "success"}
+
+
+@router.post("/api/settings/mode")
+def set_trading_mode(
+    request: Request,
+    payload: dict,
+):
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    mode = payload.get("mode")
+    if mode not in ("paper", "live"):
+        raise HTTPException(status_code=400, detail="mode must be 'paper' or 'live'")
+
+    base_url = "https://api.alpaca.markets" if mode == "live" else "https://paper-api.alpaca.markets"
+
+    if user_id:
+        save_user_settings(user_id, {"trading_mode": mode, "alpaca_base_url": base_url})
+        log_audit_event("TRADING_MODE_SWITCH", user_id, _client_ip(request), f"Switched trading mode to {mode}")
+    else:
+        update_env_file(ENV_PATH, {"ALPACA_BASE_URL": base_url})
+        os.environ["ALPACA_BASE_URL"] = base_url
+        log_audit_event("TRADING_MODE_SWITCH", "admin", _client_ip(request), f"Switched global trading mode to {mode}")
+
+    return {"status": "success", "trading_mode": mode, "alpaca_base_url": base_url}

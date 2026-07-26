@@ -11,6 +11,8 @@ class StatusResponse(BaseModel):
     etf_symbol: str
     top_n: int
     broker_url: str
+    trading_mode: str = "paper"
+    is_live: bool = False
 
 
 class AccountResponse(BaseModel):
@@ -145,8 +147,11 @@ class DayTraderResponse(BaseModel):
 
 
 class SettingsResponse(BaseModel):
+    trading_mode: str = "paper"
     alpaca_api_key_masked: str
     alpaca_api_secret_masked: str
+    alpaca_live_api_key_masked: str = ""
+    alpaca_live_api_secret_masked: str = ""
     alpaca_base_url: str
     etf_symbol: str
     top_n: int
@@ -160,11 +165,13 @@ class SettingsResponse(BaseModel):
     allowed_google_emails: list[str] = []
 
 
-
 class SettingsUpdateRequest(BaseModel):
     current_password: Optional[str] = None
+    trading_mode: Optional[str] = None
     alpaca_api_key: Optional[str] = None
     alpaca_api_secret: Optional[str] = None
+    alpaca_live_api_key: Optional[str] = None
+    alpaca_live_api_secret: Optional[str] = None
     alpaca_base_url: Optional[str] = None
     etf_symbol: Optional[str] = None
     top_n: Optional[int] = None

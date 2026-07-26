@@ -66,6 +66,8 @@ app = FastAPI(
 
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://shariahtrading.my",
+    "https://app.shariahtrading.my",
     *[o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()],
 ]
 

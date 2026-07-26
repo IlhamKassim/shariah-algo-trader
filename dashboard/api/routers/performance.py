@@ -5,11 +5,12 @@ import time
 
 import pandas as pd
 import yfinance as yf
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from dashboard.api.deps import get_alpaca
+from dashboard.api.deps import get_alpaca, get_config
 from dashboard.api.live_equity import live_equity, patch_today
 from dashboard.api.models import PerformanceResponse
+from shariah_algo_trader.config import Config
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
@@ -18,12 +19,9 @@ logger = logging.getLogger(__name__)
 _BENCH_TICKER = os.environ.get("BENCHMARK_TICKER", "SPUS")
 _SP500_TICKER = os.environ.get("SP500_TICKER", "SPY")
 _BENCH_CACHE_TTL = 3600   # 1 hour — benchmark data is daily
-_HISTORY_CACHE_TTL = 300  # 5 minutes — equity updates intraday
 
 # Cache: (ticker, start_date_iso, end_date_iso) → (monotonic_time_fetched, pd.Series)
 _bench_cache: dict[tuple[str, str, str], tuple[float, pd.Series]] = {}
-# Cache: (monotonic_time_fetched, (timestamps, equities)) | None
-_history_cache: tuple[float, tuple[list, list]] | None = None
 
 
 def _fetch_benchmark(ticker: str, start_date: datetime.date, end_date: datetime.date) -> pd.Series:
@@ -77,22 +75,14 @@ def _to_cumulative(raw: pd.Series, equity_index: pd.DatetimeIndex) -> list[float
     return ((1 + returns).cumprod() - 1).round(6).tolist()
 
 
-def _fetch_history(client: AlpacaClient) -> tuple[list, list]:
-    global _history_cache
-    if _history_cache is not None:
-        fetched_at, payload = _history_cache
-        if time.monotonic() - fetched_at < _HISTORY_CACHE_TTL:
-            return payload
-    history = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
-    payload = (history.get("timestamp", []), history.get("equity", []))
-    _history_cache = (time.monotonic(), payload)
-    return payload
-
-
 @router.get("/api/performance", response_model=PerformanceResponse)
-def get_performance(client: AlpacaClient = Depends(get_alpaca)) -> PerformanceResponse:
+def get_performance(request: Request, cfg: Config = Depends(get_config)) -> PerformanceResponse:
+    client = get_alpaca(request, cfg)
+    if not client:
+        return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])
     try:
-        timestamps, equities = _fetch_history(client)
+        history = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
+        timestamps, equities = history.get("timestamp", []), history.get("equity", [])
     except AlpacaError as exc:
         logger.warning("Performance history fetch failed: %s", exc)
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])

@@ -60,4 +60,16 @@ class Config:
         self.clerk_jwt_verification_key: str | None = os.environ.get("CLERK_JWT_VERIFICATION_KEY")
         self.clerk_enabled: bool = bool(self.clerk_jwt_verification_key)
 
+        # Supabase Authentication
+        self.supabase_url: str | None = os.environ.get("SUPABASE_URL")
+        self.supabase_anon_key: str | None = os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+        self.supabase_publishable_key: str | None = os.environ.get("SUPABASE_PUBLISHABLE_KEY") or self.supabase_anon_key
+        self.supabase_jwt_secret: str | None = os.environ.get("SUPABASE_JWT_SECRET") or os.environ.get("SUPABASE_SECRET_KEY")
+        self.supabase_secret_key: str | None = os.environ.get("SUPABASE_SECRET_KEY") or self.supabase_jwt_secret
+        self.supabase_jwks_url: str | None = os.environ.get("SUPABASE_JWKS_URL")
+        self.supabase_enabled: bool = bool(self.supabase_jwt_secret or self.supabase_url)
+        self.enforce_mfa: bool = os.environ.get("ENFORCE_MFA", "false").lower() in ("true", "1", "yes")
+
+
+
 

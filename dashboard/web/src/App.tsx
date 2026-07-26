@@ -11,8 +11,12 @@ import {
   Zap,
   BookOpen,
   SlidersHorizontal,
+  Flame,
+  Shield,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AccountModeModal } from "./components/AccountModeModal";
+import { UserAvatar } from "./components/UserAvatar";
 import { Overview } from "./pages/Overview";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
@@ -27,6 +31,7 @@ import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
 import { api, setTokenProvider } from "./lib/api";
 import { useAuth } from "@clerk/react";
+import { supabase } from "./lib/supabaseClient";
 
 const NAV = [
   { to: "/", label: "Overview", end: true, icon: LayoutDashboard },
@@ -113,11 +118,21 @@ function Topbar() {
     return mins >= 9 * 60 + 30 && mins < 16 * 60;
   })();
 
+  const [showAccountModal, setShowAccountModal] = useState(false);
+
   const { data: status } = useQuery({
     queryKey: ["status"],
     queryFn: api.status,
     refetchInterval: 30_000,
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    refetchInterval: 30_000,
+  });
+
+  const currentMode: "paper" | "live" = (status?.trading_mode || settings?.trading_mode || (status?.broker_url?.includes("paper") ? "paper" : "live")) as "paper" | "live";
 
   const { data: positions } = useQuery({
     queryKey: ["portfolio"],
@@ -148,8 +163,12 @@ function Topbar() {
       } else if (auth?.clerk_enabled) {
         await signOut();
       } else {
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
         await api.logout();
       }
+      queryClient.clear();
       await queryClient.invalidateQueries();
       navigate("/landing", { replace: true });
     } catch (err) {
@@ -201,16 +220,10 @@ function Topbar() {
             {!isDemo && (
               <NavLink
                 to="/settings"
-                className={({ isActive }) =>
-                  `w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
-                    isActive
-                      ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
-                      : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
-                  }`
-                }
+                className="w-7 h-7 rounded-full flex items-center justify-center select-none shrink-0"
                 title="User Profile & Settings"
               >
-                IK
+                <UserAvatar />
               </NavLink>
             )}
           </div>
@@ -236,10 +249,24 @@ function Topbar() {
               <span className="border border-brand-blue text-brand-blue text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap animate-pulse">
                 DEMO MODE
               </span>
+            ) : currentMode === "live" ? (
+              <button
+                onClick={() => setShowAccountModal(true)}
+                className="flex items-center gap-1 border border-rose-500 bg-rose-950/30 hover:bg-rose-950/60 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap cursor-pointer transition-all shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse"
+                title="Click to switch trading environment"
+              >
+                <Flame size={12} className="text-rose-400" />
+                <span>LIVE REAL MONEY</span>
+              </button>
             ) : (
-              <span className="border border-brand-gold text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap">
-                PAPER
-              </span>
+              <button
+                onClick={() => setShowAccountModal(true)}
+                className="flex items-center gap-1 border border-brand-gold bg-brand-gold/10 hover:bg-brand-gold/20 text-brand-gold text-[10px] font-semibold px-2 py-0.5 rounded-none tracking-[0.08em] whitespace-nowrap cursor-pointer transition-all"
+                title="Click to switch trading environment"
+              >
+                <Shield size={11} className="text-brand-gold" />
+                <span>PAPER ACCOUNT</span>
+              </button>
             )}
             <div className="hidden md:flex">
               <NotificationBell />
@@ -257,20 +284,21 @@ function Topbar() {
             {!isDemo && (
               <NavLink
                 to="/settings"
-                className={({ isActive }) =>
-                  `hidden md:flex w-7 h-7 rounded-full items-center justify-center text-[11px] font-semibold transition-all select-none shrink-0 border ${
-                    isActive
-                      ? "bg-brand-gold text-page border-brand-gold ring-2 ring-brand-gold/30 scale-105"
-                      : "bg-card-border text-muted border-transparent hover:border-muted/30 hover:scale-105"
-                  }`
-                }
+                className="hidden md:flex w-7 h-7 rounded-full items-center justify-center select-none shrink-0"
                 title="User Profile & Settings"
               >
-                IK
+                <UserAvatar />
               </NavLink>
             )}
           </div>
         </div>
+
+        {/* Environment Switcher Modal */}
+        <AccountModeModal
+          isOpen={showAccountModal}
+          onClose={() => setShowAccountModal(false)}
+          currentMode={currentMode}
+        />
       </div>
 
       {/* Nav tabs */}
@@ -325,18 +353,28 @@ function ScrollToTop() {
   return null;
 }
 
+import { ServerStatusBanner } from "./components/ServerStatusBanner";
+
 export default function App() {
   const { getToken, isLoaded } = useAuth();
-  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
   useEffect(() => {
     if (isLoaded) {
-      setTokenProvider(getToken);
+      setTokenProvider(async () => {
+        try {
+          return await getToken();
+        } catch {
+          return null;
+        }
+      });
     }
   }, [getToken, isLoaded]);
 
+  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
+
   return (
     <>
+      <ServerStatusBanner />
       <ScrollToTop />
       <Routes>
         <Route path="/landing" element={<Landing />} />

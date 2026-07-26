@@ -5,6 +5,8 @@ export interface StatusResponse {
   etf_symbol: string;
   top_n: number;
   broker_url: string;
+  trading_mode?: string;
+  is_live?: boolean;
 }
 
 export interface AccountResponse {
@@ -140,12 +142,19 @@ export interface AuthStatus {
   password_auth_enabled: boolean;
   google_auth_enabled: boolean;
   clerk_enabled: boolean;
+  supabase_enabled?: boolean;
+  mfa_required?: boolean;
+  mfa_verified?: boolean;
   authenticated: boolean;
 }
 
+
 export interface SettingsResponse {
+  trading_mode?: "paper" | "live";
   alpaca_api_key_masked: string;
   alpaca_api_secret_masked: string;
+  alpaca_live_api_key_masked?: string;
+  alpaca_live_api_secret_masked?: string;
   alpaca_base_url: string;
   etf_symbol: string;
   top_n: number;
@@ -162,8 +171,11 @@ export interface SettingsResponse {
 
 export interface SettingsUpdateRequest {
   current_password?: string;
+  trading_mode?: "paper" | "live";
   alpaca_api_key?: string;
   alpaca_api_secret?: string;
+  alpaca_live_api_key?: string;
+  alpaca_live_api_secret?: string;
   alpaca_base_url?: string;
   etf_symbol?: string;
   top_n?: number;
@@ -281,27 +293,65 @@ const getPerformanceDates = (): string[] => {
   return dates;
 };
 
-let getAuthToken: (() => Promise<string | null>) | null = null;
+import { supabase } from "./supabaseClient";
+
+let getAuthToken: (() => Promise<string | null>) | null = supabase
+  ? async () => {
+      try {
+        const { data } = await supabase!.auth.getSession();
+        return data.session?.access_token || null;
+      } catch {
+        return null;
+      }
+    }
+  : null;
 
 export const setTokenProvider = (fn: () => Promise<string | null>) => {
   getAuthToken = fn;
 };
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
   const headers = new Headers(init?.headers);
+  let token: string | null = null;
+
   if (getAuthToken) {
-    const token = await getAuthToken();
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
+    token = await getAuthToken();
+  }
+  if (!token && supabase) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      token = data.session?.access_token || null;
+    } catch {
+      // ignore session fetch error
     }
   }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const res = await fetch(path, {
     ...init,
     headers,
   });
+
+  // Handle 401 Unauthorized due to expired token after returning to tab
+  if (res.status === 401 && !isRetry && supabase) {
+    try {
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      if (refreshData?.session?.access_token) {
+        // Token refreshed successfully — retry the API request once with new token
+        return apiFetch<T>(path, init, true);
+      }
+    } catch {
+      // Refresh failed — proceed to throw error
+    }
+  }
+
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
   return res.json();
 }
+
 
 export const api = {
   status: () => {
@@ -510,10 +560,17 @@ export const api = {
       body: JSON.stringify({ password }),
     });
   },
-  logout: () => {
+  logout: async () => {
     if (isDemo()) {
       localStorage.removeItem("shariah_demo_mode");
-      return Promise.resolve({ status: "ok" });
+      return { status: "ok" };
+    }
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // ignore signout error if session already invalid
+      }
     }
     return apiFetch<{ status: string }>("/api/auth/logout", { method: "POST" });
   },
@@ -569,6 +626,21 @@ export const api = {
       return Promise.resolve({ status: "ok" });
     }
     return apiFetch<{ status: string }>(`/api/notifications/${id}/read`, { method: "PATCH" });
+  },
+  switchTradingMode: (mode: "paper" | "live") => {
+    if (isDemo()) {
+      demoSettings = {
+        ...demoSettings,
+        trading_mode: mode,
+        alpaca_base_url: mode === "live" ? "https://api.alpaca.markets" : "https://paper-api.alpaca.markets",
+      };
+      return Promise.resolve({ status: "ok", trading_mode: mode });
+    }
+    return apiFetch<{ status: string; trading_mode: string; alpaca_base_url: string }>("/api/settings/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode }),
+    });
   },
 };
 

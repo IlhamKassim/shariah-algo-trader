@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert, ArrowLeft } from "lucide-react";
+import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert, ArrowLeft, Mail } from "lucide-react";
+
 import { api } from "../lib/api";
 import { SignIn, useAuth } from "@clerk/react";
 import { ConnectionOverlay } from "../components/ConnectionOverlay";
+import { supabase } from "../lib/supabaseClient";
 
 export function Login() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [supabaseSuccessMsg, setSupabaseSuccessMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionMode, setConnectionMode] = useState("SECURE PORT 8000");
   const [pendingTarget, setPendingTarget] = useState<"demo" | "auth" | null>(null);
   const [isNavigatingToLanding, setIsNavigatingToLanding] = useState(false);
+
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -98,9 +104,125 @@ export function Login() {
     }
   };
 
+  const handleSupabaseAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError("Email and password are required.");
+      return;
+    }
+
+    setError(null);
+    setSupabaseSuccessMsg(null);
+    setIsSubmitting(true);
+
+    try {
+      if (!supabase) throw new Error("Supabase client is not configured.");
+
+      if (isSignUpMode) {
+        let signupResult: any;
+        try {
+          const result = await supabase.auth.signUp({
+            email: email.trim(),
+            password: password.trim(),
+          });
+          signupResult = result;
+        } catch (networkErr: any) {
+          // Catch network-level errors (e.g., rate limit causes "Load failed" in Safari)
+          const networkMsg = networkErr?.message || "";
+          if (networkMsg.toLowerCase().includes("load failed") || networkMsg.toLowerCase().includes("failed to fetch") || networkMsg.toLowerCase().includes("network")) {
+            setError(
+              "Signup request was blocked — this is usually Supabase's email rate limit (max 3 emails/hour).\n\n" +
+              "To fix: Go to Supabase Dashboard → Authentication → Providers → Email → turn OFF 'Confirm email'.\n" +
+              "Or go to Authentication → Users → Add User to create your account directly."
+            );
+            setIsSubmitting(false);
+            return;
+          }
+          throw networkErr;
+        }
+
+        const { data, error: sbError } = signupResult;
+
+        if (sbError) {
+          // Handle rate limit from Supabase API response
+          const errMsg = sbError.message || "";
+          const errCode = (sbError as any).code || "";
+          if (
+            errCode === "over_email_send_rate_limit" ||
+            errMsg.includes("rate limit") ||
+            errMsg.includes("429") ||
+            sbError.status === 429
+          ) {
+            setError(
+              "Supabase email rate limit reached (max 3 emails/hour on free plan).\n\n" +
+              "Quick fix: In Supabase Dashboard → Authentication → Providers → Email → turn OFF 'Confirm email'.\n" +
+              "Or go to Authentication → Users → Add User to create your account directly."
+            );
+            setIsSubmitting(false);
+            return;
+          }
+          throw sbError;
+        }
+
+        if (data?.session) {
+          // User is logged in immediately
+          setConnectionMode("SECURE CONSOLE");
+          setPendingTarget("auth");
+          setIsConnecting(true);
+        } else if (data?.user && !data?.session) {
+          if (data.user.identities && data.user.identities.length === 0) {
+            setError(
+              "An account with this email already exists. Click 'Already have an account? Sign in' to log in instead."
+            );
+            setIsSignUpMode(false);
+          } else {
+            setSupabaseSuccessMsg(
+              "✅ Account created! Check your email for a confirmation link, then sign in below."
+            );
+          }
+          setIsSubmitting(false);
+        } else {
+          setError("Registration failed. Please try again.");
+          setIsSubmitting(false);
+        }
+      } else {
+        const { error: sbError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        });
+        if (sbError) throw sbError;
+
+        setConnectionMode("SECURE CONSOLE");
+        setPendingTarget("auth");
+        setIsConnecting(true);
+      }
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("load failed") || msg.toLowerCase().includes("failed to fetch")) {
+        setError(
+          "Network request failed. Please check your internet connection and try again."
+        );
+      } else if (msg.includes("Invalid login credentials")) {
+        setError("Invalid email or password. If you haven't registered yet, click 'Need an account? Register here'.");
+      } else if (msg.includes("rate limit") || msg.includes("429") || msg.includes("over_email_send_rate_limit")) {
+        setError(
+          "Rate limit reached. Please wait a few minutes before trying again."
+        );
+      } else if (msg.includes("Email not confirmed")) {
+        setError("Email not confirmed yet. Please check your inbox for the confirmation link.");
+      } else if (msg.includes("Supabase client is not configured")) {
+        setError("Authentication system is not configured. Contact the administrator.");
+      } else {
+        setError(msg || "Authentication failed. Please check your details and try again.");
+      }
+      setIsSubmitting(false);
+    }
+  };
+
   const handleGoogleLogin = () => {
     window.location.href = "/api/auth/google/login";
   };
+
 
   const handleDemoLogin = () => {
     setConnectionMode("DEMO CONSOLE");
@@ -119,6 +241,24 @@ export function Login() {
   const handleCompleteConnection = async () => {
     if (pendingTarget === "demo") {
       localStorage.setItem("shariah_demo_mode", "true");
+    } else {
+      localStorage.removeItem("shariah_demo_mode");
+      if (supabase) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.access_token) {
+            queryClient.setQueryData(["authStatus"], {
+              authenticated: true,
+              auth_enabled: true,
+              supabase_enabled: true,
+              user_id: data.session.user.id,
+              user_email: data.session.user.email,
+            });
+          }
+        } catch {
+          // ignore session fetch error
+        }
+      }
     }
     await queryClient.invalidateQueries();
     window.scrollTo(0, 0);
@@ -190,13 +330,94 @@ export function Login() {
             {error && !auth?.clerk_enabled && (
               <div className="bg-[#1A1211] border border-[#D16A5B]/30 p-3 flex items-start gap-2.5">
                 <ShieldAlert size={14} className="text-[#D16A5B] shrink-0 mt-0.5" />
-                <div className="flex-1 text-[10px] font-semibold text-[#D16A5B] uppercase tracking-wider leading-relaxed">
+                <div className="flex-1 text-[10px] font-semibold text-[#D16A5B] uppercase tracking-wider leading-relaxed whitespace-pre-line">
                   {error}
                 </div>
               </div>
             )}
 
-            {auth?.clerk_enabled ? (
+
+            {auth?.supabase_enabled ? (
+              <form onSubmit={handleSupabaseAuth} className="space-y-4">
+                {supabaseSuccessMsg && (
+                  <div className="bg-[#121A15] border border-emerald-500/30 p-3 text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+                    {supabaseSuccessMsg}
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label htmlFor="email" className="text-[10px] font-semibold text-[#8C8577] uppercase tracking-[0.08em] flex items-center gap-1.5">
+                    <Mail size={11} className="text-[#D1A92E]" /> Email Address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    className="w-full bg-[#12100D] border border-[#29241B] text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-[#D1A92E]/60 text-[#ECE5D5] transition-all rounded-none font-sans"
+                    disabled={isSubmitting}
+                    autoFocus
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="text-[10px] font-semibold text-[#8C8577] uppercase tracking-[0.08em] flex items-center gap-1.5">
+                    <Lock size={11} className="text-[#D1A92E]" /> Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full bg-[#12100D] border border-[#29241B] text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-[#D1A92E]/60 text-[#ECE5D5] transition-all rounded-none font-sans"
+                      disabled={isSubmitting}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4C4739] hover:text-[#8C8577] transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#D1A92E] text-[#0C0B09] font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-[#D1A92E] hover:bg-transparent hover:text-[#D1A92E] transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border border-[#0C0B09] border-t-transparent animate-spin shrink-0" />
+                      {isSignUpMode ? "REGISTERING ACCOUNT..." : "AUTHENTICATING..."}
+                    </>
+                  ) : (
+                    isSignUpMode ? "CREATE ACCOUNT" : "SIGN IN"
+                  )}
+                </button>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUpMode(!isSignUpMode);
+                      setError(null);
+                      setSupabaseSuccessMsg(null);
+                    }}
+                    className="text-[10px] text-[#8C8577] hover:text-[#D1A92E] transition-colors underline cursor-pointer"
+                  >
+                    {isSignUpMode ? "Already have an account? Sign In" : "Need an account? Register here"}
+                  </button>
+                </div>
+              </form>
+            ) : auth?.clerk_enabled ? (
+
               <div className="flex justify-center min-h-[340px] items-center relative w-full">
                 {!clerkLoaded && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0C0B09] z-20">

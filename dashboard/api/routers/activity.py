@@ -2,11 +2,11 @@ import datetime
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from dashboard.api.deps import get_alpaca
 from dashboard.api.models import ActivityEntry, ActivityResponse
-from shariah_algo_trader.execution.alpaca_client import AlpacaError
+from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 _PAGE_SIZE = 100
 
 
-def _fetch_activities() -> list[ActivityEntry]:
+def _fetch_activities(client: AlpacaClient | None) -> list[ActivityEntry]:
     """Fetch recent trade fills from Alpaca /v2/account/activities."""
-    client = get_alpaca()
+    if not client:
+        return []
     entries: list[ActivityEntry] = []
     try:
         data = client.get(f"/v2/account/activities?activity_type=FILL&page_size={_PAGE_SIZE}")
@@ -51,8 +52,9 @@ def _fetch_activities() -> list[ActivityEntry]:
 def get_activity(
     type: Optional[str] = Query(default=None),
     date: Optional[str] = Query(default=None),
+    client: AlpacaClient | None = Depends(get_alpaca),
 ) -> ActivityResponse:
-    entries = _fetch_activities()
+    entries = _fetch_activities(client)
     if type and type != "order":
         # All Alpaca activities are trade orders; other type filters return empty
         entries = []
