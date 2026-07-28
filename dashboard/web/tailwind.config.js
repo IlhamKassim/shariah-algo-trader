@@ -5,8 +5,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
-        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: ['"Plus Jakarta Sans"', "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        mono: ['"JetBrains Mono"', '"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        serif: ['"Instrument Serif"', '"Newsreader"', '"Playfair Display"', "Georgia", "serif"],
+        display: ['"Instrument Serif"', '"Newsreader"', '"Playfair Display"', "Georgia", "serif"],
         playfair: ['"Playfair Display"', "serif"],
         inter: ["Inter", "sans-serif"],
       },

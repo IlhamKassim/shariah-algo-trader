@@ -330,14 +330,14 @@ export function MeshDriftShaderBackground() {
     const uSpaceLoc = gl.getUniformLocation(program, "u_space");
     const uCursorLoc = gl.getUniformLocation(program, "u_cursor");
 
-    // Colours: #03120E, #0E7C5A, #7CE577, #F4FFC7
+    // Swatch Palette: #051F20, #0B2B26, #163832, #235347, #8EB69B, #DAF1DE
     const colors = new Float32Array([
-      0.012, 0.071, 0.055, // #03120E
-      0.055, 0.486, 0.353, // #0E7C5A
-      0.486, 0.898, 0.467, // #7CE577
-      0.957, 1.000, 0.780, // #F4FFC7
-      0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0,
+      0.020, 0.122, 0.125, // #051F20 (Deepest Obsidian Forest)
+      0.043, 0.169, 0.149, // #0B2B26 (Dark Pine Teal)
+      0.086, 0.220, 0.196, // #163832 (Deep Emerald)
+      0.137, 0.325, 0.278, // #235347 (Vibrant Pine Emerald)
+      0.557, 0.714, 0.608, // #8EB69B (Sage Mint)
+      0.855, 0.945, 0.871, // #DAF1DE (Pale Mint Ice)
       0.0, 0.0, 0.0,
       0.0, 0.0, 0.0,
     ]);
@@ -386,8 +386,8 @@ export function MeshDriftShaderBackground() {
       // u_colors (first 4 used)
       gl.uniform3fv(uColorsLoc, colors);
 
-      // u_scene = vec4(canvas width, canvas height, seconds * 0.73, 4.0)
-      gl.uniform4f(uSceneLoc, canvas.width, canvas.height, elapsed * 0.73, 4.0);
+      // u_scene = vec4(canvas width, canvas height, seconds * 0.20, 6.0)
+      gl.uniform4f(uSceneLoc, canvas.width, canvas.height, elapsed * 0.20, 6.0);
 
       // u_shape = vec4(1.16, 0.34, 0.50, 0.00)
       gl.uniform4f(uShapeLoc, 1.16, 0.34, 0.50, 0.00);

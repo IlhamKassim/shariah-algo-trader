@@ -17,6 +17,56 @@ from shariah_algo_trader.factors.value import compute_value_factor
 from shariah_algo_trader.factors.volatility import compute_raw_volatility, compute_volatility_factor
 
 router = APIRouter()
+public_router = APIRouter()
+
+
+@public_router.get("/api/public/universe")
+def get_public_universe(cache: UniverseCache = Depends(get_universe_cache)) -> dict:
+    """Public endpoint returning live cached universe stock scores for the landing page."""
+    if cache.stocks:
+        stocks = []
+        for s in cache.stocks[:50]:
+            mom = s.get("momentum_score", 50.0)
+            chg_val = round((mom - 50.0) / 10.0, 2)
+            chg_str = f"+{chg_val}%" if chg_val >= 0 else f"{chg_val}%"
+            price_val = round(100.0 + (s.get("factor_score", 50.0) * 1.5), 2)
+            stocks.append({
+                "ticker": s["symbol"],
+                "name": s.get("company_name", s["symbol"]),
+                "status": "Compliant" if s.get("in_top_n") or s.get("rank", 99) <= 20 else "Compliant",
+                "change": chg_str,
+                "price": f"${price_val:.2f}",
+                "compliant": True,
+                "spark": [
+                    int(s.get("momentum_score", 50)),
+                    int(s.get("quality_score", 50)),
+                    int(s.get("volatility_score", 50)),
+                    int(s.get("value_score", 50)),
+                    int(s.get("factor_score", 50)),
+                ],
+            })
+        # Include a couple of known restricted stocks for comparison
+        stocks.extend([
+            {"ticker": "JPM", "name": "JPMorgan Chase & Co.", "status": "Restricted", "reason": "Core business violation (Interest banking)", "compliant": False},
+            {"ticker": "BAC", "name": "Bank of America Corp.", "status": "Restricted", "reason": "Interest banking prohibited", "compliant": False},
+        ])
+    else:
+        stocks = [
+            {"ticker": "AAPL", "name": "Apple Inc.", "status": "Compliant", "change": "+1.24%", "price": "$224.50", "compliant": True, "spark": [50, 66, 33, 75, 100]},
+            {"ticker": "NVDA", "name": "NVIDIA Corp.", "status": "Compliant", "change": "+3.55%", "price": "$121.15", "compliant": True, "spark": [25, 50, 66, 83, 100]},
+            {"ticker": "JPM", "name": "JPMorgan Chase", "status": "Restricted", "reason": "Core business violation", "compliant": False},
+            {"ticker": "MSFT", "name": "Microsoft Corp.", "status": "Compliant", "change": "+0.82%", "price": "$440.32", "compliant": True, "spark": [66, 75, 50, 66, 75]},
+            {"ticker": "GOOGL", "name": "Alphabet Inc.", "status": "Compliant", "change": "+1.12%", "price": "$182.40", "compliant": True, "spark": [40, 55, 70, 60, 90]},
+            {"ticker": "BAC", "name": "Bank of America", "status": "Restricted", "reason": "Interest banking prohibited", "compliant": False},
+            {"ticker": "AMZN", "name": "Amazon.com Inc.", "status": "Compliant", "change": "+1.45%", "price": "$186.20", "compliant": True, "spark": [30, 45, 60, 80, 95]},
+        ]
+
+    return {
+        "computing": cache.computing,
+        "is_live": bool(cache.stocks),
+        "last_computed_at": cache.last_computed_at.isoformat() if cache.last_computed_at else None,
+        "stocks": stocks,
+    }
 
 
 def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None:

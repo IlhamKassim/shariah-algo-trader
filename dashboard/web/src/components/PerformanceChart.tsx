@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { PerformanceResponse } from "../lib/api";
+import { api, type PerformanceResponse } from "../lib/api";
 import { CHART } from "../lib/chartColors";
 
 interface PerformanceChartProps {
@@ -50,6 +50,8 @@ function CustomTooltip({
 
 export function PerformanceChart({ data }: PerformanceChartProps) {
   const [period, setPeriod] = useState<Period>("1M");
+  const [auditing, setAuditing] = useState(false);
+  const [auditResult, setAuditResult] = useState<"IDLE" | "REALISTIC" | "ANOMALOUS" | "ERROR">("IDLE");
 
   const allPoints = data.dates.map((date, i) => ({
     date,
@@ -99,6 +101,33 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
               {sign(alphaVal)}{(alphaVal * 100).toFixed(2)} pts
             </span>
           </span>
+          <button
+            type="button"
+            onClick={async () => {
+              setAuditing(true);
+              try {
+                const res = await api.runSanityCheck();
+                setAuditResult(res.is_realistic ? "REALISTIC" : "ANOMALOUS");
+              } catch {
+                setAuditResult("ERROR");
+              } finally {
+                setAuditing(false);
+              }
+            }}
+            disabled={auditing}
+            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border border-card-border bg-card-surface hover:border-brand-gold transition-colors text-muted hover:text-foreground"
+            title="Click to run instant End-of-Market performance sanity audit against SPUS & S&P 500 benchmarks"
+          >
+            {auditing ? (
+              <span>Auditing...</span>
+            ) : auditResult === "REALISTIC" ? (
+              <span className="text-brand-green font-medium">✓ Audit Passed (Realistic)</span>
+            ) : auditResult === "ANOMALOUS" ? (
+              <span className="text-brand-red font-medium">⚠ Audit Warning (Drift)</span>
+            ) : (
+              <span>🛡 Run Sanity Check</span>
+            )}
+          </button>
         </div>
         <div className="flex gap-3 sm:self-auto self-start">
           {PERIODS.map((p) => (

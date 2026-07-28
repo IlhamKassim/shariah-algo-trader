@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectionOverlay } from "../components/ConnectionOverlay";
+import { DevWarningModal } from "../components/DevWarningModal";
 import { InteractiveAlgoTerminal } from "../components/InteractiveAlgoTerminal";
 import { ContainerScroll } from "../components/ContainerScroll";
 import { MeshDriftShaderBackground } from "../components/MeshDriftShaderBackground";
@@ -11,6 +13,9 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  AlertTriangle,
+  ArrowRight,
+  Info,
 } from "lucide-react";
 
 export function Landing() {
@@ -18,11 +23,65 @@ export function Landing() {
   const [isNavigatingToLogin, setIsNavigatingToLogin] = useState(false);
   const [connectionMode, setConnectionMode] = useState("ALPACA PAPER");
   const [showBrokerModal, setShowBrokerModal] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(
+    () => localStorage.getItem("shariah_dev_risk_acknowledged") !== "true"
+  );
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSection, setActiveSection] = useState<string>("overview");
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ["overview", "terminal", "compliance", "universe", "faqs"];
+      const scrollPosition = window.scrollY + 140;
+
+      if (window.scrollY < 100) {
+        setActiveSection("overview");
+        return;
+      }
+
+      for (const sectionId of sections) {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const top = element.offsetTop;
+          const height = element.offsetHeight;
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveSection(sectionId);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = (e: React.SyntheticEvent, id: string) => {
+    e.preventDefault();
+    setActiveSection(id);
+    if (id === "overview") {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+      return;
+    }
+    const element = document.getElementById(id);
+    if (element) {
+      const headerOffset = 110;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
+  };
 
   const handleStartConnection = (mode: string) => {
     setConnectionMode(mode);
@@ -72,15 +131,23 @@ export function Landing() {
     },
   ];
 
-  const universeStocks = [
-    { ticker: "AAPL", name: "Apple Inc.", status: "Compliant", change: "+1.24%", price: "$224.50", compliant: true, spark: [50, 66, 33, 75, 100] },
-    { ticker: "NVDA", name: "NVIDIA Corp.", status: "Compliant", change: "+3.55%", price: "$121.15", compliant: true, spark: [25, 50, 66, 83, 100] },
-    { ticker: "JPM", name: "JPMorgan Chase", status: "Restricted", reason: "Core business violation", compliant: false },
-    { ticker: "MSFT", name: "Microsoft Corp.", status: "Compliant", change: "+0.82%", price: "$440.32", compliant: true, spark: [66, 75, 50, 66, 75] },
-    { ticker: "GOOGL", name: "Alphabet Inc.", status: "Compliant", change: "+1.12%", price: "$182.40", compliant: true, spark: [40, 55, 70, 60, 90] },
-    { ticker: "BAC", name: "Bank of America", status: "Restricted", reason: "Interest banking prohibited", compliant: false },
-    { ticker: "AMZN", name: "Amazon.com Inc.", status: "Compliant", change: "+1.45%", price: "$186.20", compliant: true, spark: [30, 45, 60, 80, 95] },
-  ];
+  const { data: publicData, isSuccess: isPublicSuccess } = useQuery({
+    queryKey: ["publicUniverse"],
+    queryFn: api.publicUniverse,
+    staleTime: 60_000,
+  });
+
+  const universeStocks = (publicData?.stocks && publicData.stocks.length > 0)
+    ? publicData.stocks
+    : [
+        { ticker: "AAPL", name: "Apple Inc.", status: "Compliant", change: "+1.24%", price: "$224.50", compliant: true, spark: [50, 66, 33, 75, 100] },
+        { ticker: "NVDA", name: "NVIDIA Corp.", status: "Compliant", change: "+3.55%", price: "$121.15", compliant: true, spark: [25, 50, 66, 83, 100] },
+        { ticker: "JPM", name: "JPMorgan Chase", status: "Restricted", reason: "Core business violation", compliant: false },
+        { ticker: "MSFT", name: "Microsoft Corp.", status: "Compliant", change: "+0.82%", price: "$440.32", compliant: true, spark: [66, 75, 50, 66, 75] },
+        { ticker: "GOOGL", name: "Alphabet Inc.", status: "Compliant", change: "+1.12%", price: "$182.40", compliant: true, spark: [40, 55, 70, 60, 90] },
+        { ticker: "BAC", name: "Bank of America", status: "Restricted", reason: "Interest banking prohibited", compliant: false },
+        { ticker: "AMZN", name: "Amazon.com Inc.", status: "Compliant", change: "+1.45%", price: "$186.20", compliant: true, spark: [30, 45, 60, 80, 95] },
+      ];
 
   const filteredStocks = universeStocks.filter(
     (s) =>
@@ -99,6 +166,12 @@ export function Landing() {
         </div>
       )}
 
+      {/* Development Mode Notice Popup Modal */}
+      <DevWarningModal
+        isOpen={showDevModal}
+        onClose={() => setShowDevModal(false)}
+      />
+
       {/* Connection Overlay Simulator */}
       {isConnecting && (
         <ConnectionOverlay
@@ -108,116 +181,155 @@ export function Landing() {
       )}
 
       {/* Top Navigation Bar */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-black/90 backdrop-blur-md border-b border-[#333333]">
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#051F20]/90 backdrop-blur-md border-b border-[#235347]/60 shadow-xl">
         <div className="max-w-screen-2xl mx-auto flex justify-between items-center px-4 sm:px-12 py-4">
           <div className="flex items-center gap-12">
-            <span className="text-[18px] font-playfair tracking-wider text-white uppercase font-normal">
+            <span className="text-[18px] font-serif tracking-wider text-[#DAF1DE] uppercase font-normal">
               SHARIAHTRADING
             </span>
             <div className="hidden md:flex items-center gap-8">
-              <a href="#compliance" className="text-white border-b border-white pb-1 font-mono text-[11px] uppercase tracking-widest">
-                Compliance
+              <a
+                href="#overview"
+                onClick={(e) => scrollToSection(e, "overview")}
+                className={`font-mono text-[11px] uppercase tracking-widest transition-colors duration-200 cursor-pointer ${
+                  activeSection === "overview"
+                    ? "text-[#DAF1DE] border-b-2 border-[#8EB69B] pb-1 font-semibold"
+                    : "text-[#8EB69B] hover:text-[#DAF1DE]"
+                }`}
+              >
+                Overview
               </a>
-              <a href="#universe" className="text-[#a39d96] hover:text-white transition-colors duration-200 font-mono text-[11px] uppercase tracking-widest">
-                Universe
-              </a>
-              <a href="#terminal" className="text-[#a39d96] hover:text-white transition-colors duration-200 font-mono text-[11px] uppercase tracking-widest">
+              <a
+                href="#terminal"
+                onClick={(e) => scrollToSection(e, "terminal")}
+                className={`font-mono text-[11px] uppercase tracking-widest transition-colors duration-200 cursor-pointer ${
+                  activeSection === "terminal"
+                    ? "text-[#DAF1DE] border-b-2 border-[#8EB69B] pb-1 font-semibold"
+                    : "text-[#8EB69B] hover:text-[#DAF1DE]"
+                }`}
+              >
                 Terminal
               </a>
-              <a href="#faqs" className="text-[#a39d96] hover:text-white transition-colors duration-200 font-mono text-[11px] uppercase tracking-widest">
+              <a
+                href="#compliance"
+                onClick={(e) => scrollToSection(e, "compliance")}
+                className={`font-mono text-[11px] uppercase tracking-widest transition-colors duration-200 cursor-pointer ${
+                  activeSection === "compliance"
+                    ? "text-[#DAF1DE] border-b-2 border-[#8EB69B] pb-1 font-semibold"
+                    : "text-[#8EB69B] hover:text-[#DAF1DE]"
+                }`}
+              >
+                Compliance
+              </a>
+              <a
+                href="#universe"
+                onClick={(e) => scrollToSection(e, "universe")}
+                className={`font-mono text-[11px] uppercase tracking-widest transition-colors duration-200 cursor-pointer ${
+                  activeSection === "universe"
+                    ? "text-[#DAF1DE] border-b-2 border-[#8EB69B] pb-1 font-semibold"
+                    : "text-[#8EB69B] hover:text-[#DAF1DE]"
+                }`}
+              >
+                Universe
+              </a>
+              <a
+                href="#faqs"
+                onClick={(e) => scrollToSection(e, "faqs")}
+                className={`font-mono text-[11px] uppercase tracking-widest transition-colors duration-200 cursor-pointer ${
+                  activeSection === "faqs"
+                    ? "text-[#DAF1DE] border-b-2 border-[#8EB69B] pb-1 font-semibold"
+                    : "text-[#8EB69B] hover:text-[#DAF1DE]"
+                }`}
+              >
                 FAQs
               </a>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
             <button
-              onClick={handleNavigateToLogin}
-              className="text-white px-3 py-1 font-mono text-[11px] uppercase tracking-widest hover:text-[#a39d96] transition-colors cursor-pointer"
+              onClick={() => setShowDevModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 rounded font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.15)]"
+              title="View Development & Risk Notice"
             >
-              Login
+              <AlertTriangle size={12} className="text-amber-400 animate-pulse" />
+              <span>Dev Mode</span>
             </button>
             <button
-              onClick={() => setShowBrokerModal(true)}
-              className="border border-white text-white px-6 py-2 hover:bg-white hover:text-black transition-all duration-300 font-mono text-[11px] uppercase tracking-widest cursor-pointer"
+              onClick={handleNavigateToLogin}
+              className="border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] px-6 py-2 hover:bg-[#DAF1DE] hover:text-[#051F20] transition-all duration-300 font-mono text-[11px] uppercase tracking-widest cursor-pointer shadow-md"
             >
-              Start Trading
+              Login
             </button>
           </div>
         </div>
 
         {/* Live Scrolling Ticker Bar */}
-        <div className="w-full bg-[#111111]/80 border-t border-[#333333] overflow-hidden py-1.5 flex items-center">
-          <div className="flex whitespace-nowrap animate-ticker font-mono text-[10px] uppercase tracking-widest text-[#a39d96]">
+        <div className="w-full bg-[#0B2B26]/90 border-t border-[#235347]/50 overflow-hidden py-1.5 flex items-center">
+          <div className="flex whitespace-nowrap animate-ticker font-mono text-[10px] uppercase tracking-widest text-[#8EB69B]">
             <div className="flex items-center gap-8 px-8">
-              <span>AAPL <span className="text-[#ffdca1]">+1.2%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>MSFT <span className="text-[#ffdca1]">+0.8%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>JPM <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>NVDA <span className="text-[#ffdca1]">+3.5%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>TSLA <span className="text-[#ffdca1]">+0.4%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>GOOGL <span className="text-[#ffdca1]">+1.1%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>META <span className="text-[#ffdca1]">+0.9%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>BAC <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
+              <span>AAPL <span className="text-[#DAF1DE]">+1.2%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>MSFT <span className="text-[#DAF1DE]">+0.8%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>JPM <span className="text-rose-400 line-through">RESTRICTED</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>NVDA <span className="text-[#DAF1DE]">+3.5%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>TSLA <span className="text-[#DAF1DE]">+0.4%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>GOOGL <span className="text-[#DAF1DE]">+1.1%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>META <span className="text-[#DAF1DE]">+0.9%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>BAC <span className="text-rose-400 line-through">RESTRICTED</span></span>
             </div>
             <div className="flex items-center gap-8 px-8">
-              <span>AAPL <span className="text-[#ffdca1]">+1.2%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>MSFT <span className="text-[#ffdca1]">+0.8%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>JPM <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>NVDA <span className="text-[#ffdca1]">+3.5%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>TSLA <span className="text-[#ffdca1]">+0.4%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>GOOGL <span className="text-[#ffdca1]">+1.1%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>META <span className="text-[#ffdca1]">+0.9%</span></span>
-              <span className="w-1 h-1 bg-[#333333] rounded-full" />
-              <span>BAC <span className="text-[#ffb4ab] line-through">RESTRICTED</span></span>
+              <span>AAPL <span className="text-[#DAF1DE]">+1.2%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>MSFT <span className="text-[#DAF1DE]">+0.8%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>JPM <span className="text-rose-400 line-through">RESTRICTED</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>NVDA <span className="text-[#DAF1DE]">+3.5%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>TSLA <span className="text-[#DAF1DE]">+0.4%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>GOOGL <span className="text-[#DAF1DE]">+1.1%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>META <span className="text-[#DAF1DE]">+0.9%</span></span>
+              <span className="w-1 h-1 bg-[#235347] rounded-full" />
+              <span>BAC <span className="text-rose-400 line-through">RESTRICTED</span></span>
             </div>
           </div>
         </div>
       </nav>
 
       <main className="pt-40 md:pt-48">
-        {/* Editorial Hero Grid */}
-        <section className="px-4 sm:px-12 max-w-screen-2xl mx-auto mb-16">
+        {/* Hero Section */}
+        <section id="overview" className="px-4 sm:px-12 max-w-screen-2xl mx-auto mb-16 relative z-10 scroll-mt-32">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 border-none">
             {/* Main Hero Text Block */}
-            <div className="lg:col-span-8 bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between min-h-[520px] md:min-h-[600px]">
+            <div className="lg:col-span-8 bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between min-h-[520px] md:min-h-[600px] shadow-2xl">
               <div>
-                <div className="mb-8 inline-flex items-center gap-2 pb-2 border-b border-[#333333]">
-                  <span className="font-mono text-[11px] text-[#a39d96] uppercase tracking-widest">
+                <div className="mb-8 inline-flex items-center gap-2 pb-2 border-b border-[#235347]/60">
+                  <span className="font-mono text-[11px] text-[#8EB69B] uppercase tracking-widest">
                     AAOIFI Compliant Ecosystem
                   </span>
                 </div>
-                <h1 className="font-playfair text-[48px] sm:text-[64px] lg:text-[88px] mb-8 text-white leading-none font-normal">
+                <h1 className="font-serif text-[48px] sm:text-[64px] lg:text-[88px] mb-8 text-[#DAF1DE] leading-none font-normal">
                   The Future of<br />
-                  <span className="italic text-[#a39d96]">Ethical</span> Investing.
+                  <span className="italic text-[#8EB69B]">Ethical</span> Investing.
                 </h1>
-                <p className="font-sans text-lg text-[#a39d96] mb-12 leading-relaxed max-w-2xl border-l-2 border-[#ffdca1]/50 pl-6">
+                <p className="font-sans text-lg text-[#8EB69B] mb-12 leading-relaxed max-w-2xl border-l-2 border-[#8EB69B]/50 pl-6">
                   Institutional-grade algorithmic trading infrastructure designed strictly for Shariah-compliant portfolios. Automated screening, zero leverage, and purified returns.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => handleStartConnection("ALPACA PAPER")}
-                  className="bg-white text-black font-medium px-8 py-3 font-mono text-[11px] uppercase tracking-widest hover:bg-[#a39d96] transition-all cursor-pointer text-center"
+                  className="bg-[#DAF1DE] text-[#051F20] font-semibold px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest hover:bg-[#c2e8c8] transition-all cursor-pointer text-center shadow-lg shadow-[#DAF1DE]/10"
                 >
-                  Open Account
-                </button>
-                <button
-                  onClick={() => setShowBrokerModal(true)}
-                  className="border border-[#333333] text-white font-medium px-8 py-3 font-mono text-[11px] uppercase tracking-widest hover:border-white transition-all cursor-pointer text-center"
-                >
-                  View Gateway
+                  Demo Mode
                 </button>
               </div>
             </div>
@@ -225,57 +337,57 @@ export function Landing() {
             {/* Right Side Widgets */}
             <div className="lg:col-span-4 flex flex-col gap-4">
               {/* System Status Widget */}
-              <div className="bg-black/70 border border-[#333333] p-8 flex-1 flex flex-col justify-center">
-                <div className="flex justify-between items-center mb-6 border-b border-[#333333] pb-2">
-                  <span className="font-mono text-[10px] text-[#a39d96] tracking-widest uppercase">
+              <div className="bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 flex-1 flex flex-col justify-center shadow-2xl">
+                <div className="flex justify-between items-center mb-6 border-b border-[#235347]/60 pb-2">
+                  <span className="font-mono text-[10px] text-[#8EB69B] tracking-widest uppercase">
                     System Status
                   </span>
-                  <span className="flex items-center gap-2 font-mono text-[10px] text-[#ffdca1] uppercase tracking-widest">
-                    <span className="w-2 h-2 rounded-full bg-[#ffdca1] animate-pulse" />
+                  <span className="flex items-center gap-2 font-mono text-[10px] text-[#DAF1DE] uppercase tracking-widest">
+                    <span className="w-2 h-2 rounded-full bg-[#8EB69B] animate-pulse" />
                     Live
                   </span>
                 </div>
                 <div className="mb-4">
-                  <span className="font-playfair text-[32px] text-white block">100% Halal</span>
-                  <span className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest">
+                  <span className="font-serif text-[32px] text-[#DAF1DE] block font-normal">100% Halal</span>
+                  <span className="font-mono text-[10px] text-[#8EB69B] uppercase tracking-widest">
                     Portfolio Purity
                   </span>
                 </div>
                 <div className="space-y-3 mt-6">
                   <div className="flex justify-between items-center font-mono text-[10px] uppercase tracking-widest">
-                    <span className="text-[#a39d96]">Engine</span>
-                    <span className="text-white">AAOIFI_V2</span>
+                    <span className="text-[#8EB69B]">Engine</span>
+                    <span className="text-[#DAF1DE]">AAOIFI_V2</span>
                   </div>
                   <div className="flex justify-between items-center font-mono text-[10px] uppercase tracking-widest">
-                    <span className="text-[#a39d96]">Latency</span>
-                    <span className="text-white">12ms</span>
+                    <span className="text-[#8EB69B]">Latency</span>
+                    <span className="text-[#DAF1DE]">12ms</span>
                   </div>
                   <div className="flex justify-between items-center font-mono text-[10px] uppercase tracking-widest">
-                    <span className="text-[#a39d96]">Last Scan</span>
-                    <span className="text-white">Just Now</span>
+                    <span className="text-[#8EB69B]">Last Scan</span>
+                    <span className="text-[#DAF1DE]">Just Now</span>
                   </div>
                 </div>
               </div>
 
               {/* Market Sentiment Widget */}
-              <div className="bg-black/70 border border-[#333333] p-8 flex-1 flex flex-col justify-center">
-                <div className="flex justify-between items-center mb-6 border-b border-[#333333] pb-2">
-                  <span className="font-mono text-[10px] text-[#a39d96] tracking-widest uppercase">
+              <div className="bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 flex-1 flex flex-col justify-center shadow-2xl">
+                <div className="flex justify-between items-center mb-6 border-b border-[#235347]/60 pb-2">
+                  <span className="font-mono text-[10px] text-[#8EB69B] tracking-widest uppercase">
                     Halal Universe Sentiment
                   </span>
                 </div>
                 <div className="flex items-end gap-2 h-20 mb-6">
-                  <div className="w-1/6 bg-[#ffdca1]/20 h-[30%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
-                  <div className="w-1/6 bg-[#ffdca1]/40 h-[50%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
-                  <div className="w-1/6 bg-[#ffdca1]/60 h-[40%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
-                  <div className="w-1/6 bg-[#ffdca1]/30 h-[70%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
-                  <div className="w-1/6 bg-[#ffdca1]/80 h-[60%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
-                  <div className="w-1/6 bg-[#ffdca1] h-[90%] hover:bg-[#ffdca1] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#8EB69B]/20 h-[30%] hover:bg-[#8EB69B] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#8EB69B]/40 h-[50%] hover:bg-[#8EB69B] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#8EB69B]/60 h-[40%] hover:bg-[#8EB69B] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#8EB69B]/30 h-[70%] hover:bg-[#8EB69B] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#8EB69B]/80 h-[60%] hover:bg-[#8EB69B] transition-colors cursor-pointer" />
+                  <div className="w-1/6 bg-[#DAF1DE] h-[90%] hover:bg-[#DAF1DE] transition-colors cursor-pointer" />
                 </div>
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="font-playfair text-[20px] text-white block">+2.4%</span>
-                    <span className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest">
+                    <span className="font-serif text-[20px] text-[#DAF1DE] block font-normal">+2.4%</span>
+                    <span className="font-mono text-[10px] text-[#8EB69B] uppercase tracking-widest">
                       7 Day Avg
                     </span>
                   </div>
@@ -289,16 +401,16 @@ export function Landing() {
         </section>
 
         {/* Platform Interface Showcase */}
-        <section id="terminal">
+        <section id="terminal" className="scroll-mt-32">
           <ContainerScroll
             titleComponent={
               <div className="flex flex-col items-center">
-                <span className="font-mono text-[11px] text-[#ffdca1] uppercase tracking-[0.3em] mb-3">
+                <span className="font-mono text-[11px] text-[#8EB69B] uppercase tracking-[0.3em] mb-3">
                   Interactive Algorithmic Terminal
                 </span>
-                <h2 className="font-playfair text-[36px] sm:text-[56px] md:text-[68px] font-normal leading-tight text-white">
+                <h2 className="font-serif text-[36px] sm:text-[56px] md:text-[68px] font-normal leading-tight text-[#DAF1DE]">
                   Unleash the power of<br />
-                  <span className="italic text-[#a39d96]">Algorithmic Compliance.</span>
+                  <span className="italic text-[#8EB69B]">Algorithmic Compliance.</span>
                 </h2>
               </div>
             }
@@ -308,38 +420,38 @@ export function Landing() {
         </section>
 
         {/* Compliance Section (Grid Based) */}
-        <section id="compliance" className="py-16 px-4 sm:px-12 max-w-screen-2xl mx-auto">
+        <section id="compliance" className="scroll-mt-32 py-16 px-4 sm:px-12 max-w-screen-2xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 border-none">
-            <div className="lg:col-span-5 bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between min-h-[480px]">
+            <div className="lg:col-span-5 bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between min-h-[480px] shadow-2xl">
               <div>
-                <div className="text-[#a39d96] font-mono text-[11px] mb-6 uppercase tracking-widest flex items-center gap-3">
-                  <span className="w-8 h-[1px] bg-[#a39d96]" />
+                <div className="text-[#8EB69B] font-mono text-[11px] mb-6 uppercase tracking-widest flex items-center gap-3">
+                  <span className="w-8 h-[1px] bg-[#8EB69B]" />
                   Compliance-as-a-Service
                 </div>
-                <h2 className="font-playfair text-[36px] sm:text-[48px] mb-8 leading-tight text-white font-normal">
+                <h2 className="font-serif text-[36px] sm:text-[48px] mb-8 leading-tight text-[#DAF1DE] font-normal">
                   Screening that evolves<br />
-                  <span className="italic text-[#a39d96]">with the market.</span>
+                  <span className="italic text-[#8EB69B]">with the market.</span>
                 </h2>
-                <p className="text-[#a39d96] mb-8 font-sans text-base leading-relaxed">
+                <p className="text-[#8EB69B] mb-8 font-sans text-base leading-relaxed">
                   Our proprietary engine runs daily scans against AAOIFI and S&P Shariah standards. We don't just flag; we automate the purification process for fractional shares.
                 </p>
               </div>
-              <div className="border border-[#333333] p-6 bg-[#111111]/30">
-                <div className="font-mono text-[10px] text-[#a39d96] tracking-widest uppercase mb-4">
+              <div className="border border-[#235347]/60 p-6 bg-[#051F20]/50 rounded-xl">
+                <div className="font-mono text-[10px] text-[#8EB69B] tracking-widest uppercase mb-4">
                   Active Screening Parameters
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs text-white border-b border-[#333333]/60 pb-2">
+                  <div className="flex justify-between items-center text-xs text-[#DAF1DE] border-b border-[#235347]/40 pb-2">
                     <span>Debt / Total Assets</span>
-                    <span className="text-[#ffdca1] font-mono font-semibold">&lt; 33%</span>
+                    <span className="text-[#DAF1DE] font-mono font-semibold">&lt; 33%</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-white border-b border-[#333333]/60 pb-2">
+                  <div className="flex justify-between items-center text-xs text-[#DAF1DE] border-b border-[#235347]/40 pb-2">
                     <span>Cash / Total Assets</span>
-                    <span className="text-[#ffdca1] font-mono font-semibold">&lt; 33%</span>
+                    <span className="text-[#DAF1DE] font-mono font-semibold">&lt; 33%</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-white">
+                  <div className="flex justify-between items-center text-xs text-[#DAF1DE]">
                     <span>Non-compliant Income</span>
-                    <span className="text-[#ffdca1] font-mono font-semibold">&lt; 5%</span>
+                    <span className="text-[#DAF1DE] font-mono font-semibold">&lt; 5%</span>
                   </div>
                 </div>
               </div>
@@ -347,49 +459,49 @@ export function Landing() {
 
             <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Feature 1 */}
-              <div className="bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between">
+              <div className="bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between shadow-2xl">
                 <div>
-                  <div className="font-playfair text-[40px] text-white/20 mb-6 border-b border-[#333333] pb-2 inline-block">
+                  <div className="font-serif text-[40px] text-[#8EB69B]/40 mb-6 border-b border-[#235347]/60 pb-2 inline-block font-normal">
                     01
                   </div>
-                  <h4 className="font-playfair text-[24px] text-white mb-3">Automated Screening</h4>
-                  <p className="text-[#a39d96] font-sans text-sm leading-relaxed">
+                  <h4 className="font-serif text-[24px] text-[#DAF1DE] mb-3 font-normal">Automated Screening</h4>
+                  <p className="text-[#8EB69B] font-sans text-sm leading-relaxed">
                     Daily balance sheet scans to ensure debt-to-equity ratios remain strictly below the 33% threshold, executing seamlessly in the background.
                   </p>
                 </div>
-                <div className="mt-8 border-t border-[#333333] pt-6 flex justify-between items-end">
+                <div className="mt-8 border-t border-[#235347]/60 pt-6 flex justify-between items-end">
                   <div>
-                    <div className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest mb-1">
+                    <div className="font-mono text-[10px] text-[#8EB69B] uppercase tracking-widest mb-1">
                       Debt/Equity Ratio
                     </div>
-                    <div className="font-playfair text-white text-[28px]">28.4%</div>
+                    <div className="font-serif text-[#DAF1DE] text-[28px] font-normal">28.4%</div>
                   </div>
-                  <div className="w-1/2 h-[2px] bg-[#333333] relative">
-                    <div className="absolute top-0 left-0 h-full bg-[#ffdca1] w-[85%]" />
+                  <div className="w-1/2 h-[2px] bg-[#235347] relative">
+                    <div className="absolute top-0 left-0 h-full bg-[#8EB69B] w-[85%]" />
                   </div>
                 </div>
               </div>
 
               {/* Feature 2 */}
-              <div className="bg-black/70 border border-[#333333] p-8 md:p-12 flex flex-col justify-between">
+              <div className="bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between shadow-2xl">
                 <div>
-                  <div className="font-playfair text-[40px] text-white/20 mb-6 border-b border-[#333333] pb-2 inline-block">
+                  <div className="font-serif text-[40px] text-[#8EB69B]/40 mb-6 border-b border-[#235347]/60 pb-2 inline-block font-normal">
                     02
                   </div>
-                  <h4 className="font-playfair text-[24px] text-white mb-3">Dividend Purification</h4>
-                  <p className="text-[#a39d96] font-sans text-sm leading-relaxed">
+                  <h4 className="font-serif text-[24px] text-[#DAF1DE] mb-3 font-normal">Dividend Purification</h4>
+                  <p className="text-[#8EB69B] font-sans text-sm leading-relaxed">
                     Automatic calculation and precise redirection of non-compliant income to verified charitable organizations, maintaining portfolio purity.
                   </p>
                 </div>
-                <div className="mt-8 border-t border-[#333333] pt-6">
-                  <div className="font-mono text-[10px] text-[#a39d96] uppercase tracking-widest mb-2">
+                <div className="mt-8 border-t border-[#235347]/60 pt-6">
+                  <div className="font-mono text-[10px] text-[#8EB69B] uppercase tracking-widest mb-2">
                     Purification Queue
                   </div>
-                  <div className="flex items-center justify-between border border-[#333333] p-3 bg-[#111111]/40">
-                    <span className="text-xs text-white font-mono">MSFT Div</span>
-                    <span className="text-xs text-[#a39d96]">→</span>
-                    <span className="text-xs text-[#ffdca1] font-mono">Charity</span>
-                    <span className="font-mono text-[8px] bg-[#111111] text-[#ffdca1] px-2 py-0.5 uppercase border border-[#ffdca1]/30">
+                  <div className="flex items-center justify-between border border-[#235347]/60 p-3 bg-[#051F20]/50 rounded-lg">
+                    <span className="text-xs text-[#DAF1DE] font-mono">MSFT Div</span>
+                    <span className="text-xs text-[#8EB69B]">→</span>
+                    <span className="text-xs text-[#DAF1DE] font-mono">Charity</span>
+                    <span className="font-mono text-[8px] bg-[#0B2B26] text-[#DAF1DE] px-2 py-0.5 uppercase border border-[#235347]">
                       Pending
                     </span>
                   </div>
@@ -400,46 +512,54 @@ export function Landing() {
         </section>
 
         {/* Universe Interactive Preview */}
-        <section id="universe" className="py-16 border-y border-[#333333] bg-[#050505]">
+        <section id="universe" className="scroll-mt-32 py-16 border-y border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-12">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-16 gap-8">
               <div className="max-w-2xl">
-                <h2 className="font-playfair text-[48px] sm:text-[64px] mb-4 leading-none font-normal">The Universe</h2>
-                <p className="text-[#a39d96] font-sans text-lg">
+                <div className="flex items-center gap-4 mb-4 flex-wrap">
+                  <h2 className="font-serif text-[48px] sm:text-[64px] leading-none font-normal text-[#DAF1DE]">The Universe</h2>
+                  {isPublicSuccess && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] uppercase tracking-wider rounded">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Live Feed
+                    </span>
+                  )}
+                </div>
+                <p className="text-[#8EB69B] font-sans text-lg">
                   Explore thousands of vetted equities. Our engine filters the noise so you focus on performance.
                 </p>
               </div>
-              <div className="w-full lg:w-auto border-b border-white pb-2 flex items-center gap-3">
-                <Search size={16} className="text-[#a39d96]" />
+              <div className="w-full lg:w-auto border-b border-[#235347] pb-2 flex items-center gap-3">
+                <Search size={16} className="text-[#8EB69B]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter Ticker..."
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-lg w-full lg:w-64 p-0 text-white placeholder:text-[#333333] font-mono"
+                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-lg w-full lg:w-64 p-0 text-[#DAF1DE] placeholder:text-[#8EB69B]/40 font-mono"
                 />
               </div>
             </div>
 
             {/* Minimal List View */}
-            <div className="flex flex-col border-t border-[#333333]">
-              {filteredStocks.map((stock) => (
+            <div className="flex flex-col border-t border-[#235347]/60">
+              {filteredStocks.slice(0, 5).map((stock) => (
                 <div
                   key={stock.ticker}
-                  className={`group flex flex-col sm:flex-row justify-between items-start sm:items-center py-6 border-b border-[#333333] px-3 transition-colors ${
-                    stock.compliant ? "hover:bg-[#111111]/50 cursor-pointer" : "opacity-50 grayscale"
+                  className={`group flex flex-col sm:flex-row justify-between items-start sm:items-center py-6 border-b border-[#235347]/40 px-3 transition-colors ${
+                    stock.compliant ? "hover:bg-[#0B2B26]/60 cursor-pointer" : "opacity-50 grayscale"
                   }`}
                 >
                   <div className="flex items-center gap-8 w-full sm:w-1/3">
-                    <span className={`font-playfair text-[28px] sm:text-[32px] ${stock.compliant ? "group-hover:italic transition-all" : "line-through text-[#a39d96]"}`}>
+                    <span className={`font-serif text-[28px] sm:text-[32px] ${stock.compliant ? "group-hover:italic text-[#DAF1DE] transition-all" : "line-through text-[#8EB69B]"}`}>
                       {stock.ticker}
                     </span>
                     {stock.compliant ? (
-                      <span className="font-mono text-[10px] border border-[#333333] px-2 py-1 tracking-widest uppercase text-[#a39d96]">
+                      <span className="font-mono text-[10px] border border-[#235347] bg-[#0B2B26] px-2 py-1 tracking-widest uppercase text-[#8EB69B] rounded">
                         Compliant
                       </span>
                     ) : (
-                      <span className="font-mono text-[10px] border border-[#ffb4ab]/50 text-[#ffb4ab] px-2 py-1 tracking-widest uppercase">
+                      <span className="font-mono text-[10px] border border-rose-500/40 text-rose-300 px-2 py-1 tracking-widest uppercase rounded">
                         Restricted
                       </span>
                     )}
@@ -452,20 +572,20 @@ export function Landing() {
                   <div className="flex items-end justify-between sm:justify-end w-full sm:w-1/3 mt-3 sm:mt-0 text-right">
                     {stock.compliant ? (
                       <>
-                        <div className="hidden md:flex items-end h-7 gap-[3px] mr-6">
+                        <div className="hidden md:flex items-end h-7 gap-[3px] mr-6" title="5-Factor Quantitative Health Score">
                           {stock.spark?.map((h, i) => (
                             <div
                               key={i}
                               style={{ height: `${h}%` }}
-                              className="w-[3px] bg-[#ffdca1]/60 group-hover:bg-[#ffdca1] transition-colors"
+                              className="w-[3px] bg-[#8EB69B]/60 group-hover:bg-[#DAF1DE] transition-colors"
                             />
                           ))}
                         </div>
-                        <span className="font-mono text-sm text-[#ffdca1] mr-6">{stock.change}</span>
-                        <span className="font-playfair text-[22px] text-white font-mono">{stock.price}</span>
+                        <span className="font-mono text-sm text-[#DAF1DE] mr-6" title="24-Hour Price / Momentum Performance">{stock.change}</span>
+                        <span className="font-serif text-[22px] text-[#DAF1DE] font-mono" title="Current Stock Share Price (USD)">{stock.price}</span>
                       </>
                     ) : (
-                      <span className="font-mono text-xs text-[#ffb4ab]/80 italic">
+                      <span className="font-mono text-xs text-rose-300/80 italic">
                         {stock.reason}
                       </span>
                     )}
@@ -473,14 +593,54 @@ export function Landing() {
                 </div>
               ))}
             </div>
+
+            {/* Metric Explanation Legend */}
+            <div className="mt-6 p-4 border border-[#235347]/40 bg-[#0B2B26]/40 backdrop-blur-sm rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono text-[11px]">
+              <div className="flex items-center gap-2 text-[#8EB69B]">
+                <Info size={14} className="text-[#DAF1DE] shrink-0" />
+                <span className="text-[#DAF1DE] font-semibold uppercase tracking-wider">Metric Guide:</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto text-[#8EB69B]">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#DAF1DE] font-mono font-bold">$ (USD)</span>
+                  <span>= Current Share Price</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#DAF1DE] font-mono font-bold">% (PCT)</span>
+                  <span>= 24h Momentum Change</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#DAF1DE] font-mono font-bold">Bars (|||)</span>
+                  <span>= Factor Health Score</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Explore Full Universe CTA Button */}
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <button
+                onClick={() => {
+                  localStorage.setItem("shariah_demo_mode", "true");
+                  window.scrollTo(0, 0);
+                  navigate("/universe");
+                }}
+                className="group flex items-center gap-3 border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] hover:bg-[#DAF1DE] hover:text-[#051F20] px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer"
+              >
+                <span>Explore Full Universe (200+ Equities)</span>
+                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+              <span className="font-mono text-[10px] text-[#8EB69B] uppercase tracking-widest">
+                Showing Top 5 Ranked Equities • Updated Daily
+              </span>
+            </div>
           </div>
         </section>
 
         {/* FAQs Section */}
-        <section id="faqs" className="py-16 px-4 sm:px-12 max-w-4xl mx-auto border-t border-[#333333]">
+        <section id="faqs" className="scroll-mt-32 py-16 px-4 sm:px-12 max-w-4xl mx-auto border-t border-[#235347]/60">
           <div className="text-center mb-16">
-            <h2 className="font-playfair text-[40px] sm:text-[48px] mb-2 font-normal">Engine Mechanics & Compliance FAQs</h2>
-            <p className="text-[#a39d96] font-sans text-base">
+            <h2 className="font-serif text-[40px] sm:text-[48px] mb-2 font-normal text-[#DAF1DE]">Engine Mechanics & Compliance FAQs</h2>
+            <p className="text-[#8EB69B] font-sans text-base">
               Technical answers regarding AAOIFI screening, leverage restrictions, and factor execution.
             </p>
           </div>
@@ -489,17 +649,17 @@ export function Landing() {
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="border border-[#333333] bg-[#111111]/30 transition-colors overflow-hidden"
+                className="border border-[#235347]/60 bg-[#0B2B26]/80 backdrop-blur-xl transition-colors overflow-hidden rounded-xl shadow-lg"
               >
                 <button
                   onClick={() => toggleFaq(index)}
-                  className="w-full text-left p-5 font-playfair text-lg text-white flex justify-between items-center gap-4 hover:bg-[#111111]/60 transition-colors cursor-pointer"
+                  className="w-full text-left p-5 font-serif text-lg text-[#DAF1DE] flex justify-between items-center gap-4 hover:bg-[#163832]/60 transition-colors cursor-pointer"
                 >
                   <span>{faq.q}</span>
                   {activeFaq === index ? (
-                    <ChevronUp size={18} className="text-[#ffdca1] shrink-0" />
+                    <ChevronUp size={18} className="text-[#DAF1DE] shrink-0" />
                   ) : (
-                    <ChevronDown size={18} className="text-[#a39d96] shrink-0" />
+                    <ChevronDown size={18} className="text-[#8EB69B] shrink-0" />
                   )}
                 </button>
 
@@ -510,7 +670,7 @@ export function Landing() {
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="px-5 pb-5 text-[#a39d96] font-sans text-sm leading-relaxed border-t border-[#333333]/40 pt-4"
+                      className="px-5 pb-5 text-[#8EB69B] font-sans text-sm leading-relaxed border-t border-[#235347]/40 pt-4"
                     >
                       {faq.a}
                     </motion.div>
@@ -522,26 +682,26 @@ export function Landing() {
         </section>
 
         {/* Final Call to Action */}
-        <section className="py-16 border-t border-[#333333] bg-[#050505]">
+        <section className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
           <div className="max-w-screen-xl mx-auto px-4 sm:px-12 flex flex-col items-center text-center">
-            <h2 className="font-playfair text-[56px] sm:text-[80px] md:text-[96px] mb-8 leading-none font-normal">
+            <h2 className="font-serif text-[56px] sm:text-[80px] md:text-[96px] mb-8 leading-none font-normal text-[#DAF1DE]">
               Ready to deploy.
             </h2>
-            <p className="text-[#a39d96] mb-12 font-sans max-w-2xl text-lg">
+            <p className="text-[#8EB69B] mb-12 font-sans max-w-2xl text-lg">
               Join 500+ institutional and retail investors building the future of ethical finance. Get started in minutes.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto">
               <button
                 onClick={() => handleStartConnection("ALPACA PAPER")}
-                className="bg-white text-black font-medium px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:bg-[#a39d96] transition-all cursor-pointer"
+                className="bg-[#DAF1DE] text-[#051F20] font-semibold px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:bg-[#c2e8c8] transition-all cursor-pointer shadow-lg shadow-[#DAF1DE]/10"
               >
-                Start Trading Now
+                Demo Mode
               </button>
               <button
-                onClick={() => setShowBrokerModal(true)}
-                className="border border-[#333333] text-white font-medium px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:border-white transition-all cursor-pointer"
+                onClick={handleNavigateToLogin}
+                className="border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] font-semibold px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:bg-[#163832] transition-all cursor-pointer shadow-md"
               >
-                Schedule Demo
+                Login
               </button>
             </div>
           </div>
@@ -549,18 +709,18 @@ export function Landing() {
       </main>
 
       {/* Editorial Footer */}
-      <footer className="border-t border-[#333333] bg-black pt-16">
+      <footer className="border-t border-[#235347]/60 bg-[#051F20] pt-16">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-12 flex flex-col lg:flex-row justify-between items-start gap-12 pb-16">
           <div className="max-w-sm">
-            <span className="font-playfair text-[24px] text-white uppercase tracking-widest mb-6 block border-b border-[#333333] pb-3">
+            <span className="font-serif text-[24px] text-[#DAF1DE] uppercase tracking-widest mb-6 block border-b border-[#235347]/60 pb-3">
               SHARIAHTRADING
             </span>
-            <p className="text-[#a39d96] font-sans text-sm mb-8 leading-relaxed">
+            <p className="text-[#8EB69B] font-sans text-sm mb-8 leading-relaxed">
               Leading the transition to a debt-free, ethical investment landscape. Fully AAOIFI compliant.
             </p>
-            <div className="flex gap-8 text-[#a39d96]">
-              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-white">Global</span>
-              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-white">Press</span>
+            <div className="flex gap-8 text-[#8EB69B]">
+              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#DAF1DE]">Global</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#DAF1DE]">Press</span>
               <span className="font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-white">Journal</span>
             </div>
           </div>
@@ -569,6 +729,7 @@ export function Landing() {
             <div>
               <h5 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Platform</h5>
               <ul className="space-y-4 text-white">
+                <li><a className="hover:text-[#a39d96] transition-colors" href="#overview">Overview</a></li>
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#compliance">Compliance Policy</a></li>
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#universe">Universe Stats</a></li>
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#terminal">Terminal Docs</a></li>

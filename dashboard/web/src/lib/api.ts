@@ -207,6 +207,24 @@ export interface NotificationsResponse {
   unread_count: number;
 }
 
+export interface SanityCheckResponse {
+  user_id: string;
+  status: string;
+  is_realistic: boolean;
+  trading_mode?: string;
+  latest_date?: string;
+  strategy_cumulative_return?: number;
+  spus_cumulative_return?: number;
+  sp500_cumulative_return?: number;
+  total_alpha?: number;
+  latest_strategy_daily_return?: number;
+  latest_spus_daily_return?: number;
+  latest_sp500_daily_return?: number;
+  daily_alpha_drift?: number;
+  anomalies: string[];
+  checked_at: string;
+}
+
 
 
 // Helper to detect demo mode
@@ -403,6 +421,23 @@ export const api = {
       });
     }
     return apiFetch<UniverseResponse>("/api/universe");
+  },
+  publicUniverse: () => {
+    return apiFetch<{
+      computing: boolean;
+      is_live: boolean;
+      last_computed_at: string | null;
+      stocks: Array<{
+        ticker: string;
+        name: string;
+        status: string;
+        change?: string;
+        price?: string;
+        compliant: boolean;
+        reason?: string;
+        spark?: number[];
+      }>;
+    }>("/api/public/universe");
   },
   refreshUniverse: () => {
     if (isDemo()) {
@@ -641,6 +676,38 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode }),
     });
+  },
+  runSanityCheck: () => {
+    if (isDemo()) {
+      return Promise.resolve<SanityCheckResponse>({
+        user_id: "demo_user",
+        status: "REALISTIC",
+        is_realistic: true,
+        trading_mode: "paper",
+        latest_date: new Date().toISOString().split("T")[0],
+        strategy_cumulative_return: 0.0495,
+        spus_cumulative_return: -0.0321,
+        sp500_cumulative_return: 0.012,
+        total_alpha: 0.0816,
+        latest_strategy_daily_return: 0.0408,
+        latest_spus_daily_return: 0.001,
+        latest_sp500_daily_return: 0.002,
+        daily_alpha_drift: 0.0398,
+        anomalies: [],
+        checked_at: new Date().toISOString(),
+      });
+    }
+    return apiFetch<SanityCheckResponse>("/api/sanity-check", { method: "POST" });
+  },
+  getSanityStatus: () => {
+    if (isDemo()) {
+      return Promise.resolve({
+        has_run: true,
+        last_check: new Date().toISOString(),
+        details: "Mode: paper | Strategy Cum: +4.95% | SPUS Cum: -3.21% | Alpha: +8.16 pts",
+      });
+    }
+    return apiFetch<{ has_run: boolean; last_check: string | null; details?: string }>("/api/sanity-check/status");
   },
 };
 

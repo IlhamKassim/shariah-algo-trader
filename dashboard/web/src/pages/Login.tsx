@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { TrendingUp, Lock, Eye, EyeOff, ShieldAlert, ArrowLeft, Mail } from "lucide-react";
+import { Eye, EyeOff, ShieldAlert, ArrowLeft } from "lucide-react";
 
 import { api } from "../lib/api";
 import { SignIn, useAuth } from "@clerk/react";
@@ -266,11 +266,11 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0C0B09] text-[#ECE5D5] flex flex-col items-center justify-center px-4 font-mono select-none relative overflow-hidden animate-fadeIn">
+    <div className="min-h-screen bg-[#070709] text-white flex flex-col lg:flex-row font-sans select-none relative overflow-hidden animate-fadeIn">
       {/* Top Page Transition Loader Bar */}
       {isNavigatingToLanding && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[#29241B] overflow-hidden">
-          <div className="h-full bg-[#D1A92E] w-full transition-all duration-200 ease-out animate-pulse" />
+        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-neutral-900 overflow-hidden">
+          <div className="h-full bg-emerald-500 w-full transition-all duration-200 ease-out animate-pulse" />
         </div>
       )}
 
@@ -280,276 +280,392 @@ export function Login() {
           onComplete={handleCompleteConnection}
         />
       )}
-      {/* Top navigation back link */}
-      <div className="absolute top-6 left-6 z-20">
-        <button
-          onClick={handleNavigateToLanding}
-          className="inline-flex items-center gap-2 text-[11px] text-[#8C8577] hover:text-[#D1A92E] transition-colors tracking-wider uppercase cursor-pointer"
-        >
-          <ArrowLeft size={14} /> Back to ShariahTrading.my
-        </button>
-      </div>
 
-      {/* Decorative background grid */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-5">
+      {/* LEFT COLUMN: Emerald Mesh Visual & Onboarding Progress */}
+      <div className="hidden lg:flex lg:w-1/2 min-h-screen relative bg-gradient-to-br from-[#051F20] via-[#0B2B26] to-[#163832] p-12 lg:p-16 flex-col justify-between overflow-hidden border-r border-[#235347]/40">
+        {/* Background Ambient Radial Glow */}
         <div
-          className="w-full h-full bg-[linear-gradient(to_right,#29241B_1px,transparent_1px),linear-gradient(to_bottom,#29241B_1px,transparent_1px)]"
-          style={{ backgroundSize: "40px 40px" }}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 40% 40%, rgba(142, 182, 155, 0.18), transparent 60%), radial-gradient(circle at 80% 80%, rgba(35, 83, 71, 0.25), transparent 50%)",
+          }}
         />
-      </div>
 
-      <div className="w-full max-w-[400px] z-10 py-12">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 flex items-center justify-center bg-[#D1A92E] hover:rotate-12 transition-transform duration-300 shadow-md">
-            <TrendingUp size={22} className="text-[#0C0B09]" strokeWidth={2.5} />
-          </div>
-          <h1 className="text-[15px] font-bold text-[#ECE5D5] tracking-[0.15em] uppercase mt-4 text-center">
-            SHARIAHTRADING
+        {/* Header / Back Link */}
+        <div className="relative z-10">
+          <button
+            onClick={handleNavigateToLanding}
+            className="inline-flex items-center gap-2 text-xs text-[#8EB69B] hover:text-[#DAF1DE] transition-colors tracking-wide cursor-pointer bg-[#0B2B26]/60 hover:bg-[#163832] px-3.5 py-1.5 rounded-full border border-[#235347]/60 backdrop-blur-md"
+          >
+            <ArrowLeft size={14} /> Back to ShariahTrading
+          </button>
+        </div>
+
+        {/* Center Content */}
+        <div className="relative z-10 max-w-md my-auto py-12">
+          <h1 className="text-4xl lg:text-5xl font-serif text-[#DAF1DE] leading-tight font-normal">
+            {isSignUpMode ? "Get Started with Us" : "Welcome Back"}
           </h1>
-          <p className="text-[9px] text-[#D1A92E] tracking-[0.08em] uppercase mt-1">
-            Secure Portfolio Console
+          <p className="text-base text-[#8EB69B] mt-3 font-normal leading-relaxed">
+            {isSignUpMode
+              ? "Complete these easy steps to register your account."
+              : "Access your institutional Shariah algorithmic trading console."}
           </p>
         </div>
 
-        {/* Login Box */}
-        <div className="bg-[#0C0B09] border border-[#29241B] shadow-[0_4px_30px_rgba(0,0,0,0.5)] hover:border-[#D1A92E]/20 transition-colors duration-500 rounded-none overflow-hidden">
-          {/* Header Row */}
-          <div className="bg-[#100E0B] border-b border-[#29241B] px-5 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#D1A92E]/60" />
-              <span className="text-[10px] font-bold text-[#8C8577] tracking-wider">SYSTEM SIGN IN</span>
+        {/* Bottom Step Cards */}
+        <div className="relative z-10 grid grid-cols-3 gap-3.5 pt-6">
+          {/* Step 1 Card */}
+          <div
+            className={`p-4 rounded-2xl transition-all duration-300 flex flex-col justify-between min-h-[110px] ${
+              isSignUpMode
+                ? "bg-[#DAF1DE] text-[#051F20] shadow-xl shadow-[#051F20]/50 border border-[#DAF1DE]"
+                : "bg-[#163832]/60 backdrop-blur-md border border-[#235347]/60 text-[#DAF1DE]"
+            }`}
+          >
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                isSignUpMode ? "bg-[#051F20] text-[#DAF1DE]" : "bg-[#235347]/60 text-[#DAF1DE]"
+              }`}
+            >
+              1
             </div>
-            <span className="text-[9px] text-[#4C4739] font-semibold tracking-wider uppercase border border-[#29241B] px-1.5 py-0.5">
-              SECURE PORT 8000
+            <span className="text-xs font-bold leading-snug mt-3">
+              {isSignUpMode ? "Sign up your account" : "Sign in to account"}
             </span>
           </div>
 
-          <div className="p-6 space-y-5">
-            {/* Error Feedback Message */}
-            {error && !auth?.clerk_enabled && (
-              <div className="bg-[#1A1211] border border-[#D16A5B]/30 p-3 flex items-start gap-2.5">
-                <ShieldAlert size={14} className="text-[#D16A5B] shrink-0 mt-0.5" />
-                <div className="flex-1 text-[10px] font-semibold text-[#D16A5B] uppercase tracking-wider leading-relaxed whitespace-pre-line">
-                  {error}
-                </div>
+          {/* Step 2 Card */}
+          <div className="p-4 rounded-2xl bg-[#163832]/60 backdrop-blur-md border border-[#235347]/60 text-[#8EB69B] flex flex-col justify-between min-h-[110px]">
+            <div className="w-7 h-7 rounded-full bg-[#235347]/60 flex items-center justify-center text-xs font-bold text-[#DAF1DE]">
+              2
+            </div>
+            <span className="text-xs font-medium leading-snug mt-3">
+              Set up your workspace
+            </span>
+          </div>
+
+          {/* Step 3 Card */}
+          <div className="p-4 rounded-2xl bg-[#163832]/60 backdrop-blur-md border border-[#235347]/60 text-[#8EB69B] flex flex-col justify-between min-h-[110px]">
+            <div className="w-7 h-7 rounded-full bg-[#235347]/60 flex items-center justify-center text-xs font-bold text-[#DAF1DE]">
+              3
+            </div>
+            <span className="text-xs font-medium leading-snug mt-3">
+              Set up your profile
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Form & Auth Controls */}
+      <div className="w-full lg:w-1/2 min-h-screen bg-[#051F20] flex flex-col justify-between p-6 sm:p-12 lg:p-16 z-10">
+        {/* Mobile Header Link */}
+        <div className="flex lg:hidden justify-between items-center mb-6">
+          <button
+            onClick={handleNavigateToLanding}
+            className="inline-flex items-center gap-2 text-xs text-[#8EB69B] hover:text-[#DAF1DE] transition-colors"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-[#235347] rounded-md flex items-center justify-center text-[#DAF1DE] font-bold text-xs">
+              S
+            </div>
+            <span className="font-bold text-xs tracking-wider text-[#DAF1DE] uppercase">ShariahTrading</span>
+          </div>
+        </div>
+
+        <div className="w-full max-w-md mx-auto my-auto space-y-7">
+          {/* Header Title */}
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-serif font-normal text-[#DAF1DE]">
+              {isSignUpMode ? "Sign Up Account" : "Log In Account"}
+            </h2>
+            <p className="text-sm text-[#8EB69B] mt-1.5 font-normal">
+              {isSignUpMode
+                ? "Enter your personal data to create your account."
+                : "Enter your credentials to access your trading console."}
+            </p>
+          </div>
+
+          {/* OAuth Buttons (Google & GitHub) */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="bg-[#0B2B26] hover:bg-[#163832] border border-[#235347] hover:border-[#8EB69B]/40 text-[#DAF1DE] rounded-xl py-3 px-4 flex items-center justify-center gap-2.5 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.13C3.25 21.3 7.31 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27a7.25 7.25 0 0 1 0-4.54V6.6H1.27a11.97 11.97 0 0 0 0 10.8l4.01-3.13z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.6l4.01 3.13c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span>Google</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="bg-[#0B2B26] hover:bg-[#163832] border border-[#235347] hover:border-[#8EB69B]/40 text-[#DAF1DE] rounded-xl py-3 px-4 flex items-center justify-center gap-2.5 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            >
+              <svg className="w-4 h-4 fill-[#DAF1DE] shrink-0" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+              <span>Github</span>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center my-4">
+            <div className="w-full border-t border-[#235347]/50" />
+            <span className="bg-[#051F20] px-3.5 text-xs text-[#8EB69B] font-medium uppercase tracking-wider">
+              Or
+            </span>
+          </div>
+
+          {/* Error / Success Feedback Banners */}
+          {error && !auth?.clerk_enabled && (
+            <div className="bg-rose-950/40 border border-rose-500/30 p-3.5 rounded-xl flex items-start gap-3">
+              <ShieldAlert size={16} className="text-rose-400 shrink-0 mt-0.5" />
+              <div className="flex-1 text-xs text-rose-300 font-medium leading-relaxed whitespace-pre-line">
+                {error}
               </div>
-            )}
+            </div>
+          )}
 
+          {supabaseSuccessMsg && (
+            <div className="bg-[#0B2B26] border border-[#235347] p-3.5 rounded-xl text-xs text-[#DAF1DE] font-medium">
+              {supabaseSuccessMsg}
+            </div>
+          )}
 
-            {auth?.supabase_enabled ? (
-              <form onSubmit={handleSupabaseAuth} className="space-y-4">
-                {supabaseSuccessMsg && (
-                  <div className="bg-[#121A15] border border-emerald-500/30 p-3 text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
-                    {supabaseSuccessMsg}
+          {/* Main Auth Form */}
+          {auth?.supabase_enabled ? (
+            <form onSubmit={handleSupabaseAuth} className="space-y-4">
+              {isSignUpMode && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-[#8EB69B]">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="eg. John"
+                      className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                    />
                   </div>
-                )}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-[#8EB69B]">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="eg. Francisco"
+                      className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
 
-                <div className="space-y-1.5">
-                  <label htmlFor="email" className="text-[10px] font-semibold text-[#8C8577] uppercase tracking-[0.08em] flex items-center gap-1.5">
-                    <Mail size={11} className="text-[#D1A92E]" /> Email Address
-                  </label>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="text-xs font-semibold text-[#8EB69B]"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="eg. johnfrans@gmail.com"
+                  className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                  disabled={isSubmitting}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="password"
+                  className="text-xs font-semibold text-[#8EB69B]"
+                >
+                  Password
+                </label>
+                <div className="relative">
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="user@example.com"
-                    className="w-full bg-[#12100D] border border-[#29241B] text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-[#D1A92E]/60 text-[#ECE5D5] transition-all rounded-none font-sans"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 pr-10 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                    disabled={isSubmitting}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8EB69B] hover:text-[#DAF1DE] transition-colors focus:outline-none cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {isSignUpMode && (
+                  <p className="text-xs text-[#8EB69B]/70 mt-1">
+                    Must be at least 8 characters.
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#DAF1DE] hover:bg-[#c2e8c8] text-[#051F20] font-semibold text-sm py-3.5 rounded-xl transition-all shadow-lg shadow-[#DAF1DE]/10 cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {isSubmitting
+                  ? isSignUpMode
+                    ? "Creating Account..."
+                    : "Signing In..."
+                  : isSignUpMode
+                  ? "Sign Up"
+                  : "Log In"}
+              </button>
+            </form>
+          ) : auth?.clerk_enabled ? (
+            <div className="flex justify-center min-h-[300px] items-center relative w-full">
+              {!clerkLoaded && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#051F20] z-20">
+                  <div className="w-6 h-6 border-2 border-[#8EB69B] border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-[#8EB69B]">
+                    Initializing Portal...
+                  </span>
+                </div>
+              )}
+              <div
+                className={`w-full transition-opacity duration-300 ${
+                  clerkLoaded ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
+                <SignIn
+                  appearance={{
+                    variables: {
+                      colorPrimary: "#235347",
+                      colorBackground: "#051F20",
+                      colorForeground: "#DAF1DE",
+                      colorMutedForeground: "#8EB69B",
+                      colorInput: "#0B2B26",
+                      colorInputForeground: "#DAF1DE",
+                      colorBorder: "#235347",
+                      borderRadius: "12px",
+                    },
+                    elements: {
+                      rootBox: "w-full flex justify-center m-0 max-w-full",
+                      cardBox:
+                        "w-full shadow-none border-0 m-0 max-w-full bg-transparent",
+                      card: "border-0 shadow-none bg-transparent w-full p-0 py-2 m-0",
+                      main: "w-full m-0 p-0",
+                      socialButtonsBlockButton:
+                        "border border-[#235347] rounded-xl bg-[#0B2B26] hover:bg-[#163832] text-[#DAF1DE] transition-colors w-full flex justify-center items-center py-3",
+                      formButtonPrimary:
+                        "bg-[#DAF1DE] hover:bg-[#c2e8c8] text-[#051F20] rounded-xl font-semibold text-sm py-3.5 cursor-pointer w-full shadow-md",
+                      formFieldInput:
+                        "bg-[#0B2B26] border border-[#235347] text-[#DAF1DE] rounded-xl w-full py-3",
+                    },
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="password"
+                  className="text-xs font-semibold text-[#8EB69B]"
+                >
+                  Password / Console Key
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your console key"
+                    className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 pr-10 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
                     disabled={isSubmitting}
                     autoFocus
                     required
                   />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="password" className="text-[10px] font-semibold text-[#8C8577] uppercase tracking-[0.08em] flex items-center gap-1.5">
-                    <Lock size={11} className="text-[#D1A92E]" /> Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full bg-[#12100D] border border-[#29241B] text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-[#D1A92E]/60 text-[#ECE5D5] transition-all rounded-none font-sans"
-                      disabled={isSubmitting}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4C4739] hover:text-[#8C8577] transition-colors focus:outline-none"
-                    >
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-[#D1A92E] text-[#0C0B09] font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-[#D1A92E] hover:bg-transparent hover:text-[#D1A92E] transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border border-[#0C0B09] border-t-transparent animate-spin shrink-0" />
-                      {isSignUpMode ? "REGISTERING ACCOUNT..." : "AUTHENTICATING..."}
-                    </>
-                  ) : (
-                    isSignUpMode ? "CREATE ACCOUNT" : "SIGN IN"
-                  )}
-                </button>
-
-                <div className="text-center pt-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsSignUpMode(!isSignUpMode);
-                      setError(null);
-                      setSupabaseSuccessMsg(null);
-                    }}
-                    className="text-[10px] text-[#8C8577] hover:text-[#D1A92E] transition-colors underline cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8EB69B] hover:text-[#DAF1DE] transition-colors focus:outline-none cursor-pointer"
                   >
-                    {isSignUpMode ? "Already have an account? Sign In" : "Need an account? Register here"}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
-                </div>
-              </form>
-            ) : auth?.clerk_enabled ? (
-
-              <div className="flex justify-center min-h-[340px] items-center relative w-full">
-                {!clerkLoaded && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0C0B09] z-20">
-                    <div className="w-6 h-6 border border-[#D1A92E] border-t-transparent animate-spin" />
-                    <span className="text-[9px] text-[#8C8577] tracking-wider font-mono">INITIALIZING SECURE PORTAL...</span>
-                  </div>
-                )}
-                <div className={`w-full transition-opacity duration-300 ${clerkLoaded ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                  <SignIn
-                    appearance={{
-                      variables: {
-                        colorPrimary: "#D1A92E",
-                        colorBackground: "#0C0B09",
-                        colorForeground: "#ECE5D5",
-                        colorMutedForeground: "#8C8577",
-                        colorInput: "#12100D",
-                        colorInputForeground: "#ECE5D5",
-                        colorBorder: "#4C4739",
-                        fontFamily: '"IBM Plex Mono", monospace',
-                        borderRadius: "0px",
-                      },
-                      elements: {
-                        rootBox: "w-full flex justify-center m-0 max-w-full",
-                        cardBox: "w-full shadow-none border-0 m-0 max-w-full bg-transparent",
-                        card: "border-0 shadow-none bg-transparent w-full p-0 py-4 m-0",
-                        main: "w-full m-0 p-0",
-                        headerTitle: "tracking-wider uppercase font-bold text-[14px] text-[#ECE5D5]",
-                        socialButtonsBlockButton: "border border-[#4C4739] rounded-none bg-[#1A1813] hover:bg-[#25221A] text-[#ECE5D5] transition-colors w-full flex justify-center items-center",
-                        formButtonPrimary: "bg-[#D1A92E] hover:bg-[#D1A92E]/80 text-[#0C0B09] rounded-none font-bold uppercase tracking-wider text-[11px] py-3 cursor-pointer w-full",
-                        formFieldInput: "bg-[#12100D] border border-[#4C4739] text-[#ECE5D5] rounded-none w-full",
-                      }
-                    }}
-                  />
                 </div>
               </div>
-            ) : (
-              <>
-                {/* Google OAuth Login Button */}
-                {auth?.google_auth_enabled && (
-                  <button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    className="w-full bg-[#1A1813] hover:bg-[#25221A] text-[#D1A92E] font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-[#29241B] hover:border-[#D1A92E]/40 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.527a5.99 5.99 0 0 1 5.991-6c1.554 0 2.96.593 4.025 1.564l3.199-3.199C19.24 3.01 16.78 1.927 13.99 1.927a9.99 9.99 0 0 0-9.99 10a9.99 9.99 0 0 0 9.99 10c5.56 0 9.873-3.9 9.873-10a8.7 8.7 0 0 0-.153-1.642H12.24z" />
-                    </svg>
-                    SIGN IN WITH GOOGLE CONSOLE
-                  </button>
-                )}
 
-                {/* Divider if both are enabled */}
-                {auth?.google_auth_enabled && auth?.password_auth_enabled && (
-                  <div className="relative flex items-center justify-center py-2">
-                    <div className="border-t border-[#29241B] w-full" />
-                    <span className="absolute bg-[#0C0B09] px-3.5 text-[8px] text-[#4C4739] font-bold tracking-widest uppercase">
-                      OR
-                    </span>
-                  </div>
-                )}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#DAF1DE] hover:bg-[#c2e8c8] text-[#051F20] font-semibold text-sm py-3.5 rounded-xl transition-all shadow-lg shadow-[#DAF1DE]/10 cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {isSubmitting ? "Authenticating..." : "Initiate Connection"}
+              </button>
+            </form>
+          )}
 
-                {/* Password Login Form */}
-                {auth?.password_auth_enabled && (
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Input Group */}
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="password"
-                        className="text-[10px] font-semibold text-[#8C8577] uppercase tracking-[0.08em] flex items-center gap-1.5"
-                      >
-                        <Lock size={11} className="text-[#D1A92E]" /> Enter Console Key
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••••••"
-                          className="w-full bg-[#12100D] border border-[#29241B] text-[12px] px-3.5 py-2.5 focus:outline-none focus:border-[#D1A92E]/60 focus:ring-1 focus:ring-[#D1A92E]/20 text-[#ECE5D5] transition-all rounded-none placeholder:text-[#4C4739] font-sans tracking-widest"
-                          disabled={isSubmitting}
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4C4739] hover:text-[#8C8577] transition-colors focus:outline-none"
-                          tabIndex={-1}
-                        >
-                          {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </div>
+          {/* Demo Console Access Button */}
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            className="w-full bg-[#0B2B26]/60 hover:bg-[#163832] border border-[#235347] text-[#8EB69B] hover:text-[#DAF1DE] font-medium text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 mt-4"
+          >
+            Explore Demo Console Without Signup
+          </button>
 
-                    {/* Action Button */}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full bg-[#D1A92E] text-[#0C0B09] font-bold text-[11px] tracking-[0.12em] uppercase py-3 border border-[#D1A92E] hover:bg-transparent hover:text-[#D1A92E] transition-colors duration-300 select-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border border-[#0C0B09] border-t-transparent animate-spin shrink-0" />
-                          AUTHENTICATING...
-                        </>
-                      ) : (
-                        "INITIATE CONNECTION"
-                      )}
-                    </button>
-                  </form>
-                )}
-              </>
-            )}
-
-            <div className="relative flex items-center justify-center py-1">
-              <div className="border-t border-[#29241B] w-full" />
-            </div>
-
+          {/* Mode Switcher */}
+          <div className="text-center pt-2">
+            <span className="text-xs text-[#8EB69B]">
+              {isSignUpMode
+                ? "Already have an account? "
+                : "Don't have an account? "}
+            </span>
             <button
               type="button"
-              onClick={handleDemoLogin}
-              className="w-full bg-transparent hover:bg-[#D1A92E]/5 text-[#8C8577] hover:text-[#D1A92E] font-bold text-[10px] tracking-[0.12em] uppercase py-3 border border-[#29241B] hover:border-[#D1A92E]/30 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+              onClick={() => {
+                setIsSignUpMode(!isSignUpMode);
+                setError(null);
+                setSupabaseSuccessMsg(null);
+              }}
+              className="text-xs font-semibold text-[#DAF1DE] hover:underline cursor-pointer"
             >
-              NEW HERE? EXPLORE DEMO CONSOLE
+              {isSignUpMode ? "Log in" : "Sign up"}
             </button>
           </div>
         </div>
 
-        {/* Footer Notes */}
-        <div className="mt-6 flex flex-col items-center gap-1 text-[9px] text-[#4C4739] tracking-wider text-center uppercase font-mono">
-          <span>Long-only · No leverage · Halal Screener Console</span>
-          <span>ESTABLISHED 2026 SHARIAHTRADING</span>
+        {/* Footer */}
+        <div className="mt-8 text-center text-xs text-[#8EB69B]/60 font-normal">
+          <span>Long-only · No leverage · Shariah Screener Console</span>
         </div>
       </div>
     </div>

@@ -26,12 +26,14 @@ from dashboard.api.routers import (
     notifications,
     performance,
     portfolio,
+    sanity,
     settings,
     status,
     universe,
 )
 from dashboard.api.routers.universe import schedule_startup_refresh
 from dashboard.api.notifications_seeder import seed_notifications
+from dashboard.api.sanity_check import run_performance_sanity_check
 
 
 @asynccontextmanager
@@ -51,6 +53,27 @@ async def lifespan(app: FastAPI):
     cache = get_universe_cache()
     schedule_startup_refresh(cache, cfg, client)
     seed_notifications()
+
+    # Run initial sanity audit check for active accounts on startup
+    import threading
+
+    def _end_of_market_sanity_worker():
+        try:
+            import sqlite3
+            from dashboard.api.user_store import _DB_PATH
+            if _DB_PATH.exists():
+                conn = sqlite3.connect(str(_DB_PATH))
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT user_id FROM user_settings").fetchall()
+                conn.close()
+                for r in rows:
+                    run_performance_sanity_check(r["user_id"], cfg)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("End-of-market sanity check background worker exception: %s", exc)
+
+    threading.Thread(target=_end_of_market_sanity_worker, daemon=True).start()
+
     yield
 
 
@@ -90,8 +113,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Open auth router endpoints (login, logout, status)
+# Open auth & public router endpoints (login, logout, status, public universe)
 app.include_router(auth.router)
+app.include_router(universe.public_router)
 
 # Secure all other endpoints
 app.include_router(status.router, dependencies=[Depends(verify_auth)])
@@ -104,6 +128,7 @@ app.include_router(performance.router, dependencies=[Depends(verify_auth)])
 app.include_router(compare.router, dependencies=[Depends(verify_auth)])
 app.include_router(day_trader.router, dependencies=[Depends(verify_auth)])
 app.include_router(notifications.router, dependencies=[Depends(verify_auth)])
+app.include_router(sanity.router, dependencies=[Depends(verify_auth)])
 app.include_router(settings.router, dependencies=[Depends(verify_auth)])
 
 
