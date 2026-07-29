@@ -1,3 +1,4 @@
+import os
 import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
@@ -9,15 +10,21 @@ from dashboard.api.sanity_check import (
     MAX_DAILY_ALPHA_DRIFT_THRESHOLD,
 )
 
+# Use environment variables or generic fixture values — never hardcode real user IDs or emails.
+_TEST_USER_ID = os.environ.get("TEST_USER_ID", "test-sanity-user-00000000")
+_TEST_USER_EMAIL = os.environ.get("TEST_USER_EMAIL", "testuser@example.com")
+
+
 def test_sanity_check_unconfigured_user():
     result = run_performance_sanity_check("non_existent_user_123")
     assert result["status"] == "NO_SETTINGS"
     assert result["is_realistic"] is True
 
+
 def test_sanity_check_endpoint_integration():
     def override_verify_auth(request: Request):
-        request.state.user_id = "5b7fb8dd-5f45-4225-a62e-5c908be06279"
-        request.state.user_email = "aqilnazri9@gmail.com"
+        request.state.user_id = _TEST_USER_ID
+        request.state.user_email = _TEST_USER_EMAIL
         return True
 
     app.dependency_overrides[verify_auth] = override_verify_auth
@@ -31,7 +38,8 @@ def test_sanity_check_endpoint_integration():
     data = response.json()
     assert "status" in data
     assert "is_realistic" in data
-    assert data["user_id"] == "5b7fb8dd-5f45-4225-a62e-5c908be06279"
+    # user_id echoed back should match what we injected
+    assert data["user_id"] == _TEST_USER_ID
 
     # Test GET /api/sanity-check/status
     status_resp = client.get("/api/sanity-check/status")
