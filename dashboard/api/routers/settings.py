@@ -76,6 +76,8 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
     trading_mode = "paper"
     raw_live_key = ""
     raw_live_secret = ""
+    shariah_trader_enabled = True
+    day_trader_enabled = False
 
     if user_id:
         if user_data:
@@ -89,6 +91,8 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
             top_n = user_data.get("top_n") or cfg.top_n
             sector_cap = user_data.get("sector_cap") if user_data.get("sector_cap") is not None else cfg.sector_cap
             drift_threshold = user_data.get("drift_threshold") if user_data.get("drift_threshold") is not None else cfg.drift_threshold
+            shariah_trader_enabled = bool(user_data.get("shariah_trader_enabled") if user_data.get("shariah_trader_enabled") is not None else True)
+            day_trader_enabled = bool(user_data.get("day_trader_enabled") if user_data.get("day_trader_enabled") is not None else False)
         else:
             raw_key = ""
             raw_secret = ""
@@ -121,6 +125,8 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
         etf_symbols=cfg.etf_symbols,
         sector_cap=sector_cap,
         drift_threshold=drift_threshold,
+        shariah_trader_enabled=shariah_trader_enabled,
+        day_trader_enabled=day_trader_enabled,
         dashboard_password_masked=mask_value(raw_pass),
         google_client_id_masked=mask_value(cfg.google_client_id),
         google_client_secret_masked=mask_value(raw_google_secret),
@@ -168,6 +174,10 @@ def update_settings(
             if not (0.0 <= payload.drift_threshold <= 1.0):
                 raise HTTPException(status_code=400, detail="DRIFT_THRESHOLD must be between 0.0 and 1.0")
             user_updates["drift_threshold"] = payload.drift_threshold
+        if payload.shariah_trader_enabled is not None:
+            user_updates["shariah_trader_enabled"] = payload.shariah_trader_enabled
+        if payload.day_trader_enabled is not None:
+            user_updates["day_trader_enabled"] = payload.day_trader_enabled
 
         save_user_settings(user_id, user_updates)
         log_audit_event("USER_SETTINGS_UPDATE", user_id, _client_ip(request), f"Updated user settings: {list(user_updates.keys())}")

@@ -67,6 +67,22 @@ def run_performance_sanity_check(
         timestamps = history.get("timestamp", [])
         equities = history.get("equity", [])
     except AlpacaError as exc:
+        if "404" in str(exc):
+            log_audit_event(
+                event_type="performance_sanity_check",
+                actor=user_id,
+                ip_address="system",
+                details=f"Status: EMPTY_HISTORY | Realistic: True",
+            )
+            return {
+                "user_id": user_id,
+                "status": "EMPTY_HISTORY",
+                "is_realistic": True,
+                "trading_mode": trading_mode,
+                "anomalies": [],
+                "message": "New account with no historical equity points yet.",
+                "checked_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            }
         logger.error("Sanity check failed to fetch Alpaca history for %s: %s", user_id, exc)
         return {
             "user_id": user_id,
@@ -77,6 +93,12 @@ def run_performance_sanity_check(
         }
 
     if not timestamps or not equities:
+        log_audit_event(
+            event_type="performance_sanity_check",
+            actor=user_id,
+            ip_address="system",
+            details=f"Status: EMPTY_HISTORY | Realistic: True",
+        )
         return {
             "user_id": user_id,
             "status": "EMPTY_HISTORY",

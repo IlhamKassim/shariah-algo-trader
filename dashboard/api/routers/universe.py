@@ -86,12 +86,12 @@ def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None
         )
         top_n_set = set(ranked)
 
-        # Build composite scores for all tickers that have at least momentum+quality
-        common = momentum.keys() & quality.keys()
+        # Build composite scores for all tickers (fallback to momentum if quality is missing)
+        common = momentum.keys() if momentum else (quality.keys() | vol_scores.keys() | value.keys() | universe)
         all_scores = {
             t: (
-                0.25 * momentum[t]
-                + 0.25 * quality[t]
+                0.25 * momentum.get(t, 0.0)
+                + 0.25 * quality.get(t, 0.0)
                 + 0.25 * vol_scores.get(t, 0.0)
                 + 0.25 * value.get(t, 0.0)
             )
@@ -126,16 +126,19 @@ async def _refresh_background(cache: UniverseCache, cfg: Config, portfolio: set[
     await loop.run_in_executor(None, _run_refresh, cache, cfg, portfolio)
 
 
-def schedule_startup_refresh(cache: UniverseCache, cfg: Config, client: AlpacaClient) -> None:
+def schedule_startup_refresh(cache: UniverseCache, cfg: Config, client: AlpacaClient | None) -> None:
     """Kick off a factor score computation in a daemon thread on server startup."""
     if cache.computing:
         return
     cache.computing = True
-    try:
-        positions = client.get("/v2/positions")
-        portfolio = {pos["symbol"] for pos in positions}
-    except Exception:
-        portfolio = set()
+    portfolio = set()
+    if client:
+        try:
+            positions = client.get("/v2/positions")
+            portfolio = {pos["symbol"] for pos in positions}
+        except Exception:
+            portfolio = set()
+
     thread = threading.Thread(
         target=_run_refresh,
         args=(cache, cfg, portfolio),
@@ -157,13 +160,18 @@ def get_universe(cache: UniverseCache = Depends(get_universe_cache)) -> Universe
 def refresh_universe(
     background_tasks: BackgroundTasks,
     cfg: Config = Depends(get_config),
-    client: AlpacaClient = Depends(get_alpaca),
+    client: AlpacaClient | None = Depends(get_alpaca),
     cache: UniverseCache = Depends(get_universe_cache),
 ) -> dict:
     if cache.computing:
         return {"status": "already_computing"}
     cache.computing = True
-    positions = client.get("/v2/positions")
-    portfolio = {pos["symbol"] for pos in positions}
+    portfolio = set()
+    if client:
+        try:
+            positions = client.get("/v2/positions")
+            portfolio = {pos["symbol"] for pos in positions}
+        except Exception:
+            portfolio = set()
     background_tasks.add_task(_refresh_background, cache, cfg, portfolio)
     return {"status": "computing"}

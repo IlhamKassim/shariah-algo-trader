@@ -41,6 +41,8 @@ def init_user_store() -> None:
                     top_n                             INTEGER DEFAULT 20,
                     sector_cap                        REAL DEFAULT 0.20,
                     drift_threshold                   REAL DEFAULT 0.03,
+                    shariah_trader_enabled            INTEGER DEFAULT 1,
+                    day_trader_enabled                INTEGER DEFAULT 0,
                     created_at                        TEXT NOT NULL,
                     updated_at                        TEXT NOT NULL
                 )
@@ -57,6 +59,10 @@ def init_user_store() -> None:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN alpaca_live_api_key_encrypted TEXT")
             if "alpaca_live_api_secret_encrypted" not in existing_cols:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN alpaca_live_api_secret_encrypted TEXT")
+            if "shariah_trader_enabled" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN shariah_trader_enabled INTEGER DEFAULT 1")
+            if "day_trader_enabled" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN day_trader_enabled INTEGER DEFAULT 0")
             conn.commit()
             _initialized = True
         finally:
@@ -149,8 +155,9 @@ def get_user_settings(user_id: str) -> dict | None:
                             user_id, alpaca_api_key_encrypted, alpaca_api_secret_encrypted,
                             alpaca_live_api_key_encrypted, alpaca_live_api_secret_encrypted,
                             trading_mode, alpaca_base_url, etf_symbol, top_n, sector_cap, drift_threshold,
+                            shariah_trader_enabled, day_trader_enabled,
                             created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             sb_data.get("user_id"),
@@ -164,6 +171,8 @@ def get_user_settings(user_id: str) -> dict | None:
                             sb_data.get("top_n", 20),
                             sb_data.get("sector_cap", 0.20),
                             sb_data.get("drift_threshold", 0.03),
+                            1 if sb_data.get("shariah_trader_enabled", True) else 0,
+                            1 if sb_data.get("day_trader_enabled", False) else 0,
                             sb_data.get("created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
                             sb_data.get("updated_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
                         )
@@ -182,6 +191,10 @@ def get_user_settings(user_id: str) -> dict | None:
     data["alpaca_live_api_secret"] = decrypt_credential(data.get("alpaca_live_api_secret_encrypted"))
     if not data.get("trading_mode"):
         data["trading_mode"] = "paper"
+    if data.get("shariah_trader_enabled") is None:
+        data["shariah_trader_enabled"] = 1
+    if data.get("day_trader_enabled") is None:
+        data["day_trader_enabled"] = 0
     return data
 
 
@@ -238,6 +251,9 @@ def save_user_settings(user_id: str, settings: dict) -> None:
     sector_cap = settings.get("sector_cap") if settings.get("sector_cap") is not None else existing.get("sector_cap", 0.20)
     drift_threshold = settings.get("drift_threshold") if settings.get("drift_threshold") is not None else existing.get("drift_threshold", 0.03)
 
+    shariah_enabled = int(settings["shariah_trader_enabled"]) if "shariah_trader_enabled" in settings and settings["shariah_trader_enabled"] is not None else int(existing.get("shariah_trader_enabled", 1))
+    day_enabled = int(settings["day_trader_enabled"]) if "day_trader_enabled" in settings and settings["day_trader_enabled"] is not None else int(existing.get("day_trader_enabled", 0))
+
     created_at = existing.get("created_at") or now
 
     record = {
@@ -252,6 +268,8 @@ def save_user_settings(user_id: str, settings: dict) -> None:
         "top_n": top_n,
         "sector_cap": sector_cap,
         "drift_threshold": drift_threshold,
+        "shariah_trader_enabled": shariah_enabled,
+        "day_trader_enabled": day_enabled,
         "created_at": created_at,
         "updated_at": now,
     }
@@ -273,9 +291,11 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     top_n,
                     sector_cap,
                     drift_threshold,
+                    shariah_trader_enabled,
+                    day_trader_enabled,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
                     alpaca_api_key_encrypted = excluded.alpaca_api_key_encrypted,
                     alpaca_api_secret_encrypted = excluded.alpaca_api_secret_encrypted,
@@ -287,6 +307,8 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     top_n = excluded.top_n,
                     sector_cap = excluded.sector_cap,
                     drift_threshold = excluded.drift_threshold,
+                    shariah_trader_enabled = excluded.shariah_trader_enabled,
+                    day_trader_enabled = excluded.day_trader_enabled,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -301,6 +323,8 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     top_n,
                     sector_cap,
                     drift_threshold,
+                    shariah_enabled,
+                    day_enabled,
                     created_at,
                     now,
                 ),

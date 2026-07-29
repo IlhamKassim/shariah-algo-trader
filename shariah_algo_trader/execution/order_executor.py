@@ -4,7 +4,7 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 
 logger = logging.getLogger(__name__)
 
-_MIN_TRADE_NOTIONAL = 25.0  # skip adjustments smaller than this
+_MIN_TRADE_NOTIONAL = 1.0  # Alpaca Live supports fractional shares down to $1 notional
 _CASH_BUFFER_PCT = 0.005  # hold back 0.5% of equity as a settlement/slippage buffer
 
 

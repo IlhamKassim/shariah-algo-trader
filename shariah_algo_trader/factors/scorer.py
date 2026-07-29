@@ -45,12 +45,15 @@ def rank_by_factor_score(
     Sector cap: no more than floor(sector_cap × top_n) stocks from any single
     GICS sector. Capped-out stocks are skipped and the next-best is selected.
     """
-    required = momentum_scores.keys() & quality_scores.keys()
+    if quality_scores:
+        required = momentum_scores.keys() & quality_scores.keys()
+    else:
+        required = momentum_scores.keys()
 
     scores: dict[str, float] = {}
     for ticker in required:
-        m = momentum_scores[ticker]
-        q = quality_scores[ticker]
+        m = momentum_scores.get(ticker, 0.0)
+        q = quality_scores.get(ticker, 0.0)
         v = volatility_scores.get(ticker, 0.0)
         val = value_scores.get(ticker, 0.0)
         scores[ticker] = 0.25 * m + 0.25 * q + 0.25 * v + 0.25 * val

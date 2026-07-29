@@ -30,8 +30,22 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (supabase) {
       setTokenProvider(async () => {
         if (!supabase) return null;
-        const { data } = await supabase.auth.getSession();
-        return data.session?.access_token || null;
+        try {
+          let { data } = await supabase.auth.getSession();
+          const session = data.session;
+          if (session && session.expires_at) {
+            const nowSec = Math.floor(Date.now() / 1000);
+            if (session.expires_at - nowSec < 180) {
+              const { data: refreshed } = await supabase.auth.refreshSession();
+              if (refreshed?.session) {
+                return refreshed.session.access_token;
+              }
+            }
+          }
+          return session?.access_token || null;
+        } catch {
+          return null;
+        }
       });
 
 

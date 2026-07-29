@@ -4,9 +4,14 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from shariah_algo_trader.factors.quality import compute_quality_factor
+from shariah_algo_trader.factors.quality import compute_quality_factor, clear_quality_cache
 
 DEBT_THRESHOLD = 0.33
+
+
+@pytest.fixture(autouse=True)
+def _reset_quality_cache():
+    clear_quality_cache()
 
 
 def make_ticker_mock(

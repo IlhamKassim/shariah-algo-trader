@@ -158,6 +158,8 @@ class SettingsResponse(BaseModel):
     etf_symbols: list[str]
     sector_cap: float
     drift_threshold: float
+    shariah_trader_enabled: bool = True
+    day_trader_enabled: bool = False
     dashboard_password_masked: str
     google_client_id_masked: Optional[str] = None
     google_client_secret_masked: Optional[str] = None
@@ -178,6 +180,8 @@ class SettingsUpdateRequest(BaseModel):
     etf_symbols: Optional[list[str]] = None
     sector_cap: Optional[float] = None
     drift_threshold: Optional[float] = None
+    shariah_trader_enabled: Optional[bool] = None
+    day_trader_enabled: Optional[bool] = None
     dashboard_password: Optional[str] = None
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None

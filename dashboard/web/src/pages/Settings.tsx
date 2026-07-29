@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import type { SettingsUpdateRequest } from "../lib/api";
 import { Card, CardContent } from "../components/ui/Card";
 import { MfaEnrollModal } from "../components/auth/MfaEnrollModal";
+import { RebalanceModal } from "../components/RebalanceModal";
 import { supabase } from "../lib/supabaseClient";
 
 
@@ -48,6 +49,7 @@ export function Settings() {
   const [googleSecretVisible, setGoogleSecretVisible] = useState(false);
   const [showMfaEnroll, setShowMfaEnroll] = useState(false);
   const [activeTab, setActiveTab] = useState<"broker" | "strategy" | "auth">("broker");
+  const [isRebalanceModalOpen, setIsRebalanceModalOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sendingReset, setSendingReset] = useState(false);
 
@@ -450,9 +452,54 @@ export function Settings() {
               {activeTab === "strategy" && (
                 <div className="space-y-4">
                   <div className="border-b border-divider pb-2">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Shariah Algo Strategy Settings</h3>
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Automated Trading Engines</h3>
                     <p className="text-[10px] text-faint mt-1">
-                      Customize portfolio limits, sector caps, and drift thresholds.
+                      Choose which trading bot engines are authorized to run on your connected Alpaca account.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* SHARIAH ALGO TRADER ACTIVE BADGE */}
+                    <div className="p-4 bg-sidebar border border-brand-gold/40 rounded-lg shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-2">
+                            <ShieldCheck size={16} className="text-brand-gold" />
+                            <span>Long-Term Shariah Algo Trader</span>
+                          </div>
+                          <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                            Active execution engine for your account. Executes monthly factor rebalancing and Shariah compliance tracking. Maintains long-term positions overnight.
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-1 text-[9px] font-bold tracking-wider uppercase bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded shrink-0 ml-2">
+                          Active User Strategy
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* DAY TRADER BENCHMARK ISOLATION CARD */}
+                    <div className="p-4 bg-page/60 border border-divider rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-xs uppercase tracking-wider text-muted flex items-center gap-2">
+                            <Flame size={16} className="text-muted" />
+                            <span>Day Trader Strategy (Benchmark Engine)</span>
+                          </div>
+                          <p className="text-[11px] text-faint mt-1 leading-relaxed">
+                            Isolated comparison benchmark engine. Runs strictly on dedicated server credentials for performance comparison against intraday strategies. <strong>Never accesses user accounts.</strong>
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-1 text-[9px] font-bold tracking-wider uppercase bg-sidebar text-muted border border-divider rounded shrink-0 ml-2">
+                          Benchmark Only
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-b border-divider pb-2 pt-2">
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Shariah Algo Strategy Parameters</h3>
+                    <p className="text-[10px] text-faint mt-1">
+                      Customize portfolio limits, sector caps, and drift thresholds for factor ranking.
                     </p>
                   </div>
 
@@ -530,6 +577,25 @@ export function Settings() {
                       />
                       <span className="text-[9px] text-faint mt-1 block">0.03 represents 3% drift triggers rebalance.</span>
                     </div>
+                  </div>
+
+                  <div className="bg-brand-gold/10 border border-brand-gold/40 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
+                    <div>
+                      <div className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Flame size={14} className="text-brand-gold animate-pulse" />
+                        <span>Instant Manual Rebalance Trigger</span>
+                      </div>
+                      <div className="text-[11px] text-muted mt-0.5">
+                        Manually trigger an immediate factor-ranked rebalance to allocate cash or re-align open positions on your active trading account.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsRebalanceModalOpen(true)}
+                      className="px-4 py-2 bg-brand-gold text-slate-950 font-bold text-xs uppercase tracking-wider rounded hover:bg-brand-gold/90 transition-all cursor-pointer whitespace-nowrap shadow-md shrink-0"
+                    >
+                      ⚡ Execute Rebalance Now
+                    </button>
                   </div>
                 </div>
               )}
@@ -768,6 +834,16 @@ export function Settings() {
           onClose={() => setShowMfaEnroll(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["authStatus"] });
+          }}
+        />
+
+        <RebalanceModal
+          isOpen={isRebalanceModalOpen}
+          onClose={() => setIsRebalanceModalOpen(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            queryClient.invalidateQueries({ queryKey: ["account"] });
+            queryClient.invalidateQueries({ queryKey: ["activity"] });
           }}
         />
       </div>

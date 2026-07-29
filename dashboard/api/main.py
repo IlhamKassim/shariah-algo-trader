@@ -26,6 +26,7 @@ from dashboard.api.routers import (
     notifications,
     performance,
     portfolio,
+    rebalance,
     sanity,
     settings,
     status,
@@ -129,6 +130,7 @@ app.include_router(compare.router, dependencies=[Depends(verify_auth)])
 app.include_router(day_trader.router, dependencies=[Depends(verify_auth)])
 app.include_router(notifications.router, dependencies=[Depends(verify_auth)])
 app.include_router(sanity.router, dependencies=[Depends(verify_auth)])
+app.include_router(rebalance.router, dependencies=[Depends(verify_auth)])
 app.include_router(settings.router, dependencies=[Depends(verify_auth)])
 
 

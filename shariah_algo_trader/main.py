@@ -136,10 +136,10 @@ def main() -> None:
 
     def multi_tenant_rebalance_job() -> None:
         _factor_cache.clear()  # Clear factor cache to fetch fresh daily prices
-        execute_multi_tenant_job("rebalance", _execute_tenant_rebalance, cfg)
+        execute_multi_tenant_job("rebalance", _execute_tenant_rebalance, cfg, engine="shariah_trader")
 
     def multi_tenant_compliance_check_job() -> None:
-        execute_multi_tenant_job("compliance_check", _execute_tenant_compliance_check, cfg)
+        execute_multi_tenant_job("compliance_check", _execute_tenant_compliance_check, cfg, engine="shariah_trader")
 
     logger.info("Shariah Algo Trader Bot starting — Multi-Tenant SaaS Execution Mode Active.")
     start_scheduler(

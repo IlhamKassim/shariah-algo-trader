@@ -161,6 +161,8 @@ export interface SettingsResponse {
   etf_symbols: string[];
   sector_cap: number;
   drift_threshold: number;
+  shariah_trader_enabled?: boolean;
+  day_trader_enabled?: boolean;
   dashboard_password_masked: string;
   google_client_id_masked: string | null;
   google_client_secret_masked: string | null;
@@ -182,6 +184,8 @@ export interface SettingsUpdateRequest {
   etf_symbols?: string[];
   sector_cap?: number;
   drift_threshold?: number;
+  shariah_trader_enabled?: boolean;
+  day_trader_enabled?: boolean;
   dashboard_password?: string;
   google_client_id?: string | null;
   google_client_secret?: string | null;
@@ -708,6 +712,54 @@ export const api = {
       });
     }
     return apiFetch<{ has_run: boolean; last_check: string | null; details?: string }>("/api/sanity-check/status");
+  },
+  runManualRebalance: () => {
+    if (isDemo()) {
+      return Promise.resolve({
+        user_id: "demo_user",
+        rebalance_submitted: true,
+        status: "completed",
+        accounts_processed: 1,
+        results: [{ trading_mode: "paper", target_stocks: ["AAPL", "MSFT", "PG", "JNJ", "NVDA"] }],
+        executed_at: new Date().toISOString(),
+        message: "Demo rebalance submitted.",
+      });
+    }
+    return apiFetch<{
+      user_id: string;
+      rebalance_submitted: boolean;
+      status: string;
+      accounts_processed: number;
+      results: Array<{ trading_mode: string; target_stocks: string[]; diff_summary?: any }>;
+      executed_at: string;
+      message: string;
+    }>("/api/rebalance/run", { method: "POST" });
+  },
+  getRebalanceStatus: () => {
+    if (isDemo()) {
+      return Promise.resolve({
+        status: "completed",
+        message: "Demo rebalance complete.",
+        results: [{ trading_mode: "paper", target_stocks: ["AAPL", "MSFT", "PG", "JNJ", "NVDA"] }],
+        elapsed_seconds: 1.2,
+        step_key: "done",
+        step_number: 7,
+        error: undefined,
+      });
+    }
+    return apiFetch<{
+      status: string;
+      rebalance_submitted?: boolean;
+      accounts_processed?: number;
+      results?: Array<{ trading_mode: string; target_stocks: string[]; diff_summary?: any }>;
+      executed_at?: string;
+      completed_at?: string;
+      elapsed_seconds?: number;
+      step_key?: string;
+      step_number?: number;
+      error?: string;
+      message?: string;
+    }>("/api/rebalance/status");
   },
 };
 

@@ -115,16 +115,16 @@ def main() -> None:
         run_eod_liquidation(state=tenant_state, executor=executor)
 
     def multi_tenant_market_scan_job() -> None:
-        execute_multi_tenant_job("day_trader_market_scan", _execute_tenant_market_scan, cfg)
+        execute_multi_tenant_job("day_trader_market_scan", _execute_tenant_market_scan, cfg, engine="day_trader")
 
     def multi_tenant_intraday_monitor_job() -> None:
-        execute_multi_tenant_job("day_trader_intraday_monitor", _execute_tenant_intraday_monitor, cfg)
+        execute_multi_tenant_job("day_trader_intraday_monitor", _execute_tenant_intraday_monitor, cfg, engine="day_trader")
 
     def multi_tenant_intraday_scan_job() -> None:
-        execute_multi_tenant_job("day_trader_intraday_scan", _execute_tenant_intraday_scan, cfg)
+        execute_multi_tenant_job("day_trader_intraday_scan", _execute_tenant_intraday_scan, cfg, engine="day_trader")
 
     def multi_tenant_eod_liquidation_job() -> None:
-        execute_multi_tenant_job("day_trader_eod_liquidation", _execute_tenant_eod_liquidation, cfg)
+        execute_multi_tenant_job("day_trader_eod_liquidation", _execute_tenant_eod_liquidation, cfg, engine="day_trader")
 
     logger.info("Day Trader starting — Multi-Tenant SaaS Execution Mode Active.")
 
