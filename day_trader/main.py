@@ -1,6 +1,7 @@
 import datetime
 import logging
 import sys
+import threading
 from typing import Any
 
 from day_trader.config import DayTraderConfig
@@ -26,12 +27,14 @@ logger = logging.getLogger(__name__)
 
 # Tenant state isolation map: user_id -> DayTraderState
 _tenant_states: dict[str, DayTraderState] = {}
+_tenant_states_lock = threading.Lock()
 
 
 def _get_tenant_state(user_id: str) -> DayTraderState:
-    if user_id not in _tenant_states:
-        _tenant_states[user_id] = DayTraderState()
-    return _tenant_states[user_id]
+    with _tenant_states_lock:
+        if user_id not in _tenant_states:
+            _tenant_states[user_id] = DayTraderState()
+        return _tenant_states[user_id]
 
 
 def main() -> None:

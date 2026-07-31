@@ -5,11 +5,12 @@ from cryptography.fernet import Fernet
 
 def _get_fernet_key() -> bytes:
     """Derive a 32-byte Fernet key from the server master secret environment variable."""
-    raw_secret = (
-        os.environ.get("ENCRYPTION_MASTER_KEY")
-        or os.environ.get("DASHBOARD_SESSION_SECRET")
-        or "shariah-algo-trader-master-encryption-key-2026"
-    )
+    raw_secret = os.environ.get("ENCRYPTION_MASTER_KEY")
+    if not raw_secret:
+        raise RuntimeError(
+            "ENCRYPTION_MASTER_KEY is not set; refusing to encrypt/decrypt credentials "
+            "with a default key. Set ENCRYPTION_MASTER_KEY to a long random secret."
+        )
     digest = hashlib.sha256(raw_secret.encode("utf-8")).digest()
     return base64.urlsafe_b64encode(digest)
 

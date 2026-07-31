@@ -52,127 +52,140 @@ def get_active_tenant_accounts(
         return tenants
 
     # 2. Shariah Long-Term Algo Trader: Fetch user accounts from user_settings.db
+    db_read_ok = True
     if _DB_PATH.exists():
+        db_read_ok = False
         try:
             conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT * FROM user_settings").fetchall()
             conn.close()
+            db_read_ok = True
 
             for row in rows:
-                data = dict(row)
-                user_id = data.get("user_id")
-                active_mode = data.get("trading_mode") or "paper"
+                try:
+                    data = dict(row)
+                    user_id = data.get("user_id")
+                    active_mode = data.get("trading_mode") or "paper"
 
-                shariah_enabled = bool(data.get("shariah_trader_enabled") if data.get("shariah_trader_enabled") is not None else 1)
-                if not shariah_enabled:
+                    shariah_enabled = bool(data.get("shariah_trader_enabled") if data.get("shariah_trader_enabled") is not None else 1)
+                    if not shariah_enabled:
+                        continue
+
+                    paper_key = decrypt_credential(data.get("alpaca_api_key_encrypted"))
+                    paper_secret = decrypt_credential(data.get("alpaca_api_secret_encrypted"))
+                    paper_base_url = "https://paper-api.alpaca.markets"
+
+                    live_key = decrypt_credential(data.get("alpaca_live_api_key_encrypted"))
+                    live_secret = decrypt_credential(data.get("alpaca_live_api_secret_encrypted"))
+                    live_base_url = "https://api.alpaca.markets"
+
+                    # Check Paper Account
+                    has_paper = bool(paper_key and paper_secret)
+                    # Check Live Account
+                    has_live = bool(live_key and live_secret)
+
+                    # Determine tenant account targets
+                    if active_mode == "live":
+                        # Primary live execution requested
+                        if has_live:
+                            tenants.append({
+                                "user_id": f"{user_id} (Live)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "live",
+                                "alpaca_api_key": live_key,
+                                "alpaca_api_secret": live_secret,
+                                "alpaca_base_url": live_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                        # Also include paper testing account if configured
+                        if has_paper:
+                            tenants.append({
+                                "user_id": f"{user_id} (Paper)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "paper",
+                                "alpaca_api_key": paper_key,
+                                "alpaca_api_secret": paper_secret,
+                                "alpaca_base_url": paper_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                    elif active_mode == "both":
+                        # Explicit dual execution mode requested
+                        if has_live:
+                            tenants.append({
+                                "user_id": f"{user_id} (Live)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "live",
+                                "alpaca_api_key": live_key,
+                                "alpaca_api_secret": live_secret,
+                                "alpaca_base_url": live_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                        if has_paper:
+                            tenants.append({
+                                "user_id": f"{user_id} (Paper)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "paper",
+                                "alpaca_api_key": paper_key,
+                                "alpaca_api_secret": paper_secret,
+                                "alpaca_base_url": paper_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                    else:
+                        # Default paper mode
+                        if has_paper:
+                            tenants.append({
+                                "user_id": f"{user_id} (Paper)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "paper",
+                                "alpaca_api_key": paper_key,
+                                "alpaca_api_secret": paper_secret,
+                                "alpaca_base_url": paper_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                        elif has_live:
+                            # Fallback to live if only live credentials exist
+                            tenants.append({
+                                "user_id": f"{user_id} (Live)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "live",
+                                "alpaca_api_key": live_key,
+                                "alpaca_api_secret": live_secret,
+                                "alpaca_base_url": live_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                except Exception as row_exc:
+                    logger.error(
+                        "Skipping tenant row due to error (user_id=%s): %s",
+                        dict(row).get("user_id", "?"), row_exc, exc_info=True,
+                    )
                     continue
-
-                paper_key = decrypt_credential(data.get("alpaca_api_key_encrypted"))
-                paper_secret = decrypt_credential(data.get("alpaca_api_secret_encrypted"))
-                paper_base_url = "https://paper-api.alpaca.markets"
-
-                live_key = decrypt_credential(data.get("alpaca_live_api_key_encrypted"))
-                live_secret = decrypt_credential(data.get("alpaca_live_api_secret_encrypted"))
-                live_base_url = "https://api.alpaca.markets"
-
-                # Check Paper Account
-                has_paper = bool(paper_key and paper_secret)
-                # Check Live Account
-                has_live = bool(live_key and live_secret)
-
-                # Determine tenant account targets
-                if active_mode == "live":
-                    # Primary live execution requested
-                    if has_live:
-                        tenants.append({
-                            "user_id": f"{user_id} (Live)",
-                            "raw_user_id": user_id,
-                            "trading_mode": "live",
-                            "alpaca_api_key": live_key,
-                            "alpaca_api_secret": live_secret,
-                            "alpaca_base_url": live_base_url,
-                            "etf_symbol": data.get("etf_symbol") or "SPUS",
-                            "top_n": int(data.get("top_n") or cfg.top_n),
-                            "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
-                            "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
-                        })
-                    # Also include paper testing account if configured
-                    if has_paper:
-                        tenants.append({
-                            "user_id": f"{user_id} (Paper)",
-                            "raw_user_id": user_id,
-                            "trading_mode": "paper",
-                            "alpaca_api_key": paper_key,
-                            "alpaca_api_secret": paper_secret,
-                            "alpaca_base_url": paper_base_url,
-                            "etf_symbol": data.get("etf_symbol") or "SPUS",
-                            "top_n": int(data.get("top_n") or cfg.top_n),
-                            "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
-                            "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
-                        })
-                elif active_mode == "both":
-                    # Explicit dual execution mode requested
-                    if has_live:
-                        tenants.append({
-                            "user_id": f"{user_id} (Live)",
-                            "raw_user_id": user_id,
-                            "trading_mode": "live",
-                            "alpaca_api_key": live_key,
-                            "alpaca_api_secret": live_secret,
-                            "alpaca_base_url": live_base_url,
-                            "etf_symbol": data.get("etf_symbol") or "SPUS",
-                            "top_n": int(data.get("top_n") or cfg.top_n),
-                            "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
-                            "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
-                        })
-                    if has_paper:
-                        tenants.append({
-                            "user_id": f"{user_id} (Paper)",
-                            "raw_user_id": user_id,
-                            "trading_mode": "paper",
-                            "alpaca_api_key": paper_key,
-                            "alpaca_api_secret": paper_secret,
-                            "alpaca_base_url": paper_base_url,
-                            "etf_symbol": data.get("etf_symbol") or "SPUS",
-                            "top_n": int(data.get("top_n") or cfg.top_n),
-                            "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
-                            "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
-                        })
-                else:
-                    # Default paper mode
-                    if has_paper:
-                        tenants.append({
-                            "user_id": f"{user_id} (Paper)",
-                            "raw_user_id": user_id,
-                            "trading_mode": "paper",
-                            "alpaca_api_key": paper_key,
-                            "alpaca_api_secret": paper_secret,
-                            "alpaca_base_url": paper_base_url,
-                            "etf_symbol": data.get("etf_symbol") or "SPUS",
-                            "top_n": int(data.get("top_n") or cfg.top_n),
-                            "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
-                            "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
-                        })
-                    elif has_live:
-                        # Fallback to live if only live credentials exist
-                        tenants.append({
-                            "user_id": f"{user_id} (Live)",
-                            "raw_user_id": user_id,
-                            "trading_mode": "live",
-                            "alpaca_api_key": live_key,
-                            "alpaca_api_secret": live_secret,
-                            "alpaca_base_url": live_base_url,
-                            "etf_symbol": data.get("etf_symbol") or "SPUS",
-                            "top_n": int(data.get("top_n") or cfg.top_n),
-                            "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
-                            "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
-                        })
         except Exception as exc:
             logger.warning("Error reading local user_settings.db: %s", exc)
 
-    # 3. Fallback to primary server credentials if no tenant accounts configured
-    if not tenants:
+    # 3. Fallback to primary server credentials, but only when the tenant DB was
+    # legitimately empty (or absent) — never when the read itself failed, since
+    # that could silently route trades meant for user accounts onto the server's
+    # own credentials.
+    if not tenants and db_read_ok:
         if cfg.alpaca_api_key and cfg.alpaca_api_secret:
             logger.info("No tenant accounts in user_settings — using server primary credentials fallback.")
             tenants.append({
@@ -187,6 +200,11 @@ def get_active_tenant_accounts(
                 "sector_cap": cfg.sector_cap,
                 "drift_threshold": cfg.drift_threshold,
             })
+    elif not tenants and not db_read_ok:
+        logger.error(
+            "Tenant discovery skipped: user_settings.db read failed — "
+            "refusing to fall back to server primary credentials this cycle."
+        )
 
     return tenants
 

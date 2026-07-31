@@ -13,10 +13,6 @@ import { supabase } from "../lib/supabaseClient";
 export function Settings() {
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
-  if (isDemo) {
-    return <Navigate to="/" replace />;
-  }
-
   const queryClient = useQueryClient();
 
   // Auth Status checking
@@ -91,6 +87,10 @@ export function Settings() {
       setTimeout(() => setErrorMsg(null), 5000);
     },
   });
+
+  if (isDemo) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();

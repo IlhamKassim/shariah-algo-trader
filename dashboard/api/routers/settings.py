@@ -150,11 +150,11 @@ def update_settings(
             if payload.trading_mode not in ("paper", "live"):
                 raise HTTPException(status_code=400, detail="trading_mode must be 'paper' or 'live'")
             user_updates["trading_mode"] = payload.trading_mode
-        if payload.alpaca_api_key is not None:
+        if payload.alpaca_api_key is not None and not is_masked(payload.alpaca_api_key):
             user_updates["alpaca_api_key"] = _sanitize_val(payload.alpaca_api_key)
         if payload.alpaca_api_secret is not None and not is_masked(payload.alpaca_api_secret):
             user_updates["alpaca_api_secret"] = _sanitize_val(payload.alpaca_api_secret)
-        if payload.alpaca_live_api_key is not None:
+        if payload.alpaca_live_api_key is not None and not is_masked(payload.alpaca_live_api_key):
             user_updates["alpaca_live_api_key"] = _sanitize_val(payload.alpaca_live_api_key)
         if payload.alpaca_live_api_secret is not None and not is_masked(payload.alpaca_live_api_secret):
             user_updates["alpaca_live_api_secret"] = _sanitize_val(payload.alpaca_live_api_secret)
@@ -190,7 +190,7 @@ def update_settings(
             raise HTTPException(status_code=401, detail="Password re-verification (SUDO mode) required to update settings.")
 
     updates = {}
-    if payload.alpaca_api_key is not None:
+    if payload.alpaca_api_key is not None and not is_masked(payload.alpaca_api_key):
         updates["ALPACA_API_KEY"] = _sanitize_val(payload.alpaca_api_key)
     if payload.alpaca_api_secret is not None and not is_masked(payload.alpaca_api_secret):
         updates["ALPACA_API_SECRET"] = _sanitize_val(payload.alpaca_api_secret)

@@ -93,12 +93,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <>{children}</>;
   }
 
-  if (auth?.clerk_enabled && !timedOut) {
-    if (!isSignedIn) {
+  if (auth?.clerk_enabled) {
+    // Fail closed: an SDK timeout means we can't confirm sign-in state, so
+    // don't fall through to rendering protected content.
+    if (timedOut || !isSignedIn) {
       return <Navigate to="/login" replace />;
     }
-  } else if (auth?.auth_enabled && !auth.authenticated && !loadingAuth && !authError) {
-    return <Navigate to="/login" replace />;
+  } else if (auth?.auth_enabled) {
+    // Fail closed: an errored auth-status fetch must not be treated as authenticated.
+    if (authError || !auth.authenticated) {
+      return <Navigate to="/login" replace />;
+    }
   }
 
   return (

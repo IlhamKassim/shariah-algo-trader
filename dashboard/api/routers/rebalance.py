@@ -1,5 +1,6 @@
 import datetime
 import logging
+import threading
 import time
 from typing import Any, Callable
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 # In-memory background job tracking by user_id
 _job_status: dict[str, dict[str, Any]] = {}
+_job_lock = threading.Lock()
 
 # Ordered list of steps with estimated durations (in seconds) for the progress bar
 _REBALANCE_STEPS = [
@@ -104,21 +106,29 @@ def trigger_manual_rebalance(
     if not user_id:
         raise HTTPException(status_code=401, detail="User authentication required")
 
-    current = _job_status.get(user_id)
-    if current and current.get("status") == "running":
-        return RebalanceResponse(
-            user_id=user_id,
-            rebalance_submitted=True,
-            status="running",
-            accounts_processed=1,
-            results=[],
-            executed_at=current.get("started_at", ""),
-            message="Rebalance execution is currently in progress...",
-        )
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    with _job_lock:
+        current = _job_status.get(user_id)
+        if current and current.get("status") == "running":
+            return RebalanceResponse(
+                user_id=user_id,
+                rebalance_submitted=True,
+                status="running",
+                accounts_processed=1,
+                results=[],
+                executed_at=current.get("started_at", ""),
+                message="Rebalance execution is currently in progress...",
+            )
+        # Mark as running synchronously so a concurrent duplicate request
+        # can't slip past the check above before the background task starts.
+        _job_status[user_id] = {
+            "status": "running",
+            "rebalance_submitted": True,
+            "started_at": now,
+        }
 
     background_tasks.add_task(_run_rebalance_background, user_id, cfg)
 
-    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     return RebalanceResponse(
         user_id=user_id,
         rebalance_submitted=True,

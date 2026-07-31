@@ -14,23 +14,21 @@ export const MfaChallengeModal: React.FC<MfaChallengeModalProps> = ({ isOpen, on
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
-
   React.useEffect(() => {
-    if (isOpen && supabase) {
-      supabase.auth.mfa.listFactors().then(({ data, error }) => {
-        if (!error && data) {
-          const hasVerified = data.totp?.some((f) => f.status === 'verified');
-          if (!hasVerified) {
-            onSuccess();
-          }
-        }
-      }).catch(() => {
-        // If error fetching factors, allow graceful bypass
-        onSuccess();
-      });
-    }
-  }, [isOpen, onSuccess]);
+    if (!isOpen || !supabase) return;
+    supabase.auth.mfa.listFactors().then(({ data, error: listError }) => {
+      const hasVerified = data?.totp?.some((f) => f.status === 'verified');
+      if (listError || !hasVerified) {
+        // Fail closed: never bypass the challenge on a lookup error or
+        // when no verified factor exists — surface it and keep blocking.
+        setError('No verified two-factor method found for this account. Please sign out and contact support.');
+      }
+    }).catch(() => {
+      setError('Unable to verify your two-factor status. Please sign out and try again.');
+    });
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
