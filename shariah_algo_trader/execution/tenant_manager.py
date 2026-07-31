@@ -36,18 +36,22 @@ def get_active_tenant_accounts(
 
     # 1. Day Trader Benchmark Engine: Strict isolation to server_primary credentials only
     if engine == "day_trader":
-        if cfg.alpaca_api_key and cfg.alpaca_api_secret:
+        # Accept both the main Config (alpaca_api_key) and DayTraderConfig (api_key)
+        api_key = getattr(cfg, "alpaca_api_key", None) or getattr(cfg, "api_key", None)
+        api_secret = getattr(cfg, "alpaca_api_secret", None) or getattr(cfg, "api_secret", None)
+        base_url = getattr(cfg, "alpaca_base_url", None) or getattr(cfg, "base_url", None) or ""
+        if api_key and api_secret:
             tenants.append({
                 "user_id": "server_primary",
                 "raw_user_id": "server_primary",
-                "trading_mode": "paper" if "paper" in cfg.alpaca_base_url else "live",
-                "alpaca_api_key": cfg.alpaca_api_key,
-                "alpaca_api_secret": cfg.alpaca_api_secret,
-                "alpaca_base_url": cfg.alpaca_base_url,
+                "trading_mode": "paper" if "paper" in base_url else "live",
+                "alpaca_api_key": api_key,
+                "alpaca_api_secret": api_secret,
+                "alpaca_base_url": base_url,
                 "etf_symbol": "SPUS",
-                "top_n": cfg.top_n,
-                "sector_cap": cfg.sector_cap,
-                "drift_threshold": cfg.drift_threshold,
+                "top_n": getattr(cfg, "top_n", 20),
+                "sector_cap": getattr(cfg, "sector_cap", 0.25),
+                "drift_threshold": getattr(cfg, "drift_threshold", 0.05),
             })
         return tenants
 
