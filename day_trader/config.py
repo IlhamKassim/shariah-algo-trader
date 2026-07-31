@@ -14,9 +14,9 @@ class DayTraderConfig:
                 f"Missing required day-trader env vars: {', '.join(missing)}"
             )
 
-        self.api_key: str = os.environ["DAY_ALPACA_API_KEY"]
-        self.api_secret: str = os.environ["DAY_ALPACA_API_SECRET"]
-        self.base_url: str = os.environ.get(
+        self.alpaca_api_key: str = os.environ["DAY_ALPACA_API_KEY"]
+        self.alpaca_api_secret: str = os.environ["DAY_ALPACA_API_SECRET"]
+        self.alpaca_base_url: str = os.environ.get(
             "DAY_ALPACA_BASE_URL", "https://paper-api.alpaca.markets"
         )
         self.data_url: str = os.environ.get(

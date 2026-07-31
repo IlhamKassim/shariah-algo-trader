@@ -44,7 +44,7 @@ def main() -> None:
         logger.error("Day-trader startup failed: %s", exc)
         sys.exit(1)
 
-    data_client = AlpacaClient(cfg.api_key, cfg.api_secret, cfg.data_url)
+    data_client = AlpacaClient(cfg.alpaca_api_key, cfg.alpaca_api_secret, cfg.data_url)
     watchlist = get_watchlist()
     logger.info("Watchlist: %d symbols — fetching average daily volumes...", len(watchlist))
     avg_volumes = fetch_avg_daily_volume(data_client, watchlist)
