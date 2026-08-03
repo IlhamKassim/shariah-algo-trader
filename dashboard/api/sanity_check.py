@@ -38,6 +38,12 @@ def run_performance_sanity_check(
 
     user_settings = get_user_settings(user_id)
     if not user_settings:
+        log_audit_event(
+            event_type="performance_sanity_check",
+            actor=user_id,
+            ip_address="system",
+            details="Status: NO_SETTINGS | Realistic: True",
+        )
         return {
             "user_id": user_id,
             "status": "NO_SETTINGS",
@@ -52,6 +58,12 @@ def run_performance_sanity_check(
     base_url = user_settings.get("alpaca_base_url") or cfg.alpaca_base_url
 
     if not api_key or not api_secret:
+        log_audit_event(
+            event_type="performance_sanity_check",
+            actor=user_id,
+            ip_address="system",
+            details=f"Status: UNCONFIGURED | Realistic: True | Mode: {trading_mode}",
+        )
         return {
             "user_id": user_id,
             "status": "UNCONFIGURED",

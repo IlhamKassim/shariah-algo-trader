@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Save, Key, Sliders, Shield, ShieldCheck, Loader2, CheckCircle2, AlertCircle, Mail, Lock, Flame } from "lucide-react";
+import { Eye, EyeOff, Save, Key, Sliders, Shield, ShieldCheck, Loader2, CheckCircle2, AlertCircle, Mail, Lock, Flame, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
 import type { SettingsUpdateRequest } from "../lib/api";
 import { Card, CardContent } from "../components/ui/Card";
@@ -44,7 +44,8 @@ export function Settings() {
   const [googleIdVisible, setGoogleIdVisible] = useState(false);
   const [googleSecretVisible, setGoogleSecretVisible] = useState(false);
   const [showMfaEnroll, setShowMfaEnroll] = useState(false);
-  const [activeTab, setActiveTab] = useState<"broker" | "strategy" | "auth">("broker");
+  const [activeTab, setActiveTab] = useState<"broker" | "strategy" | "auth" | "interface">("broker");
+  const [isV2Active, setIsV2Active] = useState(() => localStorage.getItem("shariah_ui_v2_enabled") === "true");
   const [isRebalanceModalOpen, setIsRebalanceModalOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sendingReset, setSendingReset] = useState(false);
@@ -165,6 +166,7 @@ export function Settings() {
     { id: "broker", label: "Broker Credentials", icon: Key },
     { id: "strategy", label: "Strategy Parameters", icon: Sliders },
     { id: "auth", label: "Authentication", icon: Shield },
+    { id: "interface", label: "Interface Theme", icon: Sparkles },
   ] as const;
 
   return (
@@ -801,6 +803,70 @@ export function Settings() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* INTERFACE THEME SETTINGS */}
+              {activeTab === "interface" && (
+                <div className="space-y-6">
+                  <div className="border-b border-divider pb-2">
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Dashboard Layout & Interface Theme</h3>
+                    <p className="text-[10px] text-faint mt-1">
+                      Choose your preferred interface style. You can also toggle using the header button.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div
+                      onClick={() => {
+                        setIsV2Active(false);
+                        localStorage.setItem("shariah_ui_v2_enabled", "false");
+                        window.location.reload();
+                      }}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 ${
+                        !isV2Active
+                          ? "border-brand-gold bg-brand-gold/10"
+                          : "border-divider bg-page hover:border-brand-gold/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold uppercase text-primary">Classic Shariah UI (V1)</span>
+                        {!isV2Active && (
+                          <span className="text-[10px] font-mono text-brand-gold border border-brand-gold/40 px-2 py-0.5 uppercase font-bold">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Standard warm slate layout with editorial typography, classic cards, and traditional table views.
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() => {
+                        setIsV2Active(true);
+                        localStorage.setItem("shariah_ui_v2_enabled", "true");
+                        window.location.reload();
+                      }}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 ${
+                        isV2Active
+                          ? "border-indigo-500 bg-indigo-500/10"
+                          : "border-divider bg-page hover:border-indigo-500/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold uppercase text-indigo-300">Quantix Dark Glass UI (V2)</span>
+                        {isV2Active && (
+                          <span className="text-[10px] font-mono text-indigo-400 border border-indigo-500/40 px-2 py-0.5 uppercase font-bold">
+                            Active Beta
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        High-contrast dark glassmorphism layout with top ticker marquee, 3 hero telemetry cards, and dual-tabbed holdings table.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
