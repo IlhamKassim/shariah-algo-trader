@@ -25,10 +25,21 @@ def mask_value(val: str | None) -> str:
         return "••••••••••••"
     return ""
 
+def mask_email(email: str | None) -> str:
+    if not email or "@" not in email:
+        return ""
+    user, domain = email.split("@", 1)
+    if len(user) <= 2:
+        masked_user = user[0] + "••••" if user else "••••"
+    else:
+        masked_user = user[0] + "••••" + user[-1]
+    return f"{masked_user}@{domain}"
+
 def is_masked(val: str | None) -> bool:
     if not val:
         return True
-    return "•" in val or val == "••••••••••••"
+    return "•" in val or "*" in val or val == "••••••••••••"
+
 
 def update_env_file(filepath: str, updates: dict[str, str]):
     lines = []
@@ -131,7 +142,7 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
         google_client_id_masked=mask_value(cfg.google_client_id),
         google_client_secret_masked=mask_value(raw_google_secret),
         google_redirect_uri=cfg.google_redirect_uri,
-        allowed_google_emails=list(cfg.allowed_google_emails),
+        allowed_google_emails=[mask_email(e) for e in cfg.allowed_google_emails if e],
     )
 
 
@@ -221,7 +232,9 @@ def update_settings(
     if payload.google_redirect_uri is not None:
         updates["GOOGLE_REDIRECT_URI"] = _sanitize_val(payload.google_redirect_uri)
     if payload.allowed_google_emails is not None:
-        updates["ALLOWED_GOOGLE_EMAILS"] = ",".join([_sanitize_val(e).lower() for e in payload.allowed_google_emails if e and _sanitize_val(e)])
+        unmasked = [_sanitize_val(e).lower() for e in payload.allowed_google_emails if e and _sanitize_val(e) and not is_masked(e)]
+        if unmasked:
+            updates["ALLOWED_GOOGLE_EMAILS"] = ",".join(unmasked)
 
     if updates:
         try:

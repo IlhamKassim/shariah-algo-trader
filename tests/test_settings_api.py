@@ -23,7 +23,7 @@ class MockConfig:
         self.google_client_id = None
         self.google_client_secret = None
         self.google_redirect_uri = None
-        self.allowed_google_emails = set()
+        self.allowed_google_emails = {"aqilnazri9@gmail.com"}
 
 def test_get_settings(client, monkeypatch):
     # get_settings() reads secrets straight from os.environ (not cfg) so it never
@@ -45,8 +45,10 @@ def test_get_settings(client, monkeypatch):
     assert data["alpaca_api_secret_masked"] == "••••••••••••"
     assert data["top_n"] == 20
     assert data["dashboard_password_masked"] == "••••••••••••"
+    assert data["allowed_google_emails"] == ["a••••9@gmail.com"]
 
     app.dependency_overrides.clear()
+
 
 def test_update_settings(client):
     from dashboard.api.deps import verify_auth

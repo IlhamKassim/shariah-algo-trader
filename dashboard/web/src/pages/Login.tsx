@@ -111,9 +111,40 @@ export function Login() {
       return;
     }
 
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("Please enter a valid email address (e.g. user@example.com).");
+      return;
+    }
+
+    if (isSignUpMode) {
+      const trimmedPass = password.trim();
+      if (trimmedPass.length < 12) {
+        setError("Password policy violation: Minimum 12 characters required.");
+        return;
+      }
+      if (!/[A-Z]/.test(trimmedPass)) {
+        setError("Password policy violation: Must contain at least 1 uppercase letter (A-Z).");
+        return;
+      }
+      if (!/[a-z]/.test(trimmedPass)) {
+        setError("Password policy violation: Must contain at least 1 lowercase letter (a-z).");
+        return;
+      }
+      if (!/[0-9]/.test(trimmedPass)) {
+        setError("Password policy violation: Must contain at least 1 numeric digit (0-9).");
+        return;
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(trimmedPass)) {
+        setError("Password policy violation: Must contain at least 1 special character (!@#$%^&*...).");
+        return;
+      }
+    }
+
     setError(null);
     setSupabaseSuccessMsg(null);
     setIsSubmitting(true);
+
 
     try {
       if (!supabase) throw new Error("Supabase client is not configured.");

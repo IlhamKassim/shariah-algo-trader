@@ -14,11 +14,36 @@ from shariah_algo_trader.config import Config
 
 import logging
 
+import re
+
 _FALLBACK_SECRET = secrets.token_hex(32)
 logger = logging.getLogger(__name__)
 
+EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+
+
+def validate_email_format(email: str) -> bool:
+    if not email:
+        return False
+    return bool(EMAIL_REGEX.match(email.strip()))
+
+
+def validate_password_complexity(password: str) -> tuple[bool, str]:
+    if len(password) < 12:
+        return False, "Password must be at least 12 characters long."
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter (A-Z)."
+    if not re.search(r"[a-z]", password):
+        return False, "Password must contain at least one lowercase letter (a-z)."
+    if not re.search(r"[0-9]", password):
+        return False, "Password must contain at least one numeric digit (0-9)."
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", password):
+        return False, "Password must contain at least one special character (!@#$%^&*...)."
+    return True, ""
+
 
 def _client_ip(request: Request) -> str:
+
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()
