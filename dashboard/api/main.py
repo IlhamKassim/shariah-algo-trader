@@ -23,6 +23,7 @@ from dashboard.api.routers import (
     compare,
     compliance,
     day_trader,
+    health,
     notifications,
     performance,
     portfolio,
@@ -114,9 +115,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Open auth & public router endpoints (login, logout, status, public universe)
+# Open auth & public router endpoints (login, logout, status, public universe, health)
 app.include_router(auth.router)
 app.include_router(universe.public_router)
+app.include_router(health.router)
 
 # Secure all other endpoints
 app.include_router(status.router, dependencies=[Depends(verify_auth)])
