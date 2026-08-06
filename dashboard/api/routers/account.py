@@ -26,6 +26,7 @@ def get_account(client: AlpacaClient | None = Depends(get_alpaca)) -> AccountRes
         return AccountResponse(
             equity=0.0, cash=0.0, buying_power=0.0,
             portfolio_value=0.0, dayl_pl=0.0, dayl_pl_pct=0.0,
+            fee_status_label="Connection Failed — Check API Keys",
         )
     equity = float(data["equity"])
     last_equity = float(data.get("last_equity") or equity)
