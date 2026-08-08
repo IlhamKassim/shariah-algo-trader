@@ -160,11 +160,11 @@ class SettingsResponse(BaseModel):
     drift_threshold: float
     shariah_trader_enabled: bool = True
     day_trader_enabled: bool = False
-    dashboard_password_masked: str
+    dashboard_password_masked: Optional[str] = None
     google_client_id_masked: Optional[str] = None
     google_client_secret_masked: Optional[str] = None
     google_redirect_uri: Optional[str] = None
-    allowed_google_emails: list[str] = []
+    allowed_google_emails: Optional[list[str]] = None
 
 
 class SettingsUpdateRequest(BaseModel):

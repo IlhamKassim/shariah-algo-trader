@@ -335,7 +335,7 @@ def send_daily_digest() -> bool:
     </div>
     """
 
-    rows = fetch_notifications(limit=100)
+    rows = fetch_notifications(limit=100, user_id=None, is_admin=True)
     today_items = [r for r in rows if r["created_at"].startswith(today_str)]
 
     items_html = ""

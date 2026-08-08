@@ -98,15 +98,20 @@ def get_alpaca(request: Request = None, cfg: Config = Depends(get_config)) -> Al
         from dashboard.api.user_store import get_user_settings
         user_settings = get_user_settings(user_id)
         if user_settings:
+            from dashboard.api.hardening import validate_alpaca_base_url
             trading_mode = user_settings.get("trading_mode") or "paper"
+            stored_url = user_settings.get("alpaca_base_url") or ""
+            validated_url = validate_alpaca_base_url(stored_url)
             if trading_mode == "live":
                 api_key = user_settings.get("alpaca_live_api_key") or user_settings.get("alpaca_api_key")
                 api_secret = user_settings.get("alpaca_live_api_secret") or user_settings.get("alpaca_api_secret")
-                base_url = user_settings.get("alpaca_base_url") if user_settings.get("alpaca_base_url") and "paper" not in user_settings.get("alpaca_base_url") else "https://api.alpaca.markets"
+                # Never send credentials to a user-supplied host that fails
+                # SSRF validation — fall back to the safe live endpoint.
+                base_url = validated_url or "https://api.alpaca.markets"
             else:
                 api_key = user_settings.get("alpaca_api_key")
                 api_secret = user_settings.get("alpaca_api_secret")
-                base_url = user_settings.get("alpaca_base_url") or cfg.alpaca_base_url
+                base_url = validated_url or cfg.alpaca_base_url
 
             if api_key and api_secret:
                 return AlpacaClient(api_key, api_secret, base_url)
@@ -206,5 +211,32 @@ def verify_auth(request: Request, cfg: Config = Depends(get_config)):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     return True
+
+
+_ADMIN_APP_METADATA_ROLES = {"admin", "service_role", "owner", "supabase_admin"}
+
+
+def is_admin(request: Request, cfg: Config | None = None) -> bool:
+    """Return True for the platform owner/operator.
+
+    - Legacy password/OAuth session mode (no Supabase ``user_id`` bound to the
+      request) is owner-only, so those callers are admins.
+    - Supabase mode grants admin when the JWT's ``app_metadata.role`` is an
+      admin role, or when the caller's email is in the allowlist configured via
+      ``ALLOWED_GOOGLE_EMAILS``.
+    """
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    if not user_id:
+        return True
+    if cfg is None:
+        cfg = get_config()
+    payload = getattr(request.state, "user", None) or {}
+    app_meta = payload.get("app_metadata") or {}
+    if app_meta.get("role") in _ADMIN_APP_METADATA_ROLES:
+        return True
+    email = getattr(request.state, "user_email", None)
+    if email and cfg.allowed_google_emails and email.lower() in cfg.allowed_google_emails:
+        return True
+    return False
 
 

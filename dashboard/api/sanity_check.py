@@ -219,6 +219,7 @@ def run_performance_sanity_check(
                 f"{'; '.join(anomalies)} (Total Alpha vs SPUS: {total_alpha * 100:+.2f} pts)."
             ),
             created_at=now_iso,
+            user_id=user_id,
         )
 
     return {

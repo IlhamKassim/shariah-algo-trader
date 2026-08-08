@@ -92,36 +92,45 @@ from dashboard.api.deps import get_config
 from shariah_algo_trader.config import Config
 
 
+def _empty_strategy(name: str) -> StrategyMetrics:
+    return StrategyMetrics(
+        name=name,
+        total_return_pct=0.0,
+        sharpe_ratio=0.0,
+        max_drawdown_pct=0.0,
+        current_equity=0.0,
+        win_rate_pct=0.0,
+    )
+
+
 @router.get("/api/compare", response_model=CompareResponse)
 def get_compare(request: Request, cfg: Config = Depends(get_config)) -> CompareResponse:
-    shariah_client = get_alpaca(request, cfg)
-    shariah_dates, shariah_eq = _portfolio_history(shariah_client)
-    shariah_dates, shariah_eq = patch_today(shariah_dates, shariah_eq, live_equity(shariah_client))
-    shariah_metrics = _compute_metrics("Shariah Algo", shariah_eq)
-
-    # Day trader account (optional — graceful if keys not yet configured)
-    day_key = os.environ.get("DAY_ALPACA_API_KEY")
-    day_secret = os.environ.get("DAY_ALPACA_API_SECRET")
-    day_url = os.environ.get("DAY_ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
-
-    if not day_key or not day_secret:
-        return CompareResponse(
-            dates=shariah_dates,
-            shariah_equity=shariah_eq,
-            daytrader_equity=[],
-            shariah=shariah_metrics,
-            daytrader=StrategyMetrics(
-                name="Day Trader",
-                total_return_pct=0.0,
-                sharpe_ratio=0.0,
-                max_drawdown_pct=0.0,
-                current_equity=0.0,
-                win_rate_pct=0.0,
-            ),
-            daytrader_available=False,
-        )
-
+    # Fresh/unconfigured accounts (no Alpaca keys, empty portfolio history)
+    # must never yield an unhandled 500 — mirror /api/performance's graceful
+    # empty-array shape instead (CWE-248).
+    shariah_dates: list[str] = []
+    shariah_eq: list[float] = []
     try:
+        shariah_client = get_alpaca(request, cfg)
+        shariah_dates, shariah_eq = _portfolio_history(shariah_client)
+        shariah_dates, shariah_eq = patch_today(shariah_dates, shariah_eq, live_equity(shariah_client))
+        shariah_metrics = _compute_metrics("Shariah Algo", shariah_eq)
+
+        # Day trader account (optional — graceful if keys not yet configured)
+        day_key = os.environ.get("DAY_ALPACA_API_KEY")
+        day_secret = os.environ.get("DAY_ALPACA_API_SECRET")
+        day_url = os.environ.get("DAY_ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+
+        if not day_key or not day_secret:
+            return CompareResponse(
+                dates=shariah_dates,
+                shariah_equity=shariah_eq,
+                daytrader_equity=[],
+                shariah=shariah_metrics,
+                daytrader=_empty_strategy("Day Trader"),
+                daytrader_available=False,
+            )
+
         day_client = AlpacaClient(day_key, day_secret, day_url)
         day_dates, day_eq = _portfolio_history(day_client)
         day_dates, day_eq = patch_today(day_dates, day_eq, live_equity(day_client))
@@ -146,18 +155,23 @@ def get_compare(request: Request, cfg: Config = Depends(get_config)) -> CompareR
         )
     except AlpacaError as exc:
         logger.warning("Day trader account unavailable: %s", exc)
+        shariah_metrics = _compute_metrics("Shariah Algo", shariah_eq)
         return CompareResponse(
             dates=shariah_dates,
             shariah_equity=shariah_eq,
             daytrader_equity=[],
             shariah=shariah_metrics,
-            daytrader=StrategyMetrics(
-                name="Day Trader",
-                total_return_pct=0.0,
-                sharpe_ratio=0.0,
-                max_drawdown_pct=0.0,
-                current_equity=0.0,
-                win_rate_pct=0.0,
-            ),
+            daytrader=_empty_strategy("Day Trader"),
+            daytrader_available=False,
+        )
+    except Exception as exc:
+        user_id = getattr(request.state, "user_id", "unknown") if hasattr(request, "state") else "unknown"
+        logger.exception("Compare endpoint failed for user %s: %s", user_id, exc)
+        return CompareResponse(
+            dates=[],
+            shariah_equity=[],
+            daytrader_equity=[],
+            shariah=_empty_strategy("Shariah Algo"),
+            daytrader=_empty_strategy("Day Trader"),
             daytrader_available=False,
         )

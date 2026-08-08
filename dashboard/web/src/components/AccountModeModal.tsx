@@ -27,7 +27,7 @@ export function AccountModeModal({
     try {
       setIsSubmitting(true);
       setErrorMsg(null);
-      await api.switchTradingMode(selectedMode);
+      await api.switchTradingMode(selectedMode, selectedMode === "live");
       await queryClient.invalidateQueries();
       onClose();
     } catch (err: any) {

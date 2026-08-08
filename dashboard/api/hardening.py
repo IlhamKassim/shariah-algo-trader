@@ -1,10 +1,65 @@
+import ipaddress
+import socket
 import threading
 import time
+import urllib.parse
 from collections import defaultdict, deque
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+
+# ── SSRF guard for user-supplied Alpaca base URLs ────────────────────────────
+
+def validate_alpaca_base_url(url: str | None) -> str | None:
+    """Validate and normalize an Alpaca base URL against SSRF.
+
+    Returns the normalized ``https://<host><path>`` URL when safe, else
+    ``None``. Safe means: https scheme, host on ``*.alpaca.markets`` (not an
+    IP literal), no embedded credentials, no non-default port, and every
+    address the host currently resolves to is a public (non-private,
+    non-loopback, non-link-local, non-reserved) IP.
+    """
+    if not url:
+        return None
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except ValueError:
+        return None
+    if parsed.scheme != "https" or not parsed.hostname:
+        return None
+    if parsed.username or parsed.password:
+        return None
+    if parsed.port not in (None, 443):
+        return None
+    host = parsed.hostname.rstrip(".")
+    if host != "alpaca.markets" and not host.endswith(".alpaca.markets"):
+        return None
+    # Reject IP-literal hosts outright so the name allowlist cannot be
+    # bypassed with an encoded/alternative IP form.
+    try:
+        ipaddress.ip_address(host)
+        return None
+    except ValueError:
+        pass
+    # Resolve server-side and require every returned address to be public
+    # (mitigates DNS rebinding to internal/cloud-metadata ranges).
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return None
+    if not infos:
+        return None
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (
+            ip.is_private or ip.is_loopback or ip.is_link_local
+            or ip.is_reserved or ip.is_multicast or ip.is_unspecified
+        ):
+            return None
+    path = parsed.path.rstrip("/")
+    return f"https://{host}{path}"
 
 
 class _FixedWindowLimiter:

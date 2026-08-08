@@ -1,11 +1,12 @@
 import asyncio
 import threading
+import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from dashboard.api.cache import UniverseCache, get_universe_cache
-from dashboard.api.deps import get_alpaca, get_config
+from dashboard.api.deps import get_alpaca, get_config, is_admin
 from dashboard.api.models import StockScore, UniverseResponse
 from shariah_algo_trader.config import Config
 from shariah_algo_trader.data.universe import fetch_combined_universe, fetch_company_names
@@ -18,6 +19,12 @@ from shariah_algo_trader.factors.volatility import compute_raw_volatility, compu
 
 router = APIRouter()
 public_router = APIRouter()
+
+# Per-account cooldown between manual universe recomputes (seconds), on top of
+# the per-IP rate limit and the global computing lock — a single account can no
+# longer re-trigger the expensive recompute back-to-back.
+_REFRESH_COOLDOWN_SECONDS = 60
+_last_refresh_at: dict[str, float] = {}
 
 
 @public_router.get("/api/public/universe")
@@ -158,13 +165,34 @@ def get_universe(cache: UniverseCache = Depends(get_universe_cache)) -> Universe
 
 @router.post("/api/universe/refresh")
 def refresh_universe(
+    request: Request,
     background_tasks: BackgroundTasks,
     cfg: Config = Depends(get_config),
     client: AlpacaClient | None = Depends(get_alpaca),
     cache: UniverseCache = Depends(get_universe_cache),
 ) -> dict:
+    # Function-level authorization: the recompute is site-wide and expensive —
+    # only the platform owner/operator may trigger it (CWE-862).
+    if not is_admin(request, cfg):
+        raise HTTPException(
+            status_code=403,
+            detail="Only administrators can trigger a universe refresh.",
+        )
+
     if cache.computing:
         return {"status": "already_computing"}
+
+    # Per-account cooldown so a single account cannot re-trigger recomputes
+    # back-to-back after one completes.
+    user_key = getattr(request.state, "user_id", None) or "legacy"
+    now = time.monotonic()
+    if now - _last_refresh_at.get(user_key, 0.0) < _REFRESH_COOLDOWN_SECONDS:
+        raise HTTPException(
+            status_code=429,
+            detail="Universe refresh cooldown active — please wait a minute.",
+        )
+    _last_refresh_at[user_key] = now
+
     cache.computing = True
     portfolio = set()
     if client:

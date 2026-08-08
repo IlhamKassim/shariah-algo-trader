@@ -6,7 +6,9 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaErro
 _ET = ZoneInfo("America/New_York")
 
 
-def live_equity(client: AlpacaClient) -> float | None:
+def live_equity(client: AlpacaClient | None) -> float | None:
+    if client is None:
+        return None
     try:
         acct = client.get("/v2/account")
         equity = float(acct.get("equity", 0))

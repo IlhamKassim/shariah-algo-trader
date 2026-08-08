@@ -666,7 +666,7 @@ export const api = {
     }
     return apiFetch<{ status: string }>(`/api/notifications/${id}/read`, { method: "PATCH" });
   },
-  switchTradingMode: (mode: "paper" | "live") => {
+  switchTradingMode: (mode: "paper" | "live", riskAcknowledged?: boolean) => {
     if (isDemo()) {
       demoSettings = {
         ...demoSettings,
@@ -678,7 +678,7 @@ export const api = {
     return apiFetch<{ status: string; trading_mode: string; alpaca_base_url: string }>("/api/settings/mode", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify(riskAcknowledged ? { mode, riskAcknowledged } : { mode }),
     });
   },
   runSanityCheck: () => {

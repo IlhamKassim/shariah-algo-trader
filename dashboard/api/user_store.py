@@ -43,6 +43,7 @@ def init_user_store() -> None:
                     drift_threshold                   REAL DEFAULT 0.03,
                     shariah_trader_enabled            INTEGER DEFAULT 1,
                     day_trader_enabled                INTEGER DEFAULT 0,
+                    risk_acknowledged_at              TEXT,
                     created_at                        TEXT NOT NULL,
                     updated_at                        TEXT NOT NULL
                 )
@@ -63,6 +64,8 @@ def init_user_store() -> None:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN shariah_trader_enabled INTEGER DEFAULT 1")
             if "day_trader_enabled" not in existing_cols:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN day_trader_enabled INTEGER DEFAULT 0")
+            if "risk_acknowledged_at" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN risk_acknowledged_at TEXT")
             conn.commit()
             _initialized = True
         finally:
@@ -155,9 +158,9 @@ def get_user_settings(user_id: str) -> dict | None:
                             user_id, alpaca_api_key_encrypted, alpaca_api_secret_encrypted,
                             alpaca_live_api_key_encrypted, alpaca_live_api_secret_encrypted,
                             trading_mode, alpaca_base_url, etf_symbol, top_n, sector_cap, drift_threshold,
-                            shariah_trader_enabled, day_trader_enabled,
+                            shariah_trader_enabled, day_trader_enabled, risk_acknowledged_at,
                             created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             sb_data.get("user_id"),
@@ -173,6 +176,7 @@ def get_user_settings(user_id: str) -> dict | None:
                             sb_data.get("drift_threshold", 0.03),
                             1 if sb_data.get("shariah_trader_enabled", True) else 0,
                             1 if sb_data.get("day_trader_enabled", False) else 0,
+                            sb_data.get("risk_acknowledged_at"),
                             sb_data.get("created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
                             sb_data.get("updated_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
                         )
@@ -237,14 +241,27 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 
     trading_mode = settings.get("trading_mode") or existing.get("trading_mode") or "paper"
 
-    # Resolve default base URL based on trading_mode if not explicitly provided
+    # Resolve default base URL based on trading_mode if not explicitly provided.
+    # Any user-supplied URL must pass SSRF validation (https + *.alpaca.markets
+    # + public resolution) — this is the single write path for per-user URLs.
+    from dashboard.api.hardening import validate_alpaca_base_url
     if "alpaca_base_url" in settings and settings["alpaca_base_url"]:
-        base_url = settings["alpaca_base_url"]
+        validated = validate_alpaca_base_url(settings["alpaca_base_url"])
+        if not validated:
+            raise ValueError(
+                f"Invalid alpaca_base_url: {settings['alpaca_base_url']!r} — "
+                "must be an https URL on an *.alpaca.markets host."
+            )
+        base_url = validated
     else:
         if trading_mode == "live":
             base_url = "https://api.alpaca.markets"
         else:
-            base_url = existing.get("alpaca_base_url") or "https://paper-api.alpaca.markets"
+            existing_url = existing.get("alpaca_base_url")
+            validated = validate_alpaca_base_url(existing_url)
+            base_url = validated or "https://paper-api.alpaca.markets"
+
+    risk_acknowledged_at = settings.get("risk_acknowledged_at") or existing.get("risk_acknowledged_at")
 
     etf_symbol = settings.get("etf_symbol") or existing.get("etf_symbol") or "SPUS"
     top_n = settings.get("top_n") if settings.get("top_n") is not None else existing.get("top_n", 20)
@@ -270,6 +287,7 @@ def save_user_settings(user_id: str, settings: dict) -> None:
         "drift_threshold": drift_threshold,
         "shariah_trader_enabled": shariah_enabled,
         "day_trader_enabled": day_enabled,
+        "risk_acknowledged_at": risk_acknowledged_at,
         "created_at": created_at,
         "updated_at": now,
     }
@@ -293,9 +311,10 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     drift_threshold,
                     shariah_trader_enabled,
                     day_trader_enabled,
+                    risk_acknowledged_at,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
                     alpaca_api_key_encrypted = excluded.alpaca_api_key_encrypted,
                     alpaca_api_secret_encrypted = excluded.alpaca_api_secret_encrypted,
@@ -309,6 +328,7 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     drift_threshold = excluded.drift_threshold,
                     shariah_trader_enabled = excluded.shariah_trader_enabled,
                     day_trader_enabled = excluded.day_trader_enabled,
+                    risk_acknowledged_at = excluded.risk_acknowledged_at,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -325,6 +345,7 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     drift_threshold,
                     shariah_enabled,
                     day_enabled,
+                    risk_acknowledged_at,
                     created_at,
                     now,
                 ),

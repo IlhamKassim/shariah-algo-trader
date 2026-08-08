@@ -1,3 +1,4 @@
+import datetime
 import os
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -77,11 +78,24 @@ def _sanitize_val(val: str | None) -> str:
 
 
 from dashboard.api.user_store import get_user_settings, save_user_settings
+from dashboard.api.deps import is_admin
+from dashboard.api.hardening import validate_alpaca_base_url
+
+# Fields in SettingsUpdateRequest that are global/administrator configuration
+# and must never be readable or writable by regular (non-admin) users.
+_ADMIN_ONLY_FIELDS = (
+    "dashboard_password",
+    "google_client_id",
+    "google_client_secret",
+    "google_redirect_uri",
+    "allowed_google_emails",
+)
 
 
-@router.get("/api/settings", response_model=SettingsResponse)
+@router.get("/api/settings", response_model=SettingsResponse, response_model_exclude_none=True)
 def get_settings(request: Request, cfg: Config = Depends(get_config)) -> SettingsResponse:
     user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    admin = is_admin(request, cfg)
     user_data = get_user_settings(user_id) if user_id else None
 
     trading_mode = "paper"
@@ -138,11 +152,12 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
         drift_threshold=drift_threshold,
         shariah_trader_enabled=shariah_trader_enabled,
         day_trader_enabled=day_trader_enabled,
-        dashboard_password_masked=mask_value(raw_pass),
-        google_client_id_masked=mask_value(cfg.google_client_id),
-        google_client_secret_masked=mask_value(raw_google_secret),
-        google_redirect_uri=cfg.google_redirect_uri,
-        allowed_google_emails=[mask_email(e) for e in cfg.allowed_google_emails if e],
+        # Admin-only block: omitted entirely (exclude_none) for non-admins.
+        dashboard_password_masked=mask_value(raw_pass) if admin else None,
+        google_client_id_masked=mask_value(cfg.google_client_id) if admin else None,
+        google_client_secret_masked=mask_value(raw_google_secret) if admin else None,
+        google_redirect_uri=cfg.google_redirect_uri if admin else None,
+        allowed_google_emails=[mask_email(e) for e in cfg.allowed_google_emails if e] if admin else None,
     )
 
 
@@ -156,6 +171,17 @@ def update_settings(
 
     # Save to user_store if request is bound to a Supabase/auth user_id
     if user_id:
+        # Regular users must not be able to write global/admin configuration —
+        # reject outright instead of silently ignoring (which previously
+        # returned 200 "success" for ignored writes).
+        if not is_admin(request, cfg) and any(
+            getattr(payload, field) is not None for field in _ADMIN_ONLY_FIELDS
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Admin-only settings (password, Google OAuth, allowed emails) cannot be modified by regular users.",
+            )
+
         user_updates = {}
         if payload.trading_mode is not None:
             if payload.trading_mode not in ("paper", "live"):
@@ -170,7 +196,14 @@ def update_settings(
         if payload.alpaca_live_api_secret is not None and not is_masked(payload.alpaca_live_api_secret):
             user_updates["alpaca_live_api_secret"] = _sanitize_val(payload.alpaca_live_api_secret)
         if payload.alpaca_base_url is not None:
-            user_updates["alpaca_base_url"] = _sanitize_val(payload.alpaca_base_url)
+            clean_url = _sanitize_val(payload.alpaca_base_url)
+            validated_url = validate_alpaca_base_url(clean_url)
+            if not validated_url:
+                raise HTTPException(
+                    status_code=400,
+                    detail="alpaca_base_url must be an https URL on an *.alpaca.markets host.",
+                )
+            user_updates["alpaca_base_url"] = validated_url
         if payload.etf_symbol is not None:
             user_updates["etf_symbol"] = _sanitize_val(payload.etf_symbol).upper()
         if payload.top_n is not None:
@@ -206,7 +239,14 @@ def update_settings(
     if payload.alpaca_api_secret is not None and not is_masked(payload.alpaca_api_secret):
         updates["ALPACA_API_SECRET"] = _sanitize_val(payload.alpaca_api_secret)
     if payload.alpaca_base_url is not None:
-        updates["ALPACA_BASE_URL"] = _sanitize_val(payload.alpaca_base_url)
+        clean_url = _sanitize_val(payload.alpaca_base_url)
+        validated_url = validate_alpaca_base_url(clean_url)
+        if not validated_url:
+            raise HTTPException(
+                status_code=400,
+                detail="alpaca_base_url must be an https URL on an *.alpaca.markets host.",
+            )
+        updates["ALPACA_BASE_URL"] = validated_url
     if payload.etf_symbol is not None:
         updates["ETF_SYMBOL"] = _sanitize_val(payload.etf_symbol).upper()
     if payload.top_n is not None:
@@ -265,11 +305,32 @@ def set_trading_mode(
         raise HTTPException(status_code=400, detail="mode must be 'paper' or 'live'")
 
     base_url = "https://api.alpaca.markets" if mode == "live" else "https://paper-api.alpaca.markets"
+    risk_ack = bool(payload.get("riskAcknowledged") or payload.get("risk_acknowledged"))
 
     if user_id:
-        save_user_settings(user_id, {"trading_mode": mode, "alpaca_base_url": base_url})
+        existing = get_user_settings(user_id) or {}
+        user_updates = {"trading_mode": mode, "alpaca_base_url": base_url}
+        if mode == "live":
+            # Server-side risk-acknowledgment gate: the consent is persisted
+            # (user_id + timestamp), never trusted from client-side localStorage.
+            if not existing.get("risk_acknowledged_at") and not risk_ack:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Risk acknowledgment required before enabling live trading. Please confirm the real-money risk disclosure.",
+                )
+            if risk_ack and not existing.get("risk_acknowledged_at"):
+                user_updates["risk_acknowledged_at"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        try:
+            save_user_settings(user_id, user_updates)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         log_audit_event("TRADING_MODE_SWITCH", user_id, _client_ip(request), f"Switched trading mode to {mode}")
     else:
+        if mode == "live" and not risk_ack:
+            raise HTTPException(
+                status_code=400,
+                detail="Risk acknowledgment required before enabling live trading. Please confirm the real-money risk disclosure.",
+            )
         update_env_file(ENV_PATH, {"ALPACA_BASE_URL": base_url})
         os.environ["ALPACA_BASE_URL"] = base_url
         log_audit_event("TRADING_MODE_SWITCH", "admin", _client_ip(request), f"Switched global trading mode to {mode}")

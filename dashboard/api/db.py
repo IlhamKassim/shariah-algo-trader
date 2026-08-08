@@ -38,6 +38,7 @@ def init_db() -> None:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS notifications (
                     id         TEXT PRIMARY KEY,
+                    user_id    TEXT,
                     source     TEXT NOT NULL,
                     category   TEXT NOT NULL,
                     severity   TEXT NOT NULL,
@@ -47,9 +48,22 @@ def init_db() -> None:
                     created_at TEXT NOT NULL
                 )
             """)
+            # Migrate pre-existing databases that predate per-user scoping:
+            # existing rows become platform-level (user_id NULL) and are only
+            # visible to operators/admins. Must run before creating indexes on
+            # the new column.
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(notifications)")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            if "user_id" not in existing_cols:
+                cursor.execute("ALTER TABLE notifications ADD COLUMN user_id TEXT")
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_notif_created
                 ON notifications (created_at DESC)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_notif_user
+                ON notifications (user_id)
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -149,8 +163,12 @@ def insert_notification(
     title: str,
     body: str,
     created_at: str,
+    user_id: str | None = None,
 ) -> bool:
     """Insert a notification row.
+
+    ``user_id`` scopes the item to one account; ``None`` marks a
+    platform-level item visible only to operators/admins.
 
     Uses ``INSERT OR IGNORE`` so re-seeding on restart is idempotent.
     Returns ``True`` if the row was actually inserted, ``False`` if it
@@ -162,10 +180,10 @@ def insert_notification(
             conn.execute(
                 """
                 INSERT OR IGNORE INTO notifications
-                    (id, source, category, severity, title, body, read, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+                    (id, user_id, source, category, severity, title, body, read, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
                 """,
-                (id, source, category, severity, title, body, created_at),
+                (id, user_id, source, category, severity, title, body, created_at),
             )
             inserted = conn.total_changes > 0
             conn.commit()
@@ -176,53 +194,93 @@ def insert_notification(
 
 # ── Read helpers ──────────────────────────────────────────────────────────────
 
-def fetch_notifications(limit: int = 50) -> list[sqlite3.Row]:
-    """Return the most recent *limit* notifications, newest first."""
+def fetch_notifications(
+    limit: int = 50,
+    user_id: str | None = None,
+    is_admin: bool = False,
+) -> list[sqlite3.Row]:
+    """Return the most recent *limit* notifications, newest first.
+
+    Admins/operators see every item (platform-level + all tenants); regular
+    users only see items scoped to their own ``user_id`` (tenant isolation).
+    """
     with _lock:
         conn = _connect()
         try:
+            if is_admin:
+                return conn.execute(
+                    """
+                    SELECT id, user_id, source, category, severity, title, body, read, created_at
+                    FROM notifications
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
             return conn.execute(
                 """
-                SELECT id, source, category, severity, title, body, read, created_at
+                SELECT id, user_id, source, category, severity, title, body, read, created_at
                 FROM notifications
+                WHERE user_id = ?
                 ORDER BY created_at DESC
                 LIMIT ?
                 """,
-                (limit,),
+                (user_id, limit),
             ).fetchall()
         finally:
             conn.close()
 
 
-def count_unread() -> int:
+def count_unread(user_id: str | None = None, is_admin: bool = False) -> int:
     with _lock:
         conn = _connect()
         try:
+            if is_admin:
+                return conn.execute(
+                    "SELECT COUNT(*) FROM notifications WHERE read = 0"
+                ).fetchone()[0]
             return conn.execute(
-                "SELECT COUNT(*) FROM notifications WHERE read = 0"
+                "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0",
+                (user_id,),
             ).fetchone()[0]
         finally:
             conn.close()
 
 
-def mark_all_read() -> None:
+def mark_all_read(user_id: str | None = None, is_admin: bool = False) -> None:
     with _lock:
         conn = _connect()
         try:
-            conn.execute("UPDATE notifications SET read = 1")
+            if is_admin:
+                conn.execute("UPDATE notifications SET read = 1")
+            else:
+                conn.execute(
+                    "UPDATE notifications SET read = 1 WHERE user_id = ?",
+                    (user_id,),
+                )
             conn.commit()
         finally:
             conn.close()
 
 
-def mark_one_read(notification_id: str) -> None:
+def mark_one_read(
+    notification_id: str,
+    user_id: str | None = None,
+    is_admin: bool = False,
+) -> None:
     with _lock:
         conn = _connect()
         try:
-            conn.execute(
-                "UPDATE notifications SET read = 1 WHERE id = ?",
-                (notification_id,),
-            )
+            if is_admin:
+                conn.execute(
+                    "UPDATE notifications SET read = 1 WHERE id = ?",
+                    (notification_id,),
+                )
+            else:
+                conn.execute(
+                    "UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?",
+                    (notification_id, user_id),
+                )
             conn.commit()
         finally:
             conn.close()
