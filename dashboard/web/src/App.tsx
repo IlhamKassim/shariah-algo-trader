@@ -27,6 +27,7 @@ import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
+import { ResetPassword } from "./pages/ResetPassword";
 import { Landing } from "./pages/Landing";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
@@ -408,6 +409,40 @@ export default function App() {
     }
   }, [getToken, isLoaded]);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Intercept password recovery flows globally and ensure user lands on /reset-password
+  useEffect(() => {
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    const isRecovery =
+      hash.includes("type=recovery") ||
+      search.includes("type=recovery") ||
+      sessionStorage.getItem("shariah_recovery_mode") === "true";
+
+    if (isRecovery && location.pathname !== "/reset-password") {
+      sessionStorage.setItem("shariah_recovery_mode", "true");
+      navigate(`/reset-password${search}${hash}`, { replace: true });
+      return;
+    }
+
+    if (!supabase) return;
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        sessionStorage.setItem("shariah_recovery_mode", "true");
+        if (window.location.pathname !== "/reset-password") {
+          navigate("/reset-password", { replace: true });
+        }
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [location.pathname, navigate]);
+
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
   return (
@@ -417,6 +452,7 @@ export default function App() {
       <Routes>
         <Route path="/landing" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="*"
           element={

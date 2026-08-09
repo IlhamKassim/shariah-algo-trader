@@ -34,9 +34,21 @@ export function Login() {
 
   const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
 
-  // Redirect to home if already authenticated
+  // Redirect to home if already authenticated (unless in password recovery mode)
   useEffect(() => {
     if (auth) {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      const isRecovery =
+        hash.includes("type=recovery") ||
+        search.includes("type=recovery") ||
+        sessionStorage.getItem("shariah_recovery_mode") === "true";
+
+      if (isRecovery) {
+        navigate("/reset-password", { replace: true });
+        return;
+      }
+
       if (auth.clerk_enabled) {
         if (clerkLoaded && isSignedIn) {
           navigate("/", { replace: true });
@@ -252,6 +264,50 @@ export function Login() {
 
   const handleGoogleLogin = () => {
     window.location.href = "/api/auth/google/login";
+  };
+
+  const handleForgotPassword = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Enter your email address above to request a password reset link.");
+      return;
+    }
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError("Please enter a valid email address (e.g. user@example.com).");
+      return;
+    }
+    if (!supabase) {
+      setError("Authentication system is not configured. Contact the administrator.");
+      return;
+    }
+    setError(null);
+    setSupabaseSuccessMsg(null);
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setSupabaseSuccessMsg(
+        `✅ If an account exists for ${trimmedEmail}, a password reset link has been sent. Please check your inbox.`
+      );
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.toLowerCase().includes("load failed") || msg.toLowerCase().includes("failed to fetch")) {
+        setError(
+          "Network request failed or Supabase email rate limit reached (max 3 emails/hour on free tier)."
+        );
+      } else if (msg.includes("rate limit") || msg.includes("429") || msg.includes("over_email_send_rate_limit")) {
+        setError(
+          "Supabase email rate limit reached (max 3 emails/hour). Please wait a few minutes before trying again."
+        );
+      } else {
+        setError(msg || "Failed to send password reset link. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -562,6 +618,18 @@ export function Login() {
                   <p className="text-xs text-[#8EB69B]/70 mt-1">
                     Must be at least 8 characters.
                   </p>
+                )}
+                {!isSignUpMode && (
+                  <div className="flex justify-end mt-1">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={isSubmitting}
+                      className="text-xs font-semibold text-[#8EB69B] hover:text-[#DAF1DE] underline-offset-2 hover:underline transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                 )}
               </div>
 

@@ -653,7 +653,7 @@ export function Settings() {
                             setSendingReset(true);
                             try {
                               const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-                                redirectTo: `${window.location.origin}/login`,
+                                redirectTo: `${window.location.origin}/reset-password`,
                               });
                               if (error) throw error;
                               setSuccessMsg(`Password reset link sent to ${userEmail}! Please check your email.`);

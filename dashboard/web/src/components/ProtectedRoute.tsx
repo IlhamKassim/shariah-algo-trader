@@ -89,6 +89,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
+  const hash = window.location.hash || "";
+  const search = window.location.search || "";
+  const isRecovery =
+    hash.includes("type=recovery") ||
+    search.includes("type=recovery") ||
+    sessionStorage.getItem("shariah_recovery_mode") === "true";
+
+  if (isRecovery) {
+    return <Navigate to="/reset-password" replace />;
+  }
+
   if (isDemo) {
     return <>{children}</>;
   }
