@@ -137,6 +137,30 @@ def fetch_audit_logs(limit: int = 50) -> list[sqlite3.Row]:
             conn.close()
 
 
+def fetch_audit_logs_for_actor(actor: str, limit: int = 50) -> list[sqlite3.Row]:
+    """Return the most recent *limit* audit entries for one actor, newest first.
+
+    Backs the admin app's per-tester activity feed (A6: ``audit_logs WHERE
+    actor = user_id``).
+    """
+    _ensure_db_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, event_type, actor, ip_address, details, created_at
+                FROM audit_logs
+                WHERE actor = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (actor, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
+
 
 
 # ── Write helpers ─────────────────────────────────────────────────────────────

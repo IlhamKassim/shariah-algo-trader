@@ -560,6 +560,94 @@ def get_pilot_role(user_id: str) -> str | None:
     return user["role"] if user else None
 
 
+def get_user_settings_meta(user_id: str) -> dict | None:
+    """Lightweight ``user_settings`` read WITHOUT decrypting credentials (admin A1).
+
+    Returns ``{"trading_mode", "shariah_trader_enabled", "has_paper_keys",
+    "has_live_keys"}`` or None when no row exists. Key *presence* is what the
+    tester list needs — never the key material itself.
+    """
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT trading_mode, shariah_trader_enabled, "
+                "alpaca_api_key_encrypted, alpaca_api_secret_encrypted, "
+                "alpaca_live_api_key_encrypted, alpaca_live_api_secret_encrypted "
+                "FROM user_settings WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        return None
+    return {
+        "trading_mode": row["trading_mode"] or "paper",
+        "shariah_trader_enabled": int(row["shariah_trader_enabled"] or 0),
+        "has_paper_keys": bool(row["alpaca_api_key_encrypted"] and row["alpaca_api_secret_encrypted"]),
+        "has_live_keys": bool(row["alpaca_live_api_key_encrypted"] and row["alpaca_live_api_secret_encrypted"]),
+    }
+
+
+def get_paper_credentials(user_id: str) -> dict | None:
+    """Return ONLY the decrypted PAPER Alpaca credentials for a user (guardrail G5).
+
+    Admin endpoints A4/A5 must never touch live columns — this helper reads and
+    decrypts exactly ``alpaca_api_key_encrypted`` / ``alpaca_api_secret_encrypted``
+    and nothing else. Returns None when the row or either credential is missing.
+    """
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT alpaca_api_key_encrypted, alpaca_api_secret_encrypted "
+                "FROM user_settings WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        return None
+    api_key = decrypt_credential(row["alpaca_api_key_encrypted"])
+    api_secret = decrypt_credential(row["alpaca_api_secret_encrypted"])
+    if not api_key or not api_secret:
+        return None
+    return {"alpaca_api_key": api_key, "alpaca_api_secret": api_secret}
+
+
+def ensure_user_settings_row(user_id: str, *, enabled: bool = True) -> None:
+    """Ensure a local ``user_settings`` row exists with engine visibility set.
+
+    Used by admin A2 (approve: creates/enables the row so the engine picks the
+    tester up next cycle) and A3 (revoke: disables it, keeping all other data).
+    ``INSERT OR IGNORE`` never clobbers existing settings; only
+    ``shariah_trader_enabled`` and ``updated_at`` are written.
+    """
+    _ensure_initialized()
+    now = _utcnow_iso()
+    flag = 1 if enabled else 0
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO user_settings (
+                    user_id, trading_mode, alpaca_base_url, etf_symbol, top_n,
+                    sector_cap, drift_threshold, shariah_trader_enabled,
+                    day_trader_enabled, created_at, updated_at
+                ) VALUES (?, 'paper', 'https://paper-api.alpaca.markets', 'SPUS', 20, 0.20, 0.03, ?, 0, ?, ?)""",
+                (user_id, flag, now, now),
+            )
+            conn.execute(
+                "UPDATE user_settings SET shariah_trader_enabled = ?, updated_at = ? WHERE user_id = ?",
+                (flag, now, user_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
 def is_tester(user_id: str) -> bool:
     return get_pilot_role(user_id) == "tester"
 
