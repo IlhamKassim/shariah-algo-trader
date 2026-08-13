@@ -5,7 +5,9 @@ import { signIn } from "../lib/auth";
 /**
  * Sign-in glass card centered on the dark page (Quantix Glass V2 — matches
  * dashboard/web GlassCard pattern + dashboard-style inputs, OverviewV2.tsx).
- * Session changes are picked up by App's onSessionChange subscription.
+ * Primary action is indigo-600 (single accent system — gold never drives a
+ * primary action, it is reserved for rank/status). Session changes are picked
+ * up by App's onSessionChange subscription.
  */
 export function LoginCard() {
   const [email, setEmail] = useState("");
@@ -22,10 +24,29 @@ export function LoginCard() {
     setBusy(false);
   };
 
+  const inputClasses =
+    "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30";
+
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-sm flex-col justify-center px-6 py-16">
       <div className="glass-panel rounded-2xl p-8">
-        <h1 className="text-lg font-semibold tracking-tight text-primary">Sign in</h1>
+        <div className="flex items-center gap-3 select-none">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.35)]">
+            <span className="font-mono text-sm font-bold">S</span>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="font-serif text-lg leading-none text-primary">Shariah Admin</span>
+              <span className="rounded-full border border-brand-gold/40 bg-brand-gold/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-brand-gold">
+                Pilot
+              </span>
+            </div>
+            <span className="mt-1 block whitespace-nowrap text-[9px] font-medium tracking-[0.03em] text-muted">
+              Beta tester console · paper only
+            </span>
+          </div>
+        </div>
+        <h1 className="mt-6 text-lg font-semibold tracking-tight text-primary">Sign in</h1>
         <p className="mt-1 text-sm text-muted">Admin access to the beta tester pilot.</p>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
@@ -39,7 +60,7 @@ export function LoginCard() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-brand-gold focus:ring-1 focus:ring-brand-gold/30"
+              className={inputClasses}
               placeholder="you@example.com"
             />
           </div>
@@ -54,7 +75,7 @@ export function LoginCard() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-brand-gold focus:ring-1 focus:ring-brand-gold/30"
+              className={inputClasses}
             />
           </div>
           {error && (
@@ -65,7 +86,7 @@ export function LoginCard() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-brand-gold px-3 py-2 text-sm font-semibold text-page transition hover:brightness-110 disabled:opacity-50"
+            className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition hover:bg-indigo-500 disabled:opacity-50"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>

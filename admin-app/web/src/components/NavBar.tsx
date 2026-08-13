@@ -40,19 +40,19 @@ export function NavBar({ email, view, onViewChange, onSignOut }: NavBarProps) {
             </div>
           </div>
           {email && (
-            <nav className="hidden items-center gap-1 sm:flex" aria-label="Admin views">
+            <nav className="hidden items-center gap-6 sm:flex" aria-label="Admin views">
               {NAV_LINKS.map((link) => (
                 <button
                   key={link.key}
                   type="button"
                   onClick={() => onViewChange(link.key)}
-                  className={`rounded-lg px-3 py-1.5 text-[11px] font-mono font-semibold uppercase tracking-[0.08em] transition ${
+                  className={`pb-0.5 text-[12px] font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                     view === link.key
-                      ? "border border-brand-gold/40 bg-brand-gold/10 text-brand-gold"
-                      : "border border-transparent text-muted hover:bg-white/5 hover:text-primary"
+                      ? "text-brand-gold border-brand-gold"
+                      : "text-muted border-transparent hover:text-primary"
                   }`}
                 >
-                  {link.label}
+                  <span className="font-mono text-[10px] uppercase tracking-[0.08em]">{link.label}</span>
                 </button>
               ))}
             </nav>
