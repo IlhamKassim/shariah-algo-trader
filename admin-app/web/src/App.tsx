@@ -6,6 +6,7 @@ import { LoginCard } from "./components/LoginCard";
 import { NavBar, type View } from "./components/NavBar";
 import { TesterDrawer } from "./components/TesterDrawer";
 import { TestersView } from "./components/TestersView";
+import { TickerBar } from "./components/TickerBar";
 import { ApiError, AdminApi, type Tester } from "./lib/api";
 import { getInitialSession, onSessionChange, signOut } from "./lib/auth";
 
@@ -105,6 +106,11 @@ export default function App() {
         view={view}
         onViewChange={setView}
         onSignOut={() => void signOut()}
+      />
+
+      <TickerBar
+        totalTesters={session ? testers.length : null}
+        activeTesters={session ? testers.filter((t) => t.state === "active").length : null}
       />
 
       <div className="flex-1 bg-ambient-violet">
