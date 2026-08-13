@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from dashboard.api.db import log_audit_event
 from dashboard.api.deps import get_config, get_alpaca
-from dashboard.api.models import SettingsResponse, SettingsUpdateRequest
+from dashboard.api.models import SettingsResponse, SettingsUpdateRequest, ClaimInviteRequest
 from shariah_algo_trader.config import Config
 
 router = APIRouter()
@@ -77,7 +77,7 @@ def _sanitize_val(val: str | None) -> str:
     return val.replace("\r", "").replace("\n", "").strip()
 
 
-from dashboard.api.user_store import get_user_settings, save_user_settings
+from dashboard.api.user_store import get_user_settings, save_user_settings, claim_pilot_invite
 from dashboard.api.deps import is_admin
 from dashboard.api.hardening import validate_alpaca_base_url
 
@@ -336,3 +336,29 @@ def set_trading_mode(
         log_audit_event("TRADING_MODE_SWITCH", "admin", _client_ip(request), f"Switched global trading mode to {mode}")
 
     return {"status": "success", "trading_mode": mode, "alpaca_base_url": base_url}
+
+
+@router.post("/api/settings/claim-invite")
+def claim_invite(request: Request, payload: ClaimInviteRequest):
+    """Beta pilot: validate a single-use invite at first authenticated call (Q2=A).
+
+    On success the caller is provisioned as a ``pilot_users`` row with
+    ``state='pending'`` (AC-3). Invalid/expired/used codes are rejected with
+    403 and logged to ``audit_logs`` (AC-4). This router is auth-gated in
+    ``main.py``, so anonymous callers get 401 first.
+    """
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required to claim an invite.")
+    user_email = getattr(request.state, "user_email", None) or ""
+
+    result = claim_pilot_invite(
+        user_id,
+        user_email,
+        _sanitize_val(payload.code),
+        linkedin_url=_sanitize_val(payload.linkedin_url) if payload.linkedin_url else None,
+        notes=_sanitize_val(payload.notes) if payload.notes else None,
+    )
+    if not result["ok"]:
+        raise HTTPException(status_code=403, detail=result["reason"])
+    return {"status": "success", "state": result["state"]}

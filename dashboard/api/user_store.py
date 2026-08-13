@@ -4,6 +4,7 @@ Ensures zero-bloat database storage (< 0.5 KB per user record) and automatic key
 """
 
 import datetime
+import secrets
 import sqlite3
 import threading
 from pathlib import Path
@@ -46,6 +47,34 @@ def init_user_store() -> None:
                     risk_acknowledged_at              TEXT,
                     created_at                        TEXT NOT NULL,
                     updated_at                        TEXT NOT NULL
+                )
+            """)
+            # Beta pilot (SPEC-BETA-PILOT.md section 6): LOCAL-ONLY pilot
+            # registry tables — the pilot lifecycle (invites, pending/active/
+            # revoked states) is server-side; deliberately NOT mirrored to
+            # Supabase (avoids new RLS surface).
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS pilot_users (
+                    user_id        TEXT PRIMARY KEY,          -- Supabase auth UID (UUID string)
+                    email          TEXT NOT NULL,
+                    role           TEXT NOT NULL DEFAULT 'tester',   -- 'tester' | 'admin'
+                    state          TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'active' | 'revoked'
+                    invite_code    TEXT,                      -- code they signed up with
+                    linkedin_url   TEXT,                      -- collected at onboarding
+                    notes          TEXT,                      -- admin free text
+                    approved_by    TEXT,                      -- admin user_id
+                    created_at     TEXT NOT NULL,
+                    updated_at     TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS pilot_invites (
+                    code           TEXT PRIMARY KEY,          -- e.g. 8-char URL-safe token
+                    created_by     TEXT NOT NULL,             -- admin user_id
+                    max_uses       INTEGER NOT NULL DEFAULT 1,
+                    uses           INTEGER NOT NULL DEFAULT 0,
+                    expires_at     TEXT NOT NULL,
+                    created_at     TEXT NOT NULL
                 )
             """)
             conn.commit()
@@ -356,3 +385,194 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 
     # Sync to Supabase PostgreSQL database
     _sync_to_supabase(user_id, record)
+
+
+# ── Pilot store helpers (SPEC-BETA-PILOT.md section 6) ───────────────────────
+
+_INVITE_TTL_DAYS = 30
+
+
+def _utcnow_iso() -> str:
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+
+
+def create_pilot_invite(
+    created_by: str,
+    max_uses: int = 1,
+    expires_at: str | datetime.datetime | None = None,
+    code: str | None = None,
+) -> str:
+    """Create a single-use pilot invite and return its code.
+
+    ``expires_at`` defaults to 30 days from now; ``code`` defaults to an
+    8-character URL-safe token. Collisions are retried.
+    """
+    _ensure_initialized()
+    if expires_at is None:
+        expires_at = (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=_INVITE_TTL_DAYS)).isoformat()
+    elif isinstance(expires_at, datetime.datetime):
+        expires_at = expires_at.isoformat()
+
+    for _ in range(5):
+        token = code or secrets.token_urlsafe(6)[:8]
+        with _lock:
+            conn = _connect()
+            try:
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO pilot_invites (code, created_by, max_uses, uses, expires_at, created_at) "
+                    "VALUES (?, ?, ?, 0, ?, ?)",
+                    (token, created_by, max_uses, expires_at, _utcnow_iso()),
+                )
+                conn.commit()
+                inserted = cur.rowcount == 1
+            finally:
+                conn.close()
+        if inserted or code is not None:
+            return token
+    raise RuntimeError("Unable to allocate a unique pilot invite code")
+
+
+def get_pilot_invite(code: str) -> dict | None:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT code, created_by, max_uses, uses, expires_at, created_at FROM pilot_invites WHERE code = ?",
+                (code,),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_pilot_invites() -> list[dict]:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return [dict(r) for r in conn.execute(
+                "SELECT code, created_by, max_uses, uses, expires_at, created_at FROM pilot_invites ORDER BY created_at DESC"
+            ).fetchall()]
+        finally:
+            conn.close()
+
+
+def validate_invite_code(code: str) -> dict:
+    """Validate an invite code (exists, unexpired, not used up).
+
+    Returns ``{"valid": bool, "reason": str | None, "invite": dict | None}``.
+    """
+    if not code:
+        return {"valid": False, "reason": "Invite code is required.", "invite": None}
+    invite = get_pilot_invite(code)
+    if invite is None:
+        return {"valid": False, "reason": "Invalid invite code.", "invite": None}
+    if invite["expires_at"] < _utcnow_iso():
+        return {"valid": False, "reason": "Invite code has expired.", "invite": invite}
+    if invite["uses"] >= invite["max_uses"]:
+        return {"valid": False, "reason": "Invite code has already been used.", "invite": invite}
+    return {"valid": True, "reason": None, "invite": invite}
+
+
+def get_pilot_user(user_id: str) -> dict | None:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute("SELECT * FROM pilot_users WHERE user_id = ?", (user_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_pilot_users() -> list[dict]:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return [dict(r) for r in conn.execute(
+                "SELECT * FROM pilot_users ORDER BY created_at DESC"
+            ).fetchall()]
+        finally:
+            conn.close()
+
+
+def set_pilot_user_state(user_id: str, state: str, approved_by: str | None = None) -> None:
+    """Advance a pilot user's lifecycle state ('pending' | 'active' | 'revoked')."""
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute(
+                "UPDATE pilot_users SET state = ?, approved_by = COALESCE(?, approved_by), updated_at = ? WHERE user_id = ?",
+                (state, approved_by, _utcnow_iso(), user_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def get_pilot_role(user_id: str) -> str | None:
+    """Return the pilot role ('tester' | 'admin') or None when not a pilot user."""
+    user = get_pilot_user(user_id)
+    return user["role"] if user else None
+
+
+def is_tester(user_id: str) -> bool:
+    return get_pilot_role(user_id) == "tester"
+
+
+def claim_pilot_invite(
+    user_id: str,
+    email: str,
+    code: str,
+    linkedin_url: str | None = None,
+    notes: str | None = None,
+) -> dict:
+    """Validate a single-use invite and provision the caller as a pending tester.
+
+    Idempotent: a user who already has a pilot_users row is returned as
+    already-provisioned without consuming the code again. Rejected claims are
+    logged to ``audit_logs`` (AC-4). Returns ``{"ok": bool, ...}``.
+    """
+    _ensure_initialized()
+    from dashboard.api.db import log_audit_event
+
+    existing = get_pilot_user(user_id)
+    if existing is not None:
+        return {"ok": True, "state": existing["state"], "already_provisioned": True}
+
+    validation = validate_invite_code(code)
+    if not validation["valid"]:
+        log_audit_event(
+            "INVITE_REJECTED",
+            user_id,
+            "user",
+            f"Pilot invite claim rejected: {validation['reason']} (code={code!r})",
+        )
+        return {"ok": False, "reason": validation["reason"]}
+
+    now = _utcnow_iso()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute("UPDATE pilot_invites SET uses = uses + 1 WHERE code = ?", (code,))
+            conn.execute(
+                """
+                INSERT INTO pilot_users (
+                    user_id, email, role, state, invite_code, linkedin_url, notes, created_at, updated_at
+                ) VALUES (?, ?, 'tester', 'pending', ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    email = excluded.email,
+                    state = 'pending',
+                    updated_at = excluded.updated_at
+                """,
+                (user_id, email, code, linkedin_url, notes, now, now),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    log_audit_event("INVITE_CLAIMED", user_id, "user", f"Pilot invite {code} claimed; state=pending")
+    return {"ok": True, "state": "pending"}

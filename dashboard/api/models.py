@@ -189,6 +189,14 @@ class SettingsUpdateRequest(BaseModel):
     allowed_google_emails: Optional[list[str]] = None
 
 
+class ClaimInviteRequest(BaseModel):
+    """Beta pilot invite claim (Q2=A: single-use codes validated at first login)."""
+
+    code: str
+    linkedin_url: Optional[str] = None
+    notes: Optional[str] = None
+
+
 
 class NotificationItem(BaseModel):
     id: str
