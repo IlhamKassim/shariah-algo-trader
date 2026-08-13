@@ -13,8 +13,7 @@ interface ExpiryOption {
   value: string | null; // ISO-8601 absolute, or null for the backend default (30 days)
 }
 
-function expiryOptions(): ExpiryOption[] {
-  const now = Date.now();
+function buildExpiryOptions(now: number): ExpiryOption[] {
   const days = (n: number) => new Date(now + n * 86_400_000).toISOString();
   return [
     { label: "7 days", value: days(7) },
@@ -43,8 +42,13 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 export function InvitesView({ api }: InvitesViewProps) {
+  // The four expiry ISOs are computed ONCE per mount and reused for both the
+  // <select> options and the onChange lookup. Recomputing per render made the
+  // state-held ISO never match a rendered option (selector lied about the
+  // selection and every 7/90-day choice fell back to the 30-day default).
+  const [expiryOptions] = useState<ExpiryOption[]>(() => buildExpiryOptions(Date.now()));
   const [maxUses, setMaxUses] = useState(1);
-  const [expiry, setExpiry] = useState<string | null>(() => expiryOptions()[1].value);
+  const [expiry, setExpiry] = useState<string | null>(() => expiryOptions[1].value);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fresh, setFresh] = useState<Invite | null>(null);
@@ -138,12 +142,12 @@ export function InvitesView({ api }: InvitesViewProps) {
               id="expiry"
               value={expiry ?? "never"}
               onChange={(e) => {
-                const option = expiryOptions().find((o) => (o.value ?? "never") === e.target.value);
+                const option = expiryOptions.find((o) => (o.value ?? "never") === e.target.value);
                 setExpiry(option ? option.value : null);
               }}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
-              {expiryOptions().map((option) => (
+              {expiryOptions.map((option) => (
                 <option key={option.label} value={option.value ?? "never"}>
                   {option.label}
                 </option>
