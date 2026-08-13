@@ -77,8 +77,13 @@ def _sanitize_val(val: str | None) -> str:
     return val.replace("\r", "").replace("\n", "").strip()
 
 
-from dashboard.api.user_store import get_user_settings, save_user_settings, claim_pilot_invite
-from dashboard.api.deps import is_admin
+from dashboard.api.user_store import (
+    get_user_settings,
+    save_user_settings,
+    claim_pilot_invite,
+    PaperOnlyGuardError,
+)
+from dashboard.api.deps import is_admin, is_tester_request
 from dashboard.api.hardening import validate_alpaca_base_url
 
 # Fields in SettingsUpdateRequest that are global/administrator configuration
@@ -171,6 +176,25 @@ def update_settings(
 
     # Save to user_store if request is bound to a Supabase/auth user_id
     if user_id:
+        # G1 (paper-only invariant): pilot testers may never supply live
+        # credentials, regardless of payload validity — 403 before any write.
+        if is_tester_request(request):
+            live_key = payload.alpaca_live_api_key
+            live_secret = payload.alpaca_live_api_secret
+            if (live_key is not None and not is_masked(live_key)) or (
+                live_secret is not None and not is_masked(live_secret)
+            ):
+                log_audit_event(
+                    "PAPER_ONLY_GUARD",
+                    user_id,
+                    _client_ip(request),
+                    "Rejected live credentials save for tester role (G1)",
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail="Paper-only pilot account: tester role cannot save live trading credentials.",
+                )
+
         # Regular users must not be able to write global/admin configuration —
         # reject outright instead of silently ignoring (which previously
         # returned 200 "success" for ignored writes).
@@ -223,7 +247,16 @@ def update_settings(
         if payload.day_trader_enabled is not None:
             user_updates["day_trader_enabled"] = payload.day_trader_enabled
 
-        save_user_settings(user_id, user_updates)
+        try:
+            save_user_settings(user_id, user_updates)
+        except PaperOnlyGuardError as exc:
+            log_audit_event(
+                "PAPER_ONLY_GUARD",
+                user_id,
+                _client_ip(request),
+                f"Rejected live persistence for tester role (G3): {exc}",
+            )
+            raise HTTPException(status_code=403, detail=str(exc))
         log_audit_event("USER_SETTINGS_UPDATE", user_id, _client_ip(request), f"Updated user settings: {list(user_updates.keys())}")
         return {"status": "success"}
 
@@ -304,6 +337,21 @@ def set_trading_mode(
     if mode not in ("paper", "live"):
         raise HTTPException(status_code=400, detail="mode must be 'paper' or 'live'")
 
+    # G2 (paper-only invariant): pilot testers may never switch to live mode —
+    # checked before the risk-ack branch, so even a valid risk acknowledgment
+    # cannot bypass the role gate.
+    if mode == "live" and is_tester_request(request):
+        log_audit_event(
+            "PAPER_ONLY_GUARD",
+            user_id or "anonymous",
+            _client_ip(request),
+            "Rejected live trading mode for tester role (G2)",
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Paper-only pilot account: tester role cannot enable live trading mode.",
+        )
+
     base_url = "https://api.alpaca.markets" if mode == "live" else "https://paper-api.alpaca.markets"
     risk_ack = bool(payload.get("riskAcknowledged") or payload.get("risk_acknowledged"))
 
@@ -322,6 +370,16 @@ def set_trading_mode(
                 user_updates["risk_acknowledged_at"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         try:
             save_user_settings(user_id, user_updates)
+        except PaperOnlyGuardError as exc:
+            # G3 defense at the store layer (e.g. JWT predates approval and
+            # the tester role only exists in pilot_users).
+            log_audit_event(
+                "PAPER_ONLY_GUARD",
+                user_id,
+                _client_ip(request),
+                f"Rejected live persistence for tester role (G3): {exc}",
+            )
+            raise HTTPException(status_code=403, detail=str(exc))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         log_audit_event("TRADING_MODE_SWITCH", user_id, _client_ip(request), f"Switched trading mode to {mode}")

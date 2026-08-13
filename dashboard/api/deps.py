@@ -240,3 +240,25 @@ def is_admin(request: Request, cfg: Config | None = None) -> bool:
     return False
 
 
+def is_tester_request(request: Request) -> bool:
+    """True when the authenticated caller is a pilot tester (paper-only role).
+
+    Reads the role from the JWT ``app_metadata.role`` first (set at approval
+    time); falls back to the local ``pilot_users.role`` when the JWT predates
+    approval (SPEC-BETA-PILOT.md section 6). Gated by ``PILOT_GUARD_DISABLE``
+    so the guardrails can be feature-flagged off for rollback (section 10).
+    """
+    from dashboard.api.user_store import get_pilot_role, pilot_guard_enabled
+
+    if not pilot_guard_enabled():
+        return False
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    if not user_id:
+        return False
+    payload = getattr(request.state, "user", None) or {}
+    app_meta = payload.get("app_metadata") or {}
+    if app_meta.get("role") == "tester":
+        return True
+    return get_pilot_role(user_id) == "tester"
+
+

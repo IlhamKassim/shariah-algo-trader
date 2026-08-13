@@ -241,6 +241,11 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 
     existing = get_user_settings(user_id) or {}
 
+    # G3 (paper-only invariant, SPEC section 8): a pilot tester can never
+    # persist live-key columns or trading_mode='live' — checked here, before
+    # the sync record is built, as defense when routers are bypassed.
+    _enforce_paper_only(user_id, settings, existing)
+
     api_key = settings.get("alpaca_api_key")
     api_secret = settings.get("alpaca_api_secret")
     live_api_key = settings.get("alpaca_live_api_key")
@@ -390,6 +395,42 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 # ── Pilot store helpers (SPEC-BETA-PILOT.md section 6) ───────────────────────
 
 _INVITE_TTL_DAYS = 30
+
+
+class PaperOnlyGuardError(Exception):
+    """Raised when a pilot tester attempts to persist live trading state (G3)."""
+
+
+def pilot_guard_enabled() -> bool:
+    """Rollback switch for all paper-only guardrail checks (spec section 10).
+
+    Set ``PILOT_GUARD_DISABLE=1`` to turn the guardrails off; default unset
+    means the guards are active.
+    """
+    import os
+
+    return os.environ.get("PILOT_GUARD_DISABLE") != "1"
+
+
+def _enforce_paper_only(user_id: str, settings: dict, existing: dict) -> None:
+    """G3: refuse to persist live-key columns or ``trading_mode='live'`` for a tester.
+
+    Defense-in-depth when routers are bypassed — the check runs in the store
+    itself, before the sync record is built.
+    """
+    if not pilot_guard_enabled():
+        return
+    if get_pilot_role(user_id) != "tester":
+        return
+    requested_mode = settings.get("trading_mode") or existing.get("trading_mode") or "paper"
+    live_key = settings.get("alpaca_live_api_key")
+    live_secret = settings.get("alpaca_live_api_secret")
+    live_key_present = bool(live_key and "•" not in live_key)
+    live_secret_present = bool(live_secret and "•" not in live_secret)
+    if requested_mode == "live" or live_key_present or live_secret_present:
+        raise PaperOnlyGuardError(
+            "Paper-only pilot account: tester role cannot save live trading credentials or enable live trading mode."
+        )
 
 
 def _utcnow_iso() -> str:
