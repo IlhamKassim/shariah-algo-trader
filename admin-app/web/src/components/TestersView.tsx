@@ -164,7 +164,7 @@ export function TestersView({
                             e.stopPropagation();
                             setPending({ tester, action: "approve" });
                           }}
-                          className="rounded-lg bg-brand-green px-3 py-1.5 text-sm font-semibold text-page shadow-sm transition hover:brightness-110 disabled:opacity-50"
+                          className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
                         >
                           Approve
                         </button>

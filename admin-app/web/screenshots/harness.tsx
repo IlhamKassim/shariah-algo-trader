@@ -11,8 +11,11 @@
 import { createRoot } from "react-dom/client";
 
 import { NavBar } from "../src/components/NavBar";
+import { LoginCard } from "../src/components/LoginCard";
+import { TesterDrawer } from "../src/components/TesterDrawer";
 import { TestersView } from "../src/components/TestersView";
 import { InvitesView } from "../src/components/InvitesView";
+import { TickerBar } from "../src/components/TickerBar";
 import { AdminApi, type Tester } from "../src/lib/api";
 import "../src/index.css";
 
@@ -188,18 +191,38 @@ const api = new AdminApi(() => "jwt-token");
 
 const noop = () => {};
 
-// ?view=testers | ?view=invites — render one view so the screenshot shows only
-// that section (both views stacked would overlap the viewport boundary).
+// ?view=testers | ?view=invites | ?view=login | ?view=drawer — render one view
+// so the screenshot shows only that surface (stacked views would overlap the
+// viewport boundary). testers/invites render the signed-in shell (NavBar with
+// email + TickerBar with live counts); login renders the signed-out shell;
+// drawer renders TestersView with the detail drawer open on the first tester.
 const view = new URLSearchParams(window.location.search).get("view") ?? "testers";
 
-createRoot(document.getElementById("root")!).render(
-  <div className="flex min-h-screen flex-col bg-glass-page text-primary">
-    <NavBar email="aqilnazri9@gmail.com" view="testers" onViewChange={noop} onSignOut={noop} />
-    <div className="flex-1 bg-ambient-violet">
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        {view === "invites" ? (
-          <InvitesView api={api} />
-        ) : (
+const signedInShell = (
+  <>
+    <NavBar email="aqilnazri9@gmail.com" view={view === "invites" ? "invites" : "testers"} onViewChange={noop} onSignOut={noop} />
+    <TickerBar totalTesters={TESTERS.length} activeTesters={TESTERS.filter((t) => t.state === "active").length} />
+  </>
+);
+
+const root = document.getElementById("root")!;
+
+if (view === "login") {
+  createRoot(root).render(
+    <div className="flex min-h-screen flex-col bg-glass-page text-primary">
+      <NavBar email={null} view="testers" onViewChange={noop} onSignOut={noop} />
+      <TickerBar totalTesters={null} activeTesters={null} />
+      <div className="flex-1 bg-ambient-violet">
+        <LoginCard />
+      </div>
+    </div>,
+  );
+} else if (view === "drawer") {
+  createRoot(root).render(
+    <div className="flex min-h-screen flex-col bg-glass-page text-primary">
+      {signedInShell}
+      <div className="flex-1 bg-ambient-violet">
+        <main className="mx-auto max-w-6xl px-6 py-8">
           <TestersView
             testers={TESTERS}
             loading={false}
@@ -210,8 +233,33 @@ createRoot(document.getElementById("root")!).render(
             onRevoke={noop}
             onSelect={noop}
           />
-        )}
-      </main>
-    </div>
-  </div>,
-);
+        </main>
+      </div>
+      <TesterDrawer tester={TESTERS[0]} api={api} onClose={noop} />
+    </div>,
+  );
+} else {
+  createRoot(root).render(
+    <div className="flex min-h-screen flex-col bg-glass-page text-primary">
+      {signedInShell}
+      <div className="flex-1 bg-ambient-violet">
+        <main className="mx-auto max-w-6xl px-6 py-8">
+          {view === "invites" ? (
+            <InvitesView api={api} />
+          ) : (
+            <TestersView
+              testers={TESTERS}
+              loading={false}
+              error={null}
+              busyId={null}
+              api={api}
+              onApprove={noop}
+              onRevoke={noop}
+              onSelect={noop}
+            />
+          )}
+        </main>
+      </div>
+    </div>,
+  );
+}

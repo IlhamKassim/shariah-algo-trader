@@ -255,7 +255,7 @@ function ActivityTab({ api, tester }: { api: AdminApi; tester: Tester }) {
     <ol className="space-y-4">
       {data.events.map((event) => (
         <li key={event.id} className="flex gap-3">
-          <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-gold/70" />
+          <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-indigo-400/70" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-primary">{event.event_type}</span>

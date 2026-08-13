@@ -42,7 +42,7 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 const INPUT_CLASSES =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-brand-gold focus:ring-1 focus:ring-brand-gold/30";
+  "rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30";
 
 export function InvitesView({ api }: InvitesViewProps) {
   // The four expiry ISOs are computed ONCE per mount and reused for both the
@@ -162,20 +162,20 @@ export function InvitesView({ api }: InvitesViewProps) {
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-page shadow-sm transition hover:brightness-110 disabled:opacity-50"
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition hover:bg-indigo-500 disabled:opacity-50"
           >
             {creating ? "Creating…" : "Create invite"}
           </button>
         </form>
 
         {fresh && (
-          <div className="mt-5 rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-4">
+          <div className="mt-5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-brand-gold">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-300">
                   Invite created
                 </div>
-                <div className="mt-1 truncate font-mono text-sm font-semibold text-brand-gold">
+                <div className="mt-1 truncate font-mono text-sm font-semibold text-emerald-200">
                   {fresh.code}
                 </div>
                 <div className="mt-0.5 truncate font-mono text-xs text-muted">
