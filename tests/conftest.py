@@ -10,6 +10,24 @@ _ADMIN_APP_DIR = Path(__file__).resolve().parent.parent / "admin-app"
 if str(_ADMIN_APP_DIR) not in sys.path:
     sys.path.insert(0, str(_ADMIN_APP_DIR))
 
+# The admin SPA static mount (admin_app/api/main.py:65-67) is conditional on
+# admin-app/web/dist existing at IMPORT time of the app module. dist/ is
+# gitignored (produced by `npm run build` at deploy time), so a fresh checkout
+# has no dist/. Materialize a placeholder index.html HERE — conftest.py loads
+# before ANY test module is imported, so every test file sees the mount no
+# matter the import order (previously test_admin_api.py's module-level import
+# of admin_app.api.main raced the scaffold module's own placeholder hack and
+# won on a fresh checkout, leaving GET / to 404).
+_ADMIN_WEB_DIST = _ADMIN_APP_DIR / "web" / "dist"
+_ADMIN_WEB_DIST.mkdir(parents=True, exist_ok=True)
+_ADMIN_INDEX = _ADMIN_WEB_DIST / "index.html"
+if not _ADMIN_INDEX.exists():
+    _ADMIN_INDEX.write_text(
+        "<!doctype html><html><head><title>Shariah Admin</title></head>"
+        '<body><div id="root"></div></body></html>',
+        encoding="utf-8",
+    )
+
 
 @pytest.fixture(autouse=True)
 def _encryption_master_key(monkeypatch):
