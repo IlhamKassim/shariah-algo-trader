@@ -3,12 +3,20 @@ import logging
 from fastapi import APIRouter, Depends
 
 from dashboard.api.cache import UniverseCache, get_universe_cache
+from dashboard.api.compliance_core import compute_compliance
 from dashboard.api.deps import get_alpaca
 from dashboard.api.models import ComplianceResponse
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _eligible_universe(cache: UniverseCache) -> set[str]:
+    """The cached eligible universe (raw set when present, else derived from stocks)."""
+    if cache.raw_universe:
+        return set(cache.raw_universe)
+    return {s["symbol"] for s in cache.stocks} if cache.stocks else set()
 
 
 @router.get("/api/compliance", response_model=ComplianceResponse)
@@ -20,14 +28,19 @@ def get_compliance(
 
     Uses the universe cache so this endpoint is always fast (<50ms).
     Returns compliant=True when the cache is empty (can't determine violations).
+    The violation computation itself lives in ``dashboard.api.compliance_core``
+    so the admin app's per-tester compliance view (A5) reuses identical logic.
     """
     if not client:
         return ComplianceResponse(
-            compliant=True,
-            violations=[],
-            held_count=0,
-            universe_size=len(cache.stocks) if cache.stocks else 0,
-            last_checked=cache.last_computed_at.isoformat() if cache.last_computed_at else None,
+            **compute_compliance(
+                [],
+                _eligible_universe(cache),
+                universe_size=len(cache.stocks) if cache.stocks else 0,
+                last_checked=(
+                    cache.last_computed_at.isoformat() if cache.last_computed_at else None
+                ),
+            )
         )
     try:
         positions = client.get("/v2/positions")
@@ -38,22 +51,15 @@ def get_compliance(
 
     if not cache.stocks:
         return ComplianceResponse(
-            compliant=True,
-            violations=[],
-            held_count=len(held),
-            universe_size=0,
-            last_checked=None,
+            **compute_compliance(held, set(), universe_size=0, last_checked=None)
         )
 
-    eligible = cache.raw_universe if cache.raw_universe else {s["symbol"] for s in cache.stocks}
-    violations = sorted(held - eligible)
-
     return ComplianceResponse(
-        compliant=len(violations) == 0,
-        violations=violations,
-        held_count=len(held),
-        universe_size=len(eligible),
-        last_checked=(
-            cache.last_computed_at.isoformat() if cache.last_computed_at else None
-        ),
+        **compute_compliance(
+            held,
+            _eligible_universe(cache),
+            last_checked=(
+                cache.last_computed_at.isoformat() if cache.last_computed_at else None
+            ),
+        )
     )
