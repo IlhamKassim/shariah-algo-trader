@@ -2,21 +2,20 @@ import type { ReactNode } from "react";
 
 export type Tone = "green" | "amber" | "red" | "slate";
 
+// Quantix Glass V2 status pills: mono type, colored glass badge (emerald /
+// rose / amber) — matches the dashboard header pills (App.tsx:281-300).
 const TONE_CLASSES: Record<Tone, string> = {
-  green:
-    "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20",
-  amber:
-    "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20",
-  red: "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-400/20",
-  slate:
-    "bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-400/20",
+  green: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+  amber: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  red: "border-rose-500/40 bg-rose-500/10 text-rose-300",
+  slate: "border-white/10 bg-white/5 text-muted",
 };
 
 /** Small pill badge carrying one of the four allowed state colors (SPEC §5.3). */
 export function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TONE_CLASSES[tone]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-[0.08em] ${TONE_CLASSES[tone]}`}
     >
       {children}
     </span>
