@@ -59,10 +59,14 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Ambient glow backgrounds */
+/* Ambient glow backgrounds — strengthened so glass-panel blur actually reads
+   (original rgba(...,0.08/0.05) was invisible behind rgba(18,21,32,0.65) panels;
+   dashboard feels glassy because denser content sits behind the cards) */
 .bg-ambient-violet {
-  background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.14) 0%, transparent 45%),
+    radial-gradient(circle at 50% 0%, rgba(209, 169, 46, 0.06) 0%, transparent 50%);
 }
 
 /* Right-side drawer slide-in (admin app; no dashboard equivalent) */
