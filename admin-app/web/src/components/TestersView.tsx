@@ -80,8 +80,8 @@ export function TestersView({
   return (
     <section>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">Testers</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="text-[15px] font-semibold leading-tight text-primary">Testers</h1>
+        <p className="mt-0.5 text-[11px] leading-tight text-muted">
           Beta pilot tester lifecycle — approve, revoke and inspect paper portfolios.
         </p>
       </div>
@@ -89,33 +89,33 @@ export function TestersView({
       {error && (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400"
+          className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
         >
           {error}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="glass-panel overflow-hidden rounded-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                <th scope="col" className="px-5 py-3 font-medium">
+              <tr className="border-b border-white/10 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+                <th scope="col" className="px-5 py-3 font-semibold">
                   Tester
                 </th>
-                <th scope="col" className="px-4 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-semibold">
                   State
                 </th>
-                <th scope="col" className="px-4 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-semibold">
                   Keys
                 </th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">
+                <th scope="col" className="px-4 py-3 text-right font-semibold">
                   Equity
                 </th>
-                <th scope="col" className="px-4 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-semibold">
                   Last activity
                 </th>
-                <th scope="col" className="px-5 py-3 text-right font-medium">
+                <th scope="col" className="px-5 py-3 text-right font-semibold">
                   Actions
                 </th>
               </tr>
@@ -123,7 +123,7 @@ export function TestersView({
             <tbody>
               {testers.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-500 dark:text-slate-400">
+                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-muted">
                     No testers yet. Create an invite to get started.
                   </td>
                 </tr>
@@ -132,11 +132,11 @@ export function TestersView({
                 <tr
                   key={tester.user_id}
                   onClick={() => onSelect(tester)}
-                  className="cursor-pointer border-b border-slate-100 transition last:border-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
+                  className="cursor-pointer border-b border-white/10 transition last:border-0 hover:bg-white/[0.03]"
                 >
                   <td className="px-5 py-3">
-                    <div className="font-medium text-slate-900 dark:text-slate-100">{tester.email}</div>
-                    <div className="mt-0.5 text-xs text-slate-400 dark:text-slate-500" title={tester.user_id}>
+                    <div className="font-medium text-primary">{tester.email}</div>
+                    <div className="mt-0.5 font-mono text-xs text-faint" title={tester.user_id}>
                       {truncateMiddle(tester.user_id)}
                     </div>
                   </td>
@@ -148,10 +148,10 @@ export function TestersView({
                       {tester.has_paper_keys ? "Paper" : "No keys"}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-900 dark:text-slate-100">
+                  <td className="px-4 py-3 text-right font-mono tabular-nums text-primary">
                     {equities[tester.user_id] ? formatCurrency(equities[tester.user_id]) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                  <td className="px-4 py-3 text-muted">
                     {formatRelativeTime(tester.last_activity_at)}
                   </td>
                   <td className="px-5 py-3 text-right">
@@ -164,7 +164,7 @@ export function TestersView({
                             e.stopPropagation();
                             setPending({ tester, action: "approve" });
                           }}
-                          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50"
+                          className="rounded-lg bg-brand-green px-3 py-1.5 text-sm font-semibold text-page shadow-sm transition hover:brightness-110 disabled:opacity-50"
                         >
                           Approve
                         </button>
@@ -177,7 +177,7 @@ export function TestersView({
                             e.stopPropagation();
                             setPending({ tester, action: "revoke" });
                           }}
-                          className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-500/10"
+                          className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
                         >
                           Revoke
                         </button>
@@ -190,7 +190,7 @@ export function TestersView({
           </table>
         </div>
         {loading && (
-          <div className="border-t border-slate-200 px-5 py-4 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          <div className="border-t border-white/10 px-5 py-4 text-sm text-muted">
             Refreshing…
           </div>
         )}
@@ -202,7 +202,7 @@ export function TestersView({
         message={
           pending ? (
             <>
-              <span className="font-medium text-slate-900 dark:text-slate-100">{pending.tester.email}</span>
+              <span className="font-medium text-primary">{pending.tester.email}</span>
               {pending.action === "approve"
                 ? " will become active and the engine will start trading their paper account on the next cycle."
                 : " will be revoked — engine trading stops on the next cycle. Their settings and keys are kept."}
