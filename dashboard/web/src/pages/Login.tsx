@@ -80,6 +80,19 @@ export function Login() {
     }
   }, [location]);
 
+  // Beta pilot invite gating (Q2=A): an invite link
+  // (https://shariahtrading.my/login?invite=CODE) stores the code so the
+  // first authenticated call can redeem it and provision a pending pilot
+  // account. Persisted in localStorage so a fresh tab after email
+  // confirmation still redeems it.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const invite = (params.get("invite") || "").trim();
+    if (invite) {
+      localStorage.setItem("shariah_pending_invite", invite);
+    }
+  }, [location]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0C0B09] flex items-center justify-center font-mono text-[#ECE5D5]">
@@ -344,6 +357,25 @@ export function Login() {
           }
         } catch {
           // ignore session fetch error
+        }
+      }
+
+      // Beta pilot: redeem the pending invite on the first authenticated call.
+      // An invalid/expired/used code blocks entry with the server's reason.
+      const pendingInvite = localStorage.getItem("shariah_pending_invite");
+      if (pendingInvite) {
+        try {
+          const claim = await api.claimInvite(pendingInvite);
+          if (claim?.status === "success") {
+            localStorage.removeItem("shariah_pending_invite");
+          }
+        } catch (err: unknown) {
+          localStorage.removeItem("shariah_pending_invite");
+          const msg = err instanceof Error ? err.message : "Invite code could not be redeemed.";
+          setError(`${msg} Please contact the administrator for a valid invite link.`);
+          setIsConnecting(false);
+          setIsSubmitting(false);
+          return; // stay on the login page
         }
       }
     }

@@ -370,7 +370,18 @@ async function apiFetch<T>(path: string, init?: RequestInit, isRetry = false): P
     }
   }
 
-  if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
+  if (!res.ok) {
+    let detail = `API ${path} returned ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body.detail === "string") {
+        detail = body.detail;
+      }
+    } catch {
+      // non-JSON error body — keep the generic message
+    }
+    throw new Error(detail);
+  }
   return res.json();
 }
 
@@ -631,6 +642,16 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
+    });
+  },
+  claimInvite: (code: string, linkedinUrl?: string, notes?: string) => {
+    if (isDemo()) {
+      return Promise.resolve<{ status: string; state: string }>({ status: "success", state: "pending" });
+    }
+    return apiFetch<{ status: string; state: string }>("/api/settings/claim-invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, linkedin_url: linkedinUrl, notes }),
     });
   },
   verifyPassword: (password: string) => {
