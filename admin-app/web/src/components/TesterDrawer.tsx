@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   ActivityResponse,
@@ -46,15 +46,25 @@ interface TabState<T> {
 function useTabData<T>(fetcher: () => Promise<T>): TabState<T> & { reload: () => void } {
   const [state, setState] = useState<TabState<T>>({ data: null, loading: false, error: null });
 
+  // The fetcher is an inline closure (new identity every render), so it must
+  // NOT be an effect dependency — that is what caused the AC-10 infinite
+  // fetch loop (setState → re-render → new fetcher → effect re-runs → …).
+  // Read it through a ref instead: `load` stays stable for the component's
+  // lifetime (one fetch per mount), yet `reload` always calls the freshest
+  // closure (Retry still works if props change).
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+
   const load = useCallback(() => {
     setState((s) => ({ ...s, loading: true, error: null }));
-    fetcher()
+    fetcherRef
+      .current()
       .then((data) => setState({ data, loading: false, error: null }))
       .catch((e: unknown) => {
         const detail = e instanceof Error ? e.message : "Request failed";
         setState((s) => ({ ...s, loading: false, error: detail }));
       });
-  }, [fetcher]);
+  }, []);
 
   useEffect(() => {
     void load();
