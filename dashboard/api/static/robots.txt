@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://shariah-algo-trader.onrender.com/sitemap.xml
+Sitemap: https://shariahtrading.my/sitemap.xml
