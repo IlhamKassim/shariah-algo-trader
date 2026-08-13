@@ -32,16 +32,17 @@ export function formatSignedCurrency(value: string | number | null | undefined):
   return `${sign}${usd.format(Math.abs(n))}`;
 }
 
-/** "just now" / "5m ago" / "3h ago" / "2d ago" / "2026-08-05"; "Never" when missing. */
+/** "just now" / "5m ago" / "3h ago" / "2d ago" / "in 5m" / "2026-08-05"; "Never" when missing. */
 export function formatRelativeTime(iso: string | null | undefined, now: number = Date.now()): string {
   if (!iso) return "Never";
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return "Never";
   const diff = now - then;
-  if (diff < MINUTE) return "just now";
-  if (diff < HOUR) return `${Math.floor(diff / MINUTE)}m ago`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)}h ago`;
-  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)}d ago`;
+  const abs = Math.abs(diff);
+  if (abs < MINUTE) return "just now";
+  if (abs < HOUR) return diff < 0 ? `in ${Math.ceil(abs / MINUTE)}m` : `${Math.floor(diff / MINUTE)}m ago`;
+  if (abs < DAY) return diff < 0 ? `in ${Math.ceil(abs / HOUR)}h` : `${Math.floor(diff / HOUR)}h ago`;
+  if (abs < 7 * DAY) return diff < 0 ? `in ${Math.ceil(abs / DAY)}d` : `${Math.floor(diff / DAY)}d ago`;
   return new Date(then).toISOString().slice(0, 10);
 }
 

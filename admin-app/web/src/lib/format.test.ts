@@ -67,6 +67,16 @@ describe("formatRelativeTime", () => {
   it("renders a plain date once older than a week", () => {
     expect(formatRelativeTime("2026-08-05T12:00:00Z", NOW)).toBe("2026-08-05");
   });
+
+  it("renders 'in 5m' style for future timestamps, not 'just now'", () => {
+    expect(formatRelativeTime("2026-08-13T12:05:00Z", NOW)).toBe("in 5m");
+    expect(formatRelativeTime("2026-08-13T15:00:00Z", NOW)).toBe("in 3h");
+    expect(formatRelativeTime("2026-08-15T12:00:00Z", NOW)).toBe("in 2d");
+  });
+
+  it("renders a plain date for future timestamps more than a week out", () => {
+    expect(formatRelativeTime("2026-08-23T12:00:00Z", NOW)).toBe("2026-08-23");
+  });
 });
 
 describe("formatDateTime", () => {
