@@ -9,16 +9,13 @@ import { TestersView } from "./components/TestersView";
 import { ApiError, AdminApi, type Tester } from "./lib/api";
 import { getInitialSession, onSessionChange, signOut } from "./lib/auth";
 
-const THEME_KEY = "shariah-admin-theme";
-
 /**
- * Admin app shell (SPEC-BETA-PILOT.md §5.3): top nav only, light theme default
- * with a dark toggle, card-based clean-SaaS layout. Three views — Testers
- * (list + detail drawer) and Invites — plus a minimal sign-in card when there
- * is no Supabase session.
+ * Admin app shell (SPEC-BETA-PILOT.md §5.3): top nav only, dark Quantix Glass
+ * V2 theme (page #08090E + ambient glow — matches dashboard/web App.tsx:460).
+ * Three views — Testers (list + detail drawer) and Invites — plus a minimal
+ * sign-in card when there is no Supabase session.
  */
 export default function App() {
-  const [dark, setDark] = useState<boolean>(() => localStorage.getItem(THEME_KEY) === "dark");
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<View>("testers");
@@ -27,11 +24,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Tester | null>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-  }, [dark]);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,36 +99,36 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex min-h-screen flex-col bg-glass-page text-primary">
       <NavBar
         email={session?.user.email ?? null}
-        dark={dark}
         view={view}
         onViewChange={setView}
-        onToggleDark={() => setDark((value) => !value)}
         onSignOut={() => void signOut()}
       />
 
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        {authLoading ? (
-          <p className="py-16 text-center text-sm text-slate-500 dark:text-slate-400">Checking session…</p>
-        ) : !session ? (
-          <LoginCard />
-        ) : view === "testers" ? (
-          <TestersView
-            testers={testers}
-            loading={loading}
-            error={error}
-            busyId={busyId}
-            api={api}
-            onApprove={(t) => void runAction(t, "approve")}
-            onRevoke={(t) => void runAction(t, "revoke")}
-            onSelect={setSelected}
-          />
-        ) : (
-          <InvitesView api={api} />
-        )}
-      </main>
+      <div className="flex-1 bg-ambient-violet">
+        <main className="mx-auto max-w-6xl px-6 py-8">
+          {authLoading ? (
+            <p className="py-16 text-center text-sm text-muted">Checking session…</p>
+          ) : !session ? (
+            <LoginCard />
+          ) : view === "testers" ? (
+            <TestersView
+              testers={testers}
+              loading={loading}
+              error={error}
+              busyId={busyId}
+              api={api}
+              onApprove={(t) => void runAction(t, "approve")}
+              onRevoke={(t) => void runAction(t, "revoke")}
+              onSelect={setSelected}
+            />
+          ) : (
+            <InvitesView api={api} />
+          )}
+        </main>
+      </div>
 
       {selected && api && (
         <TesterDrawer tester={selected} api={api} onClose={() => setSelected(null)} />

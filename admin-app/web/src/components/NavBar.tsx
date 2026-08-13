@@ -1,13 +1,9 @@
-const PRODUCT_NAME = "Shariah Admin";
-
 export type View = "testers" | "invites";
 
 interface NavBarProps {
   email: string | null;
-  dark: boolean;
   view: View;
   onViewChange: (view: View) => void;
-  onToggleDark: () => void;
   onSignOut: () => void;
 }
 
@@ -16,29 +12,44 @@ const NAV_LINKS: { key: View; label: string }[] = [
   { key: "invites", label: "Invites" },
 ];
 
-/** Top nav only (no sidebar — SPEC §5.3): product, admin email, dark toggle. */
-export function NavBar({ email, dark, view, onViewChange, onToggleDark, onSignOut }: NavBarProps) {
+/**
+ * Dashboard-style top header (Quantix Glass V2): dark bg #0B0D14, indigo app
+ * mark, Instrument Serif wordmark, gold PILOT pill, mono small-caps nav tabs.
+ * Dark-only — the app matches the dashboard, so the old light-theme toggle is
+ * gone (dashboard/web/src/App.tsx:194-214 for the reference pattern).
+ */
+export function NavBar({ email, view, onViewChange, onSignOut }: NavBarProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-glass-sidebar px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white">
-              S
-            </span>
-            <span className="text-sm font-semibold tracking-tight">{PRODUCT_NAME}</span>
+          <div className="flex items-center gap-3 min-w-0 select-none">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white">
+              <span className="font-mono text-sm font-bold">S</span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="font-serif text-[16px] leading-none text-primary">Shariah Admin</span>
+                <span className="rounded-full border border-brand-gold/40 bg-brand-gold/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-brand-gold">
+                  Pilot
+                </span>
+              </div>
+              <span className="mt-1 whitespace-nowrap text-[9px] font-medium tracking-[0.03em] text-muted">
+                Beta tester console
+              </span>
+            </div>
           </div>
           {email && (
-            <nav className="flex items-center gap-1">
+            <nav className="hidden items-center gap-1 sm:flex" aria-label="Admin views">
               {NAV_LINKS.map((link) => (
                 <button
                   key={link.key}
                   type="button"
                   onClick={() => onViewChange(link.key)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  className={`rounded-lg px-3 py-1.5 text-[11px] font-mono font-semibold uppercase tracking-[0.08em] transition ${
                     view === link.key
-                      ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                      ? "border border-brand-gold/40 bg-brand-gold/10 text-brand-gold"
+                      : "border border-transparent text-muted hover:bg-white/5 hover:text-primary"
                   }`}
                 >
                   {link.label}
@@ -50,23 +61,18 @@ export function NavBar({ email, dark, view, onViewChange, onToggleDark, onSignOu
         <div className="flex items-center gap-4">
           {email && (
             <>
-              <span className="hidden text-sm text-slate-500 sm:inline dark:text-slate-400">{email}</span>
+              <span className="hidden max-w-[220px] truncate font-mono text-[11px] text-muted md:block" title={email}>
+                {email}
+              </span>
               <button
                 type="button"
                 onClick={onSignOut}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="flex items-center gap-1.5 border border-divider px-2.5 py-1 text-[10px] font-mono font-semibold uppercase tracking-[0.08em] text-muted transition-colors hover:border-brand-red/30 hover:text-brand-red"
               >
                 Sign out
               </button>
             </>
           )}
-          <button
-            type="button"
-            onClick={onToggleDark}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-          >
-            {dark ? "Light" : "Dark"}
-          </button>
         </div>
       </div>
     </header>
