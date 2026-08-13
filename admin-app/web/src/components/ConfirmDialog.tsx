@@ -11,7 +11,7 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-/** Minimal clean-SaaS confirm modal for approve/revoke (no shadcn dependency). */
+/** Glass confirm modal for approve/revoke (Quantix Glass V2, no shadcn dependency). */
 export function ConfirmDialog({
   open,
   title,
@@ -34,17 +34,17 @@ export function ConfirmDialog({
         type="button"
         aria-label="Close dialog"
         onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-slate-900/50"
+        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
       />
-      <div className="relative w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
-        <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">{message}</div>
+      <div className="glass-panel relative w-full max-w-md rounded-2xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+        <h2 className="text-base font-semibold text-primary">{title}</h2>
+        <div className="mt-2 text-sm text-muted">{message}</div>
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-muted transition hover:border-white/20 hover:text-primary disabled:opacity-50"
           >
             Cancel
           </button>
@@ -52,8 +52,10 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white shadow-sm transition disabled:opacity-50 ${
-              destructive ? "bg-red-600 hover:bg-red-500" : "bg-indigo-600 hover:bg-indigo-500"
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition disabled:opacity-50 ${
+              destructive
+                ? "bg-brand-red text-white hover:brightness-110"
+                : "bg-brand-green text-page hover:brightness-110"
             }`}
           >
             {busy ? "Working…" : confirmLabel}
