@@ -123,6 +123,17 @@ class TestAlpacaBaseUrlValidation:
             allowed_google_emails = set()
             alpaca_base_url = "https://paper-api.alpaca.markets"
 
+        # get_alpaca replaces any non-Config cfg with get_config(), so the
+        # paper fallback must be pinned via the global config — otherwise the
+        # assertion depends on the server's live .env ALPACA_BASE_URL.
+        monkeypatch.setattr(
+            "dashboard.api.deps.get_config",
+            lambda: SimpleNamespace(
+                alpaca_base_url="https://paper-api.alpaca.markets",
+                allowed_google_emails=set(),
+            ),
+        )
+
         request = SimpleNamespace(
             state=SimpleNamespace(user_id="strix_fix_legacy_user", user_email=None, user={})
         )
