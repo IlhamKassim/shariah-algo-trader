@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://shariah-algo-trader.onrender.com/sitemap.xml
