@@ -1,18 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400..700;1,400..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.font-editorial {
-  font-family: "Instrument Serif", "Newsreader", "Playfair Display", Georgia, serif;
-}
-
 body {
   margin: 0;
-  background-color: #08090e;
-  color: #ece5d5;
-  font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #0a0a0a;
+  color: #f2f0f1;
+  font-family: "Noto Serif", serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -20,10 +16,53 @@ body {
   min-height: 100vh;
 }
 
+h1, h2, h3, h4, h5, h6, .font-headline-lg, .font-headline-md, .font-headline, .font-label-md, .font-label-sm {
+  font-family: "Noto Serif", Georgia, serif;
+}
+
+/* Structured Brutalism Chart styling */
+.chart-grid {
+  stroke: #333333;
+  stroke-dasharray: 0;
+  stroke-width: 2;
+}
+.chart-line {
+  stroke: #3366cc;
+  stroke-width: 3;
+  fill: none;
+}
+.chart-area {
+  fill: #3366cc;
+  opacity: 0.8;
+}
+
+/* Structured Brutalism Data Grid */
+.data-grid {
+  display: grid;
+  gap: 2px;
+  background-color: #333333;
+  border: 2px solid #333333;
+}
+.data-grid > div {
+  background-color: #1a1918;
+  padding: 0.75rem;
+}
+.data-grid-header {
+  background-color: #242322 !important;
+  font-family: "Noto Serif", Georgia, serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #c2c7cc;
+  border-bottom: 2px solid #333333;
+}
+
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(3px);
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
@@ -32,44 +71,9 @@ body {
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.25s ease-out forwards;
+  animation: fadeIn 0.2s ease-out forwards;
 }
 
-/* Glassmorphism V2 Utilities (copied from dashboard/web/src/index.css) */
-.glass-panel {
-  background: rgba(18, 21, 32, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.glass-panel-hover {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.glass-panel-hover:hover {
-  background: rgba(25, 30, 45, 0.8);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
-
-.glass-pill {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Ambient glow backgrounds — strengthened so glass-panel blur actually reads
-   (original rgba(...,0.08/0.05) was invisible behind rgba(18,21,32,0.65) panels;
-   dashboard feels glassy because denser content sits behind the cards) */
-.bg-ambient-violet {
-  background:
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.22) 0%, transparent 45%),
-    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.14) 0%, transparent 45%),
-    radial-gradient(circle at 50% 0%, rgba(209, 169, 46, 0.06) 0%, transparent 50%);
-}
-
-/* Right-side drawer slide-in (admin app; no dashboard equivalent) */
 @keyframes drawer-in {
   from {
     transform: translateX(100%);
@@ -81,4 +85,21 @@ body {
 
 .animate-drawer-in {
   animation: drawer-in 0.18s ease-out;
+}
+
+/* Brutalist Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #333333;
+  border: 1px solid #555555;
+  border-radius: 0px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0a0a0a;
 }

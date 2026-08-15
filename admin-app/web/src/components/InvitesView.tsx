@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-
+import React, { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { AdminApi, Invite } from "../lib/api";
 import { formatDateTime, formatRelativeTime, inviteLink } from "../lib/format";
-import { Badge } from "./Badge";
 
 interface InvitesViewProps {
   api: AdminApi | null;
@@ -10,7 +8,7 @@ interface InvitesViewProps {
 
 interface ExpiryOption {
   label: string;
-  value: string | null; // ISO-8601 absolute, or null for the backend default (30 days)
+  value: string | null;
 }
 
 function buildExpiryOptions(now: number): ExpiryOption[] {
@@ -28,7 +26,6 @@ async function copyText(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // Non-secure contexts (plain Tailscale http) fall back to execCommand.
     const area = document.createElement("textarea");
     area.value = text;
     area.style.position = "fixed";
@@ -41,14 +38,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-const INPUT_CLASSES =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30";
-
 export function InvitesView({ api }: InvitesViewProps) {
-  // The four expiry ISOs are computed ONCE per mount and reused for both the
-  // <select> options and the onChange lookup. Recomputing per render made the
-  // state-held ISO never match a rendered option (selector lied about the
-  // selection and every 7/90-day choice fell back to the 30-day default).
   const [expiryOptions] = useState<ExpiryOption[]>(() => buildExpiryOptions(Date.now()));
   const [maxUses, setMaxUses] = useState(1);
   const [expiry, setExpiry] = useState<string | null>(() => expiryOptions[1].value);
@@ -103,31 +93,39 @@ export function InvitesView({ api }: InvitesViewProps) {
   };
 
   return (
-    <section>
-      <div className="mb-6">
-        <h1 className="text-[15px] font-semibold leading-tight text-primary">Invites</h1>
-        <p className="mt-0.5 text-[11px] leading-tight text-muted">
-          Single-use invite links for beta testers. The link opens the signup flow
-          with the code pre-filled.
-        </p>
+    <section className="space-y-6 animate-fadeIn">
+      {/* Title */}
+      <div className="flex justify-between items-end border-b-2 border-[#333333] pb-4">
+        <div>
+          <h2 className="text-3xl font-headline font-bold text-[#ffffff] uppercase tracking-wider">
+            Pilot Invites
+          </h2>
+          <p className="text-xs font-body text-secondary-fixed-dim mt-1 font-bold uppercase tracking-widest">
+            Single-use or multi-use recruitment tokens for beta testers
+          </p>
+        </div>
       </div>
 
       {error && (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
+          className="border-2 border-[#ba1a1a] bg-[#ba1a1a]/10 px-4 py-3 text-xs font-mono text-[#ffdad6]"
         >
           {error}
         </div>
       )}
 
-      <div className="glass-panel mb-6 rounded-2xl p-5">
-        <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-primary">
-          Create invite
-        </h2>
-        <form onSubmit={create} className="mt-4 flex flex-wrap items-end gap-4">
+      {/* Creation Box */}
+      <div className="bg-[#1a1918] border-2 border-[#333333] p-6 space-y-4">
+        <h3 className="font-headline text-sm font-bold uppercase tracking-wider text-[#ffffff]">
+          Create Invite
+        </h3>
+        <form onSubmit={create} className="flex flex-wrap items-end gap-4">
           <div>
-            <label htmlFor="max-uses" className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+            <label
+              htmlFor="max-uses"
+              className="mb-1 block text-[10px] font-mono font-bold uppercase tracking-widest text-secondary-fixed-dim"
+            >
               Max uses
             </label>
             <input
@@ -136,11 +134,15 @@ export function InvitesView({ api }: InvitesViewProps) {
               min={1}
               value={maxUses}
               onChange={(e) => setMaxUses(Math.max(1, Number(e.target.value) || 1))}
-              className={`w-24 ${INPUT_CLASSES}`}
+              className="w-28 bg-[#0a0a0a] border-2 border-[#333333] px-3 py-2 text-xs font-mono text-[#ffffff] outline-none focus:border-[#ffffff]"
             />
           </div>
+
           <div>
-            <label htmlFor="expiry" className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+            <label
+              htmlFor="expiry"
+              className="mb-1 block text-[10px] font-mono font-bold uppercase tracking-widest text-secondary-fixed-dim"
+            >
               Expiry
             </label>
             <select
@@ -150,7 +152,7 @@ export function InvitesView({ api }: InvitesViewProps) {
                 const option = expiryOptions.find((o) => (o.value ?? "never") === e.target.value);
                 setExpiry(option ? option.value : null);
               }}
-              className={INPUT_CLASSES}
+              className="bg-[#0a0a0a] border-2 border-[#333333] px-3 py-2 text-xs font-mono text-[#ffffff] outline-none focus:border-[#ffffff]"
             >
               {expiryOptions.map((option) => (
                 <option key={option.label} value={option.value ?? "never"}>
@@ -159,102 +161,113 @@ export function InvitesView({ api }: InvitesViewProps) {
               ))}
             </select>
           </div>
+
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition hover:bg-indigo-500 disabled:opacity-50"
+            className="bg-[#f2f0f1] text-[#0a0a0a] border-2 border-[#f2f0f1] px-5 py-2 text-xs font-label font-bold uppercase tracking-widest hover:bg-[#d1d1d1] transition-none disabled:opacity-50"
           >
             {creating ? "Creating…" : "Create invite"}
           </button>
         </form>
 
         {fresh && (
-          <div className="mt-5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-300">
+          <div className="mt-4 border-2 border-[#10b981] bg-[#10b981]/10 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#10b981]">
                   Invite created
                 </div>
-                <div className="mt-1 truncate font-mono text-sm font-semibold text-emerald-200">
+                <div className="text-base font-mono font-bold text-[#ffffff] mt-0.5">
                   {fresh.code}
                 </div>
-                <div className="mt-0.5 truncate font-mono text-xs text-muted">
+                <div className="text-xs font-mono text-secondary-fixed-dim truncate mt-0.5">
                   {inviteLink(fresh.code)}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => void copy(fresh.code)}
-                className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                className="self-start sm:self-auto bg-[#10b981] text-[#0a0a0a] border-2 border-[#10b981] px-4 py-1.5 text-xs font-label font-bold uppercase tracking-widest hover:bg-[#059669]"
               >
                 {copied ? "Copied" : "Copy link"}
               </button>
             </div>
-            <p className="mt-2 text-xs text-muted">
-              Send this link to the recruit — it expires {formatRelativeTime(fresh.expires_at)} and can be
-              used {fresh.max_uses} time{fresh.max_uses === 1 ? "" : "s"}.
+            <p className="mt-2 text-[11px] font-mono text-secondary-fixed-dim">
+              Expires {formatRelativeTime(fresh.expires_at)} · Valid for {fresh.max_uses} use
+              {fresh.max_uses === 1 ? "" : "s"}.
             </p>
           </div>
         )}
       </div>
 
-      <div className="glass-panel overflow-hidden rounded-2xl">
-        <div className="border-b border-white/10 px-5 py-4">
-          <span className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-primary">All invites</span>
+      {/* Invites Table */}
+      <div className="bg-[#1a1918] border-2 border-[#333333] p-6 space-y-4">
+        <div className="flex justify-between items-center px-1">
+          <h3 className="text-xs font-label font-bold uppercase tracking-widest text-[#f2f0f1]">
+            All invites ({invites.length})
+          </h3>
         </div>
-        {loading ? (
-          <div className="px-5 py-10 text-center text-sm text-muted">Loading invites…</div>
-        ) : invites.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-muted">
-            No invites yet. Create your first one above.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/10 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-                  <th scope="col" className="px-5 py-3 font-semibold">Code</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold">Uses</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Expires</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
-                  <th scope="col" className="px-5 py-3 text-right font-semibold">Link</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invites.map((invite) => (
-                  <tr
-                    key={invite.code}
-                    className="border-b border-white/10 transition last:border-0 hover:bg-white/[0.03]"
+
+        <div className="data-grid grid-cols-6 border-2 border-[#333333]">
+          {/* Header */}
+          <div className="data-grid-header">Code</div>
+          <div className="data-grid-header text-center">Status</div>
+          <div className="data-grid-header text-right">Uses</div>
+          <div className="data-grid-header">Expires</div>
+          <div className="data-grid-header">Created</div>
+          <div className="data-grid-header text-right">Action</div>
+
+          {/* Rows */}
+          {loading ? (
+            <div className="col-span-6 p-8 text-center text-xs font-mono text-secondary-fixed-dim">
+              Loading invites…
+            </div>
+          ) : invites.length === 0 ? (
+            <div className="col-span-6 p-8 text-center text-xs font-mono text-secondary-fixed-dim">
+              No invites yet. Create your first one above.
+            </div>
+          ) : (
+            invites.map((inv) => (
+              <React.Fragment key={inv.code}>
+                <div className="text-xs font-mono font-bold text-[#ffffff] truncate bg-[#1a1918]">
+                  {inv.code}
+                </div>
+                <div className="text-center bg-[#1a1918]">
+                  <span
+                    className={`px-2 py-0.5 border border-[#333333] text-[9px] font-bold uppercase tracking-wider ${
+                      inv.expired
+                        ? "bg-[#0a0a0a] text-[#ba1a1a]"
+                        : inv.uses >= inv.max_uses
+                        ? "bg-[#0a0a0a] text-[#f59e0b]"
+                        : "bg-[#0a0a0a] text-[#10b981]"
+                    }`}
                   >
-                    <td className="px-5 py-3 font-mono text-sm text-primary">{invite.code}</td>
-                    <td className="px-4 py-3">
-                      <Badge tone={invite.expired ? "red" : invite.uses >= invite.max_uses ? "amber" : "green"}>
-                        {invite.expired ? "Expired" : invite.uses >= invite.max_uses ? "Used up" : "Active"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-muted">
-                      {invite.uses} / {invite.max_uses}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted">
-                      {invite.expires_at ? formatDateTime(invite.expires_at) : "Never"}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted">{formatDateTime(invite.created_at)}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => void copy(invite.code)}
-                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-muted transition hover:border-white/20 hover:text-primary"
-                      >
-                        Copy
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    {inv.expired ? "Expired" : inv.uses >= inv.max_uses ? "Used up" : "Active"}
+                  </span>
+                </div>
+                <div className="text-xs font-mono text-right text-[#f2f0f1] bg-[#1a1918]">
+                  {inv.uses} / {inv.max_uses}
+                </div>
+                <div className="text-[11px] font-mono text-secondary-fixed-dim truncate bg-[#1a1918]">
+                  {inv.expires_at ? formatDateTime(inv.expires_at) : "Never"}
+                </div>
+                <div className="text-[11px] font-mono text-secondary-fixed-dim truncate bg-[#1a1918]">
+                  {formatDateTime(inv.created_at)}
+                </div>
+                <div className="text-right bg-[#1a1918]">
+                  <button
+                    type="button"
+                    onClick={() => void copy(inv.code)}
+                    className="border-2 border-[#333333] bg-[#242322] px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase text-[#f2f0f1] hover:bg-[#333333]"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </React.Fragment>
+            ))
+          )}
+        </div>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 /**
- * Typed client for the admin API (SPEC-BETA-PILOT.md §5.2, A1-A7).
+ * Typed client for the admin API (SPEC-BETA-PILOT.md §5.2 & SPEC-BRUTALISM-ADMIN.md).
  *
  * The backend requires BOTH verify_auth (401) and is_admin (403) on every
  * /api/admin/* route; the token is supplied as a bearer token by the caller
@@ -65,6 +65,8 @@ export interface Position {
   qty: string;
   market_value: string;
   unrealized_pl: string;
+  current_price?: string;
+  cost_basis?: string;
   [key: string]: unknown;
 }
 
@@ -90,6 +92,7 @@ export interface ActivityEvent {
   id: string;
   event_type: string;
   actor: string;
+  actor_cust_id?: string | null;
   ip_address: string;
   details: string;
   created_at: string;
@@ -99,6 +102,114 @@ export interface ActivityResponse {
   user_id: string;
   events: ActivityEvent[];
   count: number;
+}
+
+export interface TradingPrefs {
+  etf_symbol: string;
+  top_n: number;
+  sector_cap: number;
+  drift_threshold: number;
+}
+
+export interface CustomerProfilePortfolio {
+  status: "ok" | "no_keys" | "unreachable";
+  equity?: string;
+  cash?: string;
+  buying_power?: string;
+  position_count?: number;
+  unrealized_pl?: number;
+  positions?: Position[];
+  paper_base_url?: string;
+}
+
+export interface CustomerProfileCompliance {
+  status: "ok" | "no_keys" | "unreachable";
+  compliant?: boolean;
+  violations?: string[];
+  held_count?: number;
+  universe_size?: number;
+  last_checked?: string | null;
+}
+
+export interface CustomerProfile {
+  user_id: string;
+  cust_id: string;
+  email: string;
+  role: string;
+  state: TesterState;
+  invite_code: string | null;
+  linkedin_url: string | null;
+  notes: string | null;
+  approved_by: string | null;
+  created_at: string;
+  updated_at: string;
+  trading_mode: string;
+  shariah_trader_enabled: number;
+  has_paper_keys: boolean;
+  has_live_keys: boolean;
+  prefs: TradingPrefs;
+  portfolio: CustomerProfilePortfolio;
+  compliance: CustomerProfileCompliance;
+  last_activity_at: string | null;
+}
+
+export interface RiskKpis {
+  total_customers: number;
+  active_traders: number;
+  portfolio_value_usd: number;
+  accounts_evaluated: number;
+  accounts_unreachable: number;
+  compliance_pct: number | null;
+  compliance_status: "OPTIMAL" | "WATCH" | "CRITICAL" | "N/A";
+}
+
+export interface RiskDistribution {
+  low: number;
+  med: number;
+  high: number;
+}
+
+export interface LiveAlert {
+  created_at: string;
+  severity: "critical" | "warning" | "info";
+  code: string;
+  user_id: string;
+  message: string;
+}
+
+export interface FlaggedAccount {
+  user_id: string;
+  cust_id: string;
+  risk_level: "LOW" | "MED" | "HIGH";
+  last_activity_at: string | null;
+  exposure_usd: number;
+  state: TesterState;
+  reasons: string[];
+}
+
+export interface AnalyticsRiskResponse {
+  generated_at: string;
+  cache_ttl_seconds: number;
+  kpis: RiskKpis;
+  risk_distribution: RiskDistribution;
+  alerts: LiveAlert[];
+  flagged: FlaggedAccount[];
+}
+
+export interface AuditQueryParams {
+  limit?: number;
+  offset?: number;
+  event_type?: string;
+  q?: string;
+  since?: string;
+}
+
+export interface AuditLogsResponse {
+  events: ActivityEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+  event_types: string[];
 }
 
 export class ApiError extends Error {
@@ -159,6 +270,26 @@ export class AdminApi {
 
   async listInvites(): Promise<InviteList> {
     return this.request<InviteList>("/invites");
+  }
+
+  async getCustomerProfile(userId: string): Promise<CustomerProfile> {
+    return this.request<CustomerProfile>(`/customers/${encodeURIComponent(userId)}/profile`);
+  }
+
+  async getAnalyticsRisk(): Promise<AnalyticsRiskResponse> {
+    return this.request<AnalyticsRiskResponse>("/analytics/risk");
+  }
+
+  async getAuditLogs(params: AuditQueryParams = {}): Promise<AuditLogsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params.limit !== undefined) searchParams.set("limit", String(params.limit));
+    if (params.offset !== undefined) searchParams.set("offset", String(params.offset));
+    if (params.event_type) searchParams.set("event_type", params.event_type);
+    if (params.q) searchParams.set("q", params.q);
+    if (params.since) searchParams.set("since", params.since);
+
+    const query = searchParams.toString();
+    return this.request<AuditLogsResponse>(`/audit${query ? `?${query}` : ""}`);
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
