@@ -208,4 +208,128 @@ describe("AdminApi", () => {
     expect(err.detail).toBe("Missing or invalid Authorization header");
     expect(err.message).toBe("Missing or invalid Authorization header");
   });
+
+  it("fetches spectate engine status from /spectate/status", async () => {
+    const status = {
+      scheduler_running: true,
+      last_started_at: "2026-08-15T01:00:00+00:00",
+      next_fire_at: "2026-08-17T09:30:00-04:00",
+      etf_symbol: "SPUS",
+      top_n: 20,
+      broker_url: "https://paper-api.alpaca.markets",
+      trading_mode: "paper",
+      is_live: false,
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status)));
+
+    const result = await new AdminApi(() => "jwt-token").spectateStatus();
+
+    expect(fetchMockUrl()).toBe("/api/admin/spectate/status");
+    expect(result.scheduler_running).toBe(true);
+    expect(result.etf_symbol).toBe("SPUS");
+    expect(result.top_n).toBe(20);
+  });
+
+  it("fetches spectate account from /spectate/account", async () => {
+    const account = {
+      equity: 12500.5,
+      cash: 2500.0,
+      buying_power: 5000.0,
+      portfolio_value: 12500.5,
+      dayl_pl: 120.25,
+      dayl_pl_pct: 0.97,
+      estimated_fees: 0.0,
+      fee_drag_pct: 0.0,
+      fee_status_label: "Ultra-Low Drag (<0.05%)",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(account)));
+
+    const result = await new AdminApi(() => "jwt-token").spectateAccount();
+
+    expect(fetchMockUrl()).toBe("/api/admin/spectate/account");
+    expect(result.equity).toBe(12500.5);
+    expect(result.dayl_pl_pct).toBe(0.97);
+  });
+
+  it("fetches spectate portfolio positions from /spectate/portfolio", async () => {
+    const positions = [
+      {
+        symbol: "SPUS",
+        qty: 100,
+        market_value: 4200.0,
+        avg_entry_price: 40.5,
+        unrealized_pl: 150.0,
+        unrealized_pl_pct: 3.7,
+        current_price: 42.0,
+      },
+    ];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(positions)));
+
+    const result = await new AdminApi(() => "jwt-token").spectatePortfolio();
+
+    expect(fetchMockUrl()).toBe("/api/admin/spectate/portfolio");
+    expect(result[0].symbol).toBe("SPUS");
+    expect(result[0].unrealized_pl).toBe(150.0);
+  });
+
+  it("fetches spectate universe from /spectate/universe", async () => {
+    const universe = {
+      computing: false,
+      last_computed_at: "2026-08-15T02:00:00+00:00",
+      stocks: [
+        {
+          symbol: "MSFT",
+          momentum_score: 0.9,
+          quality_score: 0.8,
+          volatility_score: 0.2,
+          value_score: 0.6,
+          factor_score: 0.78,
+          rank: 1,
+          in_portfolio: true,
+          in_top_n: true,
+        },
+      ],
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(universe)));
+
+    const result = await new AdminApi(() => "jwt-token").spectateUniverse();
+
+    expect(fetchMockUrl()).toBe("/api/admin/spectate/universe");
+    expect(result.stocks[0].factor_score).toBe(0.78);
+    expect(result.stocks[0].in_portfolio).toBe(true);
+  });
+
+  it("fetches spectate compliance from /spectate/compliance", async () => {
+    const compliance = {
+      compliant: true,
+      violations: [],
+      held_count: 18,
+      universe_size: 20,
+      last_checked: "2026-08-15T02:30:00+00:00",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(compliance)));
+
+    const result = await new AdminApi(() => "jwt-token").spectateCompliance();
+
+    expect(fetchMockUrl()).toBe("/api/admin/spectate/compliance");
+    expect(result.compliant).toBe(true);
+    expect(result.held_count).toBe(18);
+  });
+
+  it("surfaces 502 from any spectate call as ApiError with the proxy detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse({ detail: "Dashboard unreachable: connection refused" }, 502)),
+    );
+
+    await expect(new AdminApi(() => "jwt-token").spectateStatus()).rejects.toMatchObject({
+      status: 502,
+      detail: "Dashboard unreachable: connection refused",
+    });
+  });
 });
+
+function fetchMockUrl(): string {
+  const calls = vi.mocked(fetch).mock.calls;
+  return typeof calls[0][0] === "string" ? calls[0][0] : String(calls[0][0]);
+}

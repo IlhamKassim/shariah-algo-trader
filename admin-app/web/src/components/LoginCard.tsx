@@ -1,14 +1,6 @@
 import { useState, type FormEvent } from "react";
-
 import { signIn } from "../lib/auth";
 
-/**
- * Sign-in glass card centered on the dark page (Quantix Glass V2 — matches
- * dashboard/web GlassCard pattern + dashboard-style inputs, OverviewV2.tsx).
- * Primary action is indigo-600 (single accent system — gold never drives a
- * primary action, it is reserved for rank/status). Session changes are picked
- * up by App's onSessionChange subscription.
- */
 export function LoginCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,33 +17,42 @@ export function LoginCard() {
   };
 
   const inputClasses =
-    "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-primary shadow-sm outline-none transition placeholder:text-faint focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30";
+    "w-full bg-[#0a0a0a] border-2 border-[#333333] px-3 py-2.5 text-xs font-mono text-[#ffffff] outline-none focus:border-[#ffffff] placeholder:text-secondary-fixed-dim rounded-none";
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-sm flex-col justify-center px-6 py-16">
-      <div className="glass-panel rounded-2xl p-8">
-        <div className="flex items-center gap-3 select-none">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.35)]">
-            <span className="font-mono text-sm font-bold">S</span>
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6 py-16">
+      <div className="bg-[#1a1918] border-2 border-[#333333] p-8 space-y-6">
+        {/* Brand header */}
+        <div className="flex items-center gap-3 select-none border-b-2 border-[#333333] pb-4">
+          <div className="w-10 h-10 bg-[#3366cc] border-2 border-[#333333] flex items-center justify-center text-lg font-headline font-bold text-white">
+            S
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="font-serif text-lg leading-none text-primary">Shariah Admin</span>
-              <span className="rounded-full border border-brand-gold/40 bg-brand-gold/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-brand-gold">
-                Pilot
-              </span>
-            </div>
-            <span className="mt-1 block whitespace-nowrap text-[9px] font-medium tracking-[0.03em] text-muted">
-              Beta tester console · paper only
-            </span>
+          <div>
+            <h1 className="text-lg font-headline font-bold text-[#ffffff] uppercase tracking-wider">
+              ShariahAdmin
+            </h1>
+            <p className="text-[10px] font-mono text-secondary-fixed-dim uppercase tracking-widest">
+              Trading Portal · Paper Only
+            </p>
           </div>
         </div>
-        <h1 className="mt-6 text-lg font-semibold tracking-tight text-primary">Sign in</h1>
-        <p className="mt-1 text-sm text-muted">Admin access to the beta tester pilot.</p>
-        <form onSubmit={submit} className="mt-6 space-y-4">
+
+        <div>
+          <h2 className="text-xl font-headline font-bold text-[#ffffff] uppercase tracking-wider">
+            Operator Sign In
+          </h2>
+          <p className="text-xs font-mono text-secondary-fixed-dim mt-1">
+            Administrative access to the algorithmic trading console.
+          </p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
-              Email
+            <label
+              htmlFor="email"
+              className="mb-1 block text-[10px] font-mono font-bold uppercase tracking-widest text-secondary-fixed-dim"
+            >
+              Operator Email
             </label>
             <input
               id="email"
@@ -61,11 +62,15 @@ export function LoginCard() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={inputClasses}
-              placeholder="you@example.com"
+              placeholder="admin@shariahtrading.my"
             />
           </div>
+
           <div>
-            <label htmlFor="password" className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+            <label
+              htmlFor="password"
+              className="mb-1 block text-[10px] font-mono font-bold uppercase tracking-widest text-secondary-fixed-dim"
+            >
               Password
             </label>
             <input
@@ -78,17 +83,22 @@ export function LoginCard() {
               className={inputClasses}
             />
           </div>
+
           {error && (
-            <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+            <div
+              role="alert"
+              className="border-2 border-[#ba1a1a] bg-[#ba1a1a]/10 p-3 text-xs font-mono text-[#ffdad6]"
+            >
               {error}
-            </p>
+            </div>
           )}
+
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full bg-[#f2f0f1] text-[#0a0a0a] border-2 border-[#f2f0f1] py-3 text-xs font-label font-bold uppercase tracking-widest hover:bg-[#d1d1d1] transition-none disabled:opacity-50"
           >
-            {busy ? "Signing in…" : "Sign in"}
+            {busy ? "Authenticating…" : "Authenticate Session"}
           </button>
         </form>
       </div>

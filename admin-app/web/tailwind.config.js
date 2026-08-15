@@ -1,44 +1,79 @@
 /** @type {import('tailwindcss').Config} */
-// Token set copied verbatim from dashboard/web/tailwind.config.js (Quantix Glass V2).
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
-        mono: ['"JetBrains Mono"', '"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
-        serif: ['"Instrument Serif"', '"Newsreader"', '"Playfair Display"', "Georgia", "serif"],
-        display: ['"Instrument Serif"', '"Newsreader"', '"Playfair Display"', "Georgia", "serif"],
-        playfair: ['"Playfair Display"', "serif"],
-        inter: ["Inter", "sans-serif"],
+        headline: ['"Noto Serif"', "serif"],
+        display: ['"Noto Serif"', "serif"],
+        label: ['"Noto Serif"', "serif"],
+        serif: ['"Noto Serif"', "Georgia", "serif"],
+        sans: ['"Inter"', '"Plus Jakarta Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        body: ['"Inter"', '"Plus Jakarta Sans"', "sans-serif"],
+        mono: ['"JetBrains Mono"', '"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       colors: {
-        page: "#0C0B09",
-        sidebar: "#0C0B09",
-        card: "#0C0B09",
-        "card-hover": "#141210",
-        divider: "#29241B",
-        "card-border": "#29241B",
-        primary: "#ECE5D5",
-        muted: "#8C8577",
-        faint: "#4C4739",
-        section: "#8C8577",
-        "brand-green": "#5BA97C",
-        "brand-red": "#D16A5B",
-        "brand-gold": "#D1A92E",
-        "brand-blue": "#7FB4FF",
-        // Quantix Glass V2 Theme Tokens
-        "glass-page": "#08090E",
-        "glass-sidebar": "#0B0D14",
-        "glass-card": "rgba(18, 21, 32, 0.65)",
-        "glass-card-hover": "rgba(25, 30, 45, 0.8)",
-        "glass-border": "rgba(255, 255, 255, 0.08)",
-        "glass-border-glow": "rgba(255, 255, 255, 0.18)",
-        "glass-accent-emerald": "#10B981",
-        "glass-accent-rose": "#F43F5E",
-        "glass-accent-amber": "#F59E0B",
-        "glass-accent-indigo": "#6366F1",
+        // Structured Brutalism Surface tokens
+        page: "#0A0A0A",
+        surface: "#1A1918",
+        "surface-container": "#1A1918",
+        "surface-header": "#242322",
+        "surface-elevated": "#2D2C2B",
+        "border-grid": "#333333",
+        "border-light": "#555555",
+
+        // Primary branding & chart accents
+        primary: "#3366CC",
+        "primary-dark": "#094CB2",
+        "primary-container": "#3366CC",
+        "on-primary-container": "#E7EBFF",
+        "primary-fixed": "#D9E2FF",
+
+        // Secondary & neutral tokens
+        secondary: "#5A5F63",
+        "secondary-fixed-dim": "#C2C7CC",
+        "secondary-container": "#DFE3E8",
+        "inverse-surface": "#303031",
+        "inverse-on-surface": "#F2F0F1",
+
+        // Text tokens
+        "text-primary": "#FFFFFF",
+        "text-body": "#F2F0F1",
+        "text-secondary": "#C2C7CC",
+        "text-muted": "#737784",
+        "text-faint": "#5A6E68",
+
+        // Semantic status tokens
+        "brand-green": "#10B981",
+        "brand-emerald": "#10B981",
+        "brand-amber": "#F59E0B",
+        "brand-red": "#BA1A1A",
+        "brand-rose": "#FB7185",
+        "brand-gold": "#6D5E00",
+        "tertiary": "#6D5E00",
+        "tertiary-fixed": "#F9E37A",
+
+        // Legacy compat aliases
+        panel: "#1A1918",
+        "panel-hover": "#242322",
+        line: "#333333",
+        lime: "#BEF264",
+        "lime-deep": "#84CC16",
+      },
+      borderRadius: {
+        DEFAULT: "0rem",
+        none: "0rem",
+        xs: "2px",
+        sm: "2px",
+        md: "4px",
+        lg: "0rem",
+        xl: "0rem",
+        full: "9999px",
+      },
+      boxShadow: {
+        panel: "none",
+        brutalist: "2px 2px 0px 0px #333333",
       },
     },
   },

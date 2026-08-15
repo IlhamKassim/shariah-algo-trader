@@ -1,30 +1,38 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 
+import { AdminHeader } from "./components/AdminHeader";
+import { AdminSidebar, type View } from "./components/AdminSidebar";
+import { OverviewView } from "./components/OverviewView";
+import { CustomersView } from "./components/CustomersView";
+import { SpectateView } from "./components/SpectateView";
 import { InvitesView } from "./components/InvitesView";
+import { ActivityTrailView } from "./components/ActivityTrailView";
 import { LoginCard } from "./components/LoginCard";
-import { NavBar, type View } from "./components/NavBar";
 import { TesterDrawer } from "./components/TesterDrawer";
-import { TestersView } from "./components/TestersView";
 import { TickerBar } from "./components/TickerBar";
-import { ApiError, AdminApi, type Tester } from "./lib/api";
+import {
+  ApiError,
+  AdminApi,
+  type AnalyticsRiskResponse,
+  type Invite,
+  type Tester,
+} from "./lib/api";
 import { getInitialSession, onSessionChange, signOut } from "./lib/auth";
 
-/**
- * Admin app shell (SPEC-BETA-PILOT.md §5.3): top nav only, dark Quantix Glass
- * V2 theme (page #08090E + ambient glow — matches dashboard/web App.tsx:460).
- * Three views — Testers (list + detail drawer) and Invites — plus a minimal
- * sign-in card when there is no Supabase session.
- */
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<View>("testers");
+  const [view, setView] = useState<View>("overview");
   const [testers, setTesters] = useState<Tester[]>([]);
+  const [, setInvites] = useState<Invite[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsRiskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Tester | null>(null);
+  const [selectedTesterId, setSelectedTesterId] = useState<string | null>(null);
+  const [drawerTester, setDrawerTester] = useState<Tester | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,18 +72,23 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.listTesters();
-      setTesters(data.testers);
-      setSelected((current) => {
-        if (!current) return null;
-        return data.testers.find((t) => t.user_id === current.user_id) ?? null;
-      });
+      const [testerData, inviteData, riskData] = await Promise.all([
+        api.listTesters(),
+        api.listInvites(),
+        api.getAnalyticsRisk().catch(() => null),
+      ]);
+      setTesters(testerData.testers);
+      setInvites(inviteData.invites);
+      if (riskData) setAnalytics(riskData);
+      if (testerData.testers.length > 0 && !selectedTesterId) {
+        setSelectedTesterId(testerData.testers[0].user_id);
+      }
     } catch (e) {
       handleError(e);
     } finally {
       setLoading(false);
     }
-  }, [api, handleError]);
+  }, [api, selectedTesterId, handleError]);
 
   useEffect(() => {
     if (api) void refresh();
@@ -99,45 +112,109 @@ export default function App() {
     [api, refresh, handleError],
   );
 
+  const activeTestersCount = testers.filter((t) => t.state === "active").length;
+
   return (
-    <div className="flex min-h-screen flex-col bg-glass-page text-primary">
-      <NavBar
-        email={session?.user.email ?? null}
-        view={view}
-        onViewChange={setView}
-        onSignOut={() => void signOut()}
-      />
+    <div className="flex h-screen max-h-screen overflow-hidden bg-[#0a0a0a] font-sans text-[#f2f0f1]">
+      {!authLoading && session && (
+        <AdminSidebar
+          view={view}
+          onViewChange={setView}
+          email={session.user.email ?? null}
+          onSignOut={() => void signOut()}
+          onOpenInviteModal={() => setView("invites")}
+        />
+      )}
 
-      <TickerBar
-        totalTesters={session ? testers.length : null}
-        activeTesters={session ? testers.filter((t) => t.state === "active").length : null}
-      />
+      <div className={`flex min-w-0 flex-1 flex-col overflow-hidden bg-[#0a0a0a] ${session ? "ml-64" : ""}`}>
+        {!authLoading && session && (
+          <AdminHeader
+            title={view.toUpperCase()}
+            email={session.user.email ?? null}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onRefresh={() => void refresh()}
+            alertCount={analytics?.alerts.length ?? 0}
+            alerts={analytics?.alerts ?? []}
+          />
+        )}
 
-      <div className="flex-1 bg-ambient-violet">
-        <main className="mx-auto max-w-6xl px-6 py-8">
-          {authLoading ? (
-            <p className="py-16 text-center text-sm text-muted">Checking session…</p>
-          ) : !session ? (
+        {authLoading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <p className="font-mono text-xs uppercase tracking-widest text-secondary-fixed-dim">
+              Validating operator credentials…
+            </p>
+          </div>
+        ) : !session ? (
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <LoginCard />
-          ) : view === "testers" ? (
-            <TestersView
-              testers={testers}
-              loading={loading}
-              error={error}
-              busyId={busyId}
-              api={api}
-              onApprove={(t) => void runAction(t, "approve")}
-              onRevoke={(t) => void runAction(t, "revoke")}
-              onSelect={setSelected}
+          </div>
+        ) : (
+          <>
+            <TickerBar
+              totalTesters={testers.length}
+              activeTesters={activeTestersCount}
+              compliancePct={analytics?.kpis.compliance_pct}
+              portfolioValue={analytics?.kpis.portfolio_value_usd}
             />
-          ) : (
-            <InvitesView api={api} />
-          )}
-        </main>
+
+            <main className="custom-scrollbar flex-1 overflow-y-auto p-8">
+              <div className="mx-auto w-full max-w-[1550px]">
+                {error && (
+                  <div
+                    role="alert"
+                    className="mb-6 border-2 border-[#ba1a1a] bg-[#ba1a1a]/10 p-4 text-xs font-mono text-[#ffdad6]"
+                  >
+                    {error}
+                  </div>
+                )}
+
+                {view === "overview" && (
+                  <OverviewView
+                    analytics={analytics}
+                    testers={testers}
+                    loading={loading}
+                    onNavigateToCustomers={(uid) => {
+                      if (uid) setSelectedTesterId(uid);
+                      setView("customers");
+                    }}
+                    onRefresh={() => void refresh()}
+                  />
+                )}
+
+                {view === "customers" && (
+                  <CustomersView
+                    testers={testers}
+                    selectedTesterId={selectedTesterId}
+                    onSelectTester={(t) => setSelectedTesterId(t?.user_id ?? null)}
+                    onApprove={(t) => void runAction(t, "approve")}
+                    onRevoke={(t) => void runAction(t, "revoke")}
+                    onInspectDrawer={(t) => setDrawerTester(t)}
+                    api={api}
+                    busyId={busyId}
+                    globalSearch={searchQuery}
+                  />
+                )}
+
+                {view === "spectate" && (
+                  <SpectateView api={api} email={session.user.email ?? null} />
+                )}
+
+                {view === "invites" && <InvitesView api={api} />}
+
+                {view === "activity" && <ActivityTrailView api={api} />}
+              </div>
+            </main>
+          </>
+        )}
       </div>
 
-      {selected && api && (
-        <TesterDrawer tester={selected} api={api} onClose={() => setSelected(null)} />
+      {drawerTester && api && (
+        <TesterDrawer
+          tester={drawerTester}
+          api={api}
+          onClose={() => setDrawerTester(null)}
+        />
       )}
     </div>
   );

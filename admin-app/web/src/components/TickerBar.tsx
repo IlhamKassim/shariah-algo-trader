@@ -1,67 +1,59 @@
+
 interface TickerBarProps {
   totalTesters: number | null;
   activeTesters: number | null;
+  compliancePct?: number | null;
+  portfolioValue?: number | null;
 }
 
-function ShieldGlyph() {
+export function TickerBar({
+  totalTesters,
+  activeTesters,
+  compliancePct,
+  portfolioValue,
+}: TickerBarProps) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-    </svg>
-  );
-}
-
-function UsersGlyph() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-/**
- * Signature top strip mirroring the dashboard's TopTickerBar (Quantix Glass
- * V2): mono pills on a translucent #0B0D14 bar with a bottom hairline. The
- * dashboard ticks market prices; the admin console ticks pilot telemetry —
- * PILOT · N TESTERS · N ACTIVE · PAPER ONLY.
- */
-export function TickerBar({ totalTesters, activeTesters }: TickerBarProps) {
-  return (
-    <div className="w-full bg-[#0B0D14]/80 backdrop-blur-md border-b border-white/10 px-4 py-2 flex flex-wrap items-center justify-between text-xs font-mono gap-3 text-slate-300">
+    <div className="flex w-full flex-wrap items-center justify-between gap-3 border-b-2 border-[#333333] bg-[#1a1918] px-8 py-2 font-mono text-xs text-secondary-fixed-dim select-none">
       <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 shrink-0">
-          <ShieldGlyph />
-          <span className="font-bold tracking-wider">PILOT</span>
-          <span className="text-indigo-200 font-sans font-bold">BETA</span>
+        {/* System telemetry */}
+        <div className="flex items-center gap-2 border-2 border-[#333333] px-2.5 py-1 bg-[#0a0a0a]">
+          <span className="h-2 w-2 bg-[#10b981]" />
+          <span className="font-bold text-[#f2f0f1] uppercase tracking-wider">
+            SYS STATUS: ONLINE
+          </span>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/60 border border-white/10 text-slate-300 shrink-0">
-          <UsersGlyph />
-          <span className="font-semibold tracking-wider text-indigo-300">TESTERS</span>
-          <span className="font-sans font-bold tabular-nums">{totalTesters ?? "—"}</span>
+        <div className="flex items-center gap-2 border-2 border-[#333333] px-2.5 py-1 bg-[#242322]">
+          <span className="text-secondary-fixed-dim uppercase tracking-wider">TOTAL CUSTOMERS:</span>
+          <span className="font-bold text-[#ffffff]">{totalTesters ?? "—"}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-semibold tracking-wider">ACTIVE</span>
-          <span className="font-sans font-bold tabular-nums">{activeTesters ?? "—"}</span>
+        <div className="flex items-center gap-2 border-2 border-[#333333] px-2.5 py-1 bg-[#242322]">
+          <span className="text-secondary-fixed-dim uppercase tracking-wider">ACTIVE TRADERS:</span>
+          <span className="font-bold text-[#10b981]">{activeTesters ?? "—"}</span>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 text-slate-400 text-[11px] shrink-0 border-l border-white/10 pl-3">
-          <span className="uppercase text-slate-500">Shariah Trading Platform</span>
-          <span className="text-indigo-300 font-medium">Admin Console</span>
-        </div>
+        {compliancePct !== undefined && compliancePct !== null && (
+          <div className="flex items-center gap-2 border-2 border-[#333333] px-2.5 py-1 bg-[#242322]">
+            <span className="text-secondary-fixed-dim uppercase tracking-wider">COMPLIANCE:</span>
+            <span className="font-bold text-[#10b981]">{compliancePct.toFixed(1)}%</span>
+          </div>
+        )}
+
+        {portfolioValue !== undefined && portfolioValue !== null && (
+          <div className="hidden lg:flex items-center gap-2 border-2 border-[#333333] px-2.5 py-1 bg-[#242322]">
+            <span className="text-secondary-fixed-dim uppercase tracking-wider">AGGREGATE AUM:</span>
+            <span className="font-bold text-[#ffffff]">
+              ${portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-[11px]">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-          <span className="text-slate-400 uppercase tracking-wider text-[10px]">MODE</span>
-          <span className="text-indigo-300 font-bold">PAPER ONLY</span>
-        </div>
+      <div className="flex items-center gap-2 border-2 border-[#333333] px-2.5 py-1 bg-[#0a0a0a] text-[11px]">
+        <span className="h-1.5 w-1.5 bg-[#f9e37a]" />
+        <span className="uppercase tracking-widest text-secondary-fixed-dim">ENVIRONMENT:</span>
+        <span className="font-bold text-[#f9e37a]">PAPER ONLY (G5)</span>
       </div>
     </div>
   );
