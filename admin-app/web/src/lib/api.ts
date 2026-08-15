@@ -212,6 +212,71 @@ export interface AuditLogsResponse {
   event_types: string[];
 }
 
+/** Engine status (spectate S1 → GET /api/status on :8000). */
+export interface SpectateStatusResponse {
+  scheduler_running: boolean;
+  last_started_at: string | null;
+  next_fire_at: string | null;
+  etf_symbol: string;
+  top_n: number;
+  broker_url: string;
+  trading_mode?: string;
+  is_live?: boolean;
+}
+
+/** Founder account (spectate S2 → GET /api/account on :8000). */
+export interface SpectateAccountResponse {
+  equity: number;
+  cash: number;
+  buying_power: number;
+  portfolio_value: number;
+  dayl_pl: number;
+  dayl_pl_pct: number;
+  estimated_fees?: number;
+  fee_drag_pct?: number;
+  fee_status_label?: string;
+}
+
+/** Founder position (spectate S3 → GET /api/portfolio on :8000). */
+export interface SpectatePosition {
+  symbol: string;
+  qty: number;
+  market_value: number;
+  avg_entry_price: number;
+  unrealized_pl: number;
+  unrealized_pl_pct: number;
+  current_price: number;
+}
+
+/** Universe row (spectate S4 → GET /api/universe on :8000). */
+export interface SpectateStockScore {
+  symbol: string;
+  company_name?: string | null;
+  momentum_score: number;
+  quality_score: number;
+  volatility_score: number;
+  value_score: number;
+  factor_score: number;
+  rank: number;
+  in_portfolio: boolean;
+  in_top_n: boolean;
+}
+
+export interface SpectateUniverseResponse {
+  computing: boolean;
+  last_computed_at: string | null;
+  stocks: SpectateStockScore[];
+}
+
+/** Founder compliance (spectate S5 → GET /api/compliance on :8000). */
+export interface SpectateComplianceResponse {
+  compliant: boolean;
+  violations: string[];
+  held_count: number;
+  universe_size: number;
+  last_checked: string | null;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly detail: string;
@@ -290,6 +355,31 @@ export class AdminApi {
 
     const query = searchParams.toString();
     return this.request<AuditLogsResponse>(`/audit${query ? `?${query}` : ""}`);
+  }
+
+  /** Spectate S1 — global engine status via the admin proxy (SPEC-ADMIN-SPECTATE.md §5). */
+  async spectateStatus(): Promise<SpectateStatusResponse> {
+    return this.request<SpectateStatusResponse>("/spectate/status");
+  }
+
+  /** Spectate S2 — the calling founder's own account (proxy forwards the JWT). */
+  async spectateAccount(): Promise<SpectateAccountResponse> {
+    return this.request<SpectateAccountResponse>("/spectate/account");
+  }
+
+  /** Spectate S3 — the calling founder's own open positions. */
+  async spectatePortfolio(): Promise<SpectatePosition[]> {
+    return this.request<SpectatePosition[]>("/spectate/portfolio");
+  }
+
+  /** Spectate S4 — global cached eligible universe. */
+  async spectateUniverse(): Promise<SpectateUniverseResponse> {
+    return this.request<SpectateUniverseResponse>("/spectate/universe");
+  }
+
+  /** Spectate S5 — the calling founder's own compliance status. */
+  async spectateCompliance(): Promise<SpectateComplianceResponse> {
+    return this.request<SpectateComplianceResponse>("/spectate/compliance");
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {

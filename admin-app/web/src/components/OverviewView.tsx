@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import type { AnalyticsRiskResponse, Tester } from "../lib/api";
 
 interface OverviewViewProps {
@@ -9,6 +9,14 @@ interface OverviewViewProps {
   onRefresh: () => void;
 }
 
+/** Percentages are computed from the analytics payload ONLY — the audit found
+ *  fabricated 55/30/15% allocation rows and a hardcoded SVG "trend" chart
+ *  with no data source; both are removed (SPEC-ADMIN-SPECTATE §4). */
+function riskPct(count: number, total: number): string {
+  if (total <= 0) return "0%";
+  return `${Math.round((count / total) * 100)}%`;
+}
+
 export function OverviewView({
   analytics,
   testers,
@@ -16,14 +24,19 @@ export function OverviewView({
   onNavigateToCustomers,
   onRefresh,
 }: OverviewViewProps) {
-  const [timeframe, setTimeframe] = useState<"1W" | "1M" | "1Y">("1M");
-
   const totalAum = analytics?.kpis.portfolio_value_usd ?? 0;
   const activeCount = analytics?.kpis.active_traders ?? testers.filter((t) => t.state === "active").length;
-  const compliancePct = analytics?.kpis.compliance_pct ?? 100.0;
-  const complianceStatus = analytics?.kpis.compliance_status ?? "OPTIMAL";
+  const compliancePct = analytics?.kpis.compliance_pct;
+  const complianceStatus = analytics?.kpis.compliance_status ?? "N/A";
   const alerts = analytics?.alerts ?? [];
   const flagged = analytics?.flagged ?? [];
+
+  const riskTotal = analytics
+    ? analytics.risk_distribution.low + analytics.risk_distribution.med + analytics.risk_distribution.high
+    : 0;
+  const lowPct = analytics ? riskPct(analytics.risk_distribution.low, riskTotal) : "0%";
+  const medPct = analytics ? riskPct(analytics.risk_distribution.med, riskTotal) : "0%";
+  const highPct = analytics ? riskPct(analytics.risk_distribution.high, riskTotal) : "0%";
 
   // Top customers by activity or paper status
   const topTesters = [...testers]
@@ -94,11 +107,12 @@ export function OverviewView({
           </div>
           <div className="flex items-baseline justify-between mt-auto">
             <div className="text-2xl lg:text-3xl font-headline font-bold text-[#ffffff]">
-              ${totalAum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {analytics
+                ? `$${totalAum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : "—"}
             </div>
-            <div className="flex items-center gap-1 text-[#10b981] text-xs font-label font-bold border-2 border-[#333333] px-2 py-0.5 bg-[#242322]">
-              <span className="material-symbols-outlined text-[14px]">trending_up</span>
-              <span>+12.5%</span>
+            <div className="flex items-center gap-1 text-secondary-fixed-dim text-xs font-label font-bold border-2 border-[#333333] px-2 py-0.5 bg-[#242322]">
+              <span>{activeCount} Traders</span>
             </div>
           </div>
         </div>
@@ -117,14 +131,32 @@ export function OverviewView({
                 {complianceStatus}
               </span>
               <span className="text-xs font-mono font-bold text-[#10b981]">
-                {compliancePct !== null ? `${compliancePct.toFixed(1)}%` : "N/A"}
+                {compliancePct !== null && compliancePct !== undefined
+                  ? `${compliancePct.toFixed(1)}%`
+                  : "N/A"}
               </span>
             </div>
-            <div className="w-full bg-[#0a0a0a] h-3 border-2 border-[#333333] flex">
-              <div className="bg-[#10b981] h-full w-3/4 border-r-2 border-[#333333]" title="Low Risk / Compliant" />
-              <div className="bg-[#f59e0b] h-full w-1/6 border-r-2 border-[#333333]" title="Medium Risk" />
-              <div className="bg-[#ba1a1a] h-full w-1/12" title="High Risk" />
-            </div>
+            {analytics && riskTotal > 0 ? (
+              <div className="w-full bg-[#0a0a0a] h-3 border-2 border-[#333333] flex">
+                <div
+                  className="bg-[#10b981] h-full border-r-2 border-[#333333]"
+                  style={{ width: lowPct }}
+                  title={`Low Risk ${analytics.risk_distribution.low} accounts`}
+                />
+                <div
+                  className="bg-[#f59e0b] h-full border-r-2 border-[#333333]"
+                  style={{ width: medPct }}
+                  title={`Medium Risk ${analytics.risk_distribution.med} accounts`}
+                />
+                <div
+                  className="bg-[#ba1a1a] h-full"
+                  style={{ width: highPct }}
+                  title={`High Risk ${analytics.risk_distribution.high} accounts`}
+                />
+              </div>
+            ) : (
+              <div className="w-full bg-[#0a0a0a] h-3 border-2 border-[#333333]" />
+            )}
           </div>
         </div>
 
@@ -137,11 +169,9 @@ export function OverviewView({
             <span className="material-symbols-outlined text-[20px] text-[#f2f0f1]">water_drop</span>
           </div>
           <div className="flex items-baseline justify-between mt-auto">
-            <div className="text-2xl lg:text-3xl font-headline font-bold text-[#ffffff]">
-              ${(totalAum * 0.25).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </div>
+            <div className="text-2xl lg:text-3xl font-headline font-bold text-[#ffffff]">—</div>
             <div className="text-[10px] font-mono font-bold text-secondary-fixed-dim uppercase tracking-widest border-2 border-[#333333] px-2 py-1 bg-[#242322]">
-              1.4x Ratio
+              No data
             </div>
           </div>
         </div>
@@ -158,7 +188,7 @@ export function OverviewView({
           </div>
           <div className="flex items-baseline justify-between mt-auto">
             <div className="text-2xl lg:text-3xl font-headline font-bold text-[#ffffff]">
-              {alerts.length}
+              {analytics ? alerts.length : "—"}
             </div>
             <div className="flex items-center gap-1 text-[#f2f0f1] text-xs font-label font-bold border-2 border-[#333333] px-2 py-0.5 bg-[#242322]">
               <span className="material-symbols-outlined text-[14px]">notifications_active</span>
@@ -168,119 +198,96 @@ export function OverviewView({
         </div>
       </div>
 
-      {/* Middle Row: Charts & Data */}
+      {/* Middle Row: Real Data Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[2px] bg-[#333333] border-2 border-[#333333]">
-        {/* User Growth & Volume Trends (Spans 2 columns) */}
+        {/* No time-series data — the analytics API exposes point-in-time KPIs only */}
         <div className="lg:col-span-2 bg-[#1a1918] flex flex-col min-h-[320px]">
           <div className="flex justify-between items-center p-4 border-b-2 border-[#333333] bg-[#242322]">
             <h3 className="text-xs font-label font-bold uppercase tracking-widest text-[#f2f0f1]">
-              User Growth &amp; Portfolio Trends
+              Portfolio Trends
             </h3>
-            <div className="flex bg-[#0a0a0a] border-2 border-[#333333] rounded-none">
-              {(["1W", "1M", "1Y"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTimeframe(t)}
-                  className={`px-3 py-1 text-xs font-label font-bold uppercase tracking-widest transition-none border-r-2 border-[#333333] last:border-r-0 ${
-                    timeframe === t
-                      ? "bg-[#f2f0f1] text-[#0a0a0a]"
-                      : "text-secondary-fixed-dim hover:bg-[#333333]"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
           </div>
-
-          <div className="flex-1 relative w-full p-6 flex flex-col justify-between">
-            {/* SVG Structured Brutalism Chart */}
-            <div className="w-full h-44 relative">
-              <svg className="w-full h-full preserve-3d" preserveAspectRatio="none" viewBox="0 0 800 200">
-                {/* Grid lines */}
-                <line className="chart-grid" x1="0" x2="800" y1="40" y2="40" />
-                <line className="chart-grid" x1="0" x2="800" y1="100" y2="100" />
-                <line className="chart-grid" x1="0" x2="800" y1="160" y2="160" />
-
-                {/* Stepped blocky brutalist area */}
-                <path
-                  d="M0,160 L0,120 L100,120 L100,140 L200,140 L200,90 L300,90 L300,30 L400,30 L400,70 L500,70 L500,40 L600,40 L600,10 L700,10 L700,50 L800,50 L800,160 Z"
-                  fill="#3366cc"
-                  stroke="#3366cc"
-                  strokeWidth="2"
-                  opacity="0.85"
-                />
-              </svg>
-            </div>
-
-            <div className="flex justify-between text-[11px] font-mono font-bold uppercase tracking-widest text-secondary-fixed-dim mt-4 px-2 border-t-2 border-[#333333] pt-3">
-              <span>{timeframe === "1W" ? "Day 1" : timeframe === "1M" ? "Week 1" : "Q1"}</span>
-              <span>{timeframe === "1W" ? "Day 3" : timeframe === "1M" ? "Week 2" : "Q2"}</span>
-              <span>{timeframe === "1W" ? "Day 5" : timeframe === "1M" ? "Week 3" : "Q3"}</span>
-              <span>{timeframe === "1W" ? "Day 7" : timeframe === "1M" ? "Week 4" : "Q4"}</span>
-            </div>
+          <div className="flex-1 flex items-center justify-center p-6">
+            <p className="text-xs font-mono text-secondary-fixed-dim text-center">
+              No time-series data — the analytics API exposes point-in-time telemetry only.
+            </p>
           </div>
         </div>
 
-        {/* Asset Allocation Grid */}
+        {/* Account Risk Distribution — real counts from /analytics/risk */}
         <div className="bg-[#1a1918] flex flex-col min-h-[320px]">
           <div className="p-4 border-b-2 border-[#333333] bg-[#242322]">
             <h3 className="text-xs font-label font-bold uppercase tracking-widest text-[#f2f0f1]">
-              Shariah Asset Allocation
+              Account Risk Distribution
             </h3>
           </div>
           <div className="data-grid grid-cols-1 flex-1 border-none bg-[#333333]">
-            <div className="flex items-center justify-between h-full bg-[#1a1918]">
-              <div>
-                <div className="text-xs font-body font-bold text-[#f2f0f1] uppercase tracking-wider">
-                  Halal Equities (SPUS Top 20)
-                </div>
-                <div className="text-[10px] font-label font-bold text-secondary-fixed-dim uppercase tracking-widest">
-                  High Alpha
-                </div>
+            {!analytics ? (
+              <div className="flex items-center justify-center h-full bg-[#1a1918]">
+                <span className="text-xs font-mono text-secondary-fixed-dim">
+                  No risk distribution data
+                </span>
               </div>
-              <div className="text-right">
-                <div className="text-lg font-headline font-bold text-[#ffffff]">55%</div>
-                <div className="w-24 bg-[#0a0a0a] h-2.5 mt-1.5 border-2 border-[#333333]">
-                  <div className="bg-[#f2f0f1] h-full border-r-2 border-[#333333]" style={{ width: "55%" }} />
+            ) : (
+              <>
+                <div className="flex items-center justify-between h-full bg-[#1a1918]">
+                  <div>
+                    <div className="text-xs font-body font-bold text-[#10b981] uppercase tracking-wider">
+                      Low Risk
+                    </div>
+                    <div className="text-[10px] font-label font-bold text-secondary-fixed-dim uppercase tracking-widest">
+                      Compliant accounts
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-headline font-bold text-[#ffffff]">
+                      {analytics.risk_distribution.low}
+                    </div>
+                    <div className="w-24 bg-[#0a0a0a] h-2.5 mt-1.5 border-2 border-[#333333]">
+                      <div className="bg-[#10b981] h-full" style={{ width: lowPct }} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between h-full bg-[#1a1918]">
-              <div>
-                <div className="text-xs font-body font-bold text-[#f2f0f1] uppercase tracking-wider">
-                  ETFs &amp; Halal Indices
+                <div className="flex items-center justify-between h-full bg-[#1a1918]">
+                  <div>
+                    <div className="text-xs font-body font-bold text-[#f59e0b] uppercase tracking-wider">
+                      Medium Risk
+                    </div>
+                    <div className="text-[10px] font-label font-bold text-secondary-fixed-dim uppercase tracking-widest">
+                      Disabled or flagged
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-headline font-bold text-[#ffffff]">
+                      {analytics.risk_distribution.med}
+                    </div>
+                    <div className="w-24 bg-[#0a0a0a] h-2.5 mt-1.5 border-2 border-[#333333]">
+                      <div className="bg-[#f59e0b] h-full" style={{ width: medPct }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10px] font-label font-bold text-secondary-fixed-dim uppercase tracking-widest">
-                  Medium Risk
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-headline font-bold text-[#ffffff]">30%</div>
-                <div className="w-24 bg-[#0a0a0a] h-2.5 mt-1.5 border-2 border-[#333333]">
-                  <div className="bg-[#bbbbbb] h-full border-r-2 border-[#333333]" style={{ width: "30%" }} />
-                </div>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between h-full bg-[#1a1918]">
-              <div>
-                <div className="text-xs font-body font-bold text-[#f2f0f1] uppercase tracking-wider">
-                  Sukuk &amp; Cash Reserves
+                <div className="flex items-center justify-between h-full bg-[#1a1918]">
+                  <div>
+                    <div className="text-xs font-body font-bold text-[#ba1a1a] uppercase tracking-wider">
+                      High Risk
+                    </div>
+                    <div className="text-[10px] font-label font-bold text-secondary-fixed-dim uppercase tracking-widest">
+                      Violations
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-headline font-bold text-[#ffffff]">
+                      {analytics.risk_distribution.high}
+                    </div>
+                    <div className="w-24 bg-[#0a0a0a] h-2.5 mt-1.5 border-2 border-[#333333]">
+                      <div className="bg-[#ba1a1a] h-full" style={{ width: highPct }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10px] font-label font-bold text-secondary-fixed-dim uppercase tracking-widest">
-                  Low Risk / Liquid
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-headline font-bold text-[#ffffff]">15%</div>
-                <div className="w-24 bg-[#0a0a0a] h-2.5 mt-1.5 border-2 border-[#333333]">
-                  <div className="bg-[#777777] h-full border-r-2 border-[#333333]" style={{ width: "15%" }} />
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -339,8 +346,8 @@ export function OverviewView({
                         t.state === "active"
                           ? "bg-[#242322] text-[#10b981]"
                           : t.state === "pending"
-                          ? "bg-[#0a0a0a] text-[#f59e0b]"
-                          : "bg-[#0a0a0a] text-[#ba1a1a]"
+                            ? "bg-[#0a0a0a] text-[#f59e0b]"
+                            : "bg-[#0a0a0a] text-[#ba1a1a]"
                       }`}
                     >
                       {t.state}
@@ -373,8 +380,8 @@ export function OverviewView({
                         a.severity === "critical"
                           ? "text-[#ba1a1a]"
                           : a.severity === "warning"
-                          ? "text-[#f59e0b]"
-                          : "text-[#ffffff]"
+                            ? "text-[#f59e0b]"
+                            : "text-[#ffffff]"
                       }`}
                     >
                       {a.code.replace(/_/g, " ")}

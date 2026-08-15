@@ -1,5 +1,5 @@
 
-export type View = "overview" | "customers" | "invites" | "activity";
+export type View = "overview" | "customers" | "spectate" | "invites" | "activity";
 
 interface AdminSidebarProps {
   view: View;
@@ -12,6 +12,7 @@ interface AdminSidebarProps {
 const NAV_ITEMS: { key: View; label: string; icon: string }[] = [
   { key: "overview", label: "Overview", icon: "dashboard" },
   { key: "customers", label: "Customers", icon: "group" },
+  { key: "spectate", label: "Spectate", icon: "monitor_heart" },
   { key: "invites", label: "Invites", icon: "mark_email_read" },
   { key: "activity", label: "Activity", icon: "history" },
 ];

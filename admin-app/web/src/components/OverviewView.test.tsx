@@ -81,4 +81,75 @@ describe("OverviewView component", () => {
     fireEvent.click(screen.getByText(/View All CRM/i));
     expect(onNavigate).toHaveBeenCalled();
   });
+
+  it("renders the REAL risk distribution from the analytics payload, never fabricated 55/30/15%", () => {
+    render(
+      <OverviewView
+        analytics={MOCK_ANALYTICS}
+        testers={MOCK_TESTERS}
+        loading={false}
+        onNavigateToCustomers={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    // Real counts from analytics.risk_distribution (low 8 / med 0 / high 0).
+    expect(screen.getByText(/Low Risk/i)).toBeTruthy();
+    expect(screen.getByText(/High Risk/i)).toBeTruthy();
+    // The fabricated allocation percentages must be gone.
+    expect(screen.queryByText("55%")).toBeNull();
+    expect(screen.queryByText("30%")).toBeNull();
+    expect(screen.queryByText("15%")).toBeNull();
+    expect(screen.queryByText(/Halal Equities/)).toBeNull();
+    expect(screen.queryByText(/Sukuk/)).toBeNull();
+  });
+
+  it("does not render the fabricated +12.5% trend or 1.4x ratio", () => {
+    render(
+      <OverviewView
+        analytics={MOCK_ANALYTICS}
+        testers={MOCK_TESTERS}
+        loading={false}
+        onNavigateToCustomers={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("+12.5%")).toBeNull();
+    expect(screen.queryByText("1.4x Ratio")).toBeNull();
+  });
+
+  it("renders an honest no-time-series state instead of the hardcoded SVG chart and dead timeframe tabs", () => {
+    render(
+      <OverviewView
+        analytics={MOCK_ANALYTICS}
+        testers={MOCK_TESTERS}
+        loading={false}
+        onNavigateToCustomers={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    // The analytics API exposes no time series, so no fabricated chart or
+    // timeframe tabs may render.
+    expect(screen.getByText(/No time-series data/)).toBeTruthy();
+    expect(screen.queryByText("1W")).toBeNull();
+    expect(screen.queryByText("1M")).toBeNull();
+    expect(screen.queryByText("1Y")).toBeNull();
+    expect(screen.queryByText(/User Growth & Portfolio Trends/)).toBeNull();
+  });
+
+  it("shows an honest empty state for risk distribution when analytics is absent", () => {
+    render(
+      <OverviewView
+        analytics={null}
+        testers={MOCK_TESTERS}
+        loading={false}
+        onNavigateToCustomers={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/No risk distribution data/)).toBeTruthy();
+  });
 });

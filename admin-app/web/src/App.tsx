@@ -5,6 +5,7 @@ import { AdminHeader } from "./components/AdminHeader";
 import { AdminSidebar, type View } from "./components/AdminSidebar";
 import { OverviewView } from "./components/OverviewView";
 import { CustomersView } from "./components/CustomersView";
+import { SpectateView } from "./components/SpectateView";
 import { InvitesView } from "./components/InvitesView";
 import { ActivityTrailView } from "./components/ActivityTrailView";
 import { LoginCard } from "./components/LoginCard";
@@ -134,6 +135,7 @@ export default function App() {
             onSearchChange={setSearchQuery}
             onRefresh={() => void refresh()}
             alertCount={analytics?.alerts.length ?? 0}
+            alerts={analytics?.alerts ?? []}
           />
         )}
 
@@ -192,6 +194,10 @@ export default function App() {
                     busyId={busyId}
                     globalSearch={searchQuery}
                   />
+                )}
+
+                {view === "spectate" && (
+                  <SpectateView api={api} email={session.user.email ?? null} />
                 )}
 
                 {view === "invites" && <InvitesView api={api} />}
