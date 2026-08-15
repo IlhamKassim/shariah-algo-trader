@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from admin_app.api.routers import admin
+from admin_app.api.routers import admin, spectate
 from dashboard.api.deps import get_config, is_admin, verify_auth
 
 app = FastAPI(
@@ -38,8 +38,15 @@ def require_admin(request: Request, cfg=Depends(get_config)) -> None:
 
 # Every /api/admin/* route needs verify_auth AND require_admin (AC-7):
 # anonymous -> 401, authenticated non-admin (e.g. tester role) -> 403.
+# The spectate proxy (SPEC-ADMIN-SPECTATE.md §5) rides the SAME include and
+# inherits this authz for free.
 app.include_router(
     admin.router,
+    prefix="/api/admin",
+    dependencies=[Depends(verify_auth), Depends(require_admin)],
+)
+app.include_router(
+    spectate.router,
     prefix="/api/admin",
     dependencies=[Depends(verify_auth), Depends(require_admin)],
 )
