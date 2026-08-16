@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Zap, Shield, CheckCircle2, AlertCircle, X, ArrowRight, RefreshCw, BarChart2, Loader2, Clock } from "lucide-react";
+import { Shield, CheckCircle2, AlertCircle, X, ArrowRight, RefreshCw, BarChart2, Loader2, Clock, Layers } from "lucide-react";
 import { api } from "../lib/api";
 import { formatCurrency } from "../lib/utils";
 
@@ -16,13 +16,13 @@ interface RebalanceModalProps {
 
 // Mirrors the step order in rebalance.py _REBALANCE_STEPS
 const STEPS = [
-  { key: "universe",   label: "Fetching Shariah universe",       hint: "Downloading SPUS + HLAL ETF holdings" },
+  { key: "universe",   label: "Fetching Shariah Universe",       hint: "Downloading SPUS + HLAL ETF holdings" },
   { key: "momentum",   label: "Computing Momentum Factor",        hint: "12-1 month return z-scores across ~200 tickers" },
-  { key: "quality",    label: "Computing Quality Factor",         hint: "ROE, margins & AAOIFI debt screen — takes ~2–4 min" },
+  { key: "quality",    label: "Computing Quality Factor",         hint: "ROE, margins & AAOIFI debt screen (<33% debt)" },
   { key: "volatility", label: "Computing Volatility & Value",     hint: "Annualised volatility + FCF yield scores" },
-  { key: "ranking",    label: "Ranking by composite score",       hint: "Top-N selection + sector caps applied" },
-  { key: "orders",     label: "Submitting orders to Alpaca",      hint: "Fractional market orders for each position" },
-  { key: "done",       label: "Finalising & recording audit log", hint: "Writing audit trail and notifying systems" },
+  { key: "ranking",    label: "Ranking by Composite Score",       hint: "Top-N selection + 20% sector cap applied" },
+  { key: "orders",     label: "Submitting Orders to Alpaca",      hint: "Cash-capped fractional market orders" },
+  { key: "done",       label: "Finalising & Recording Audit Log", hint: "Writing audit trail and updating state" },
 ];
 
 function useElapsedTimer(running: boolean) {
@@ -72,7 +72,7 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
           setSubmitting(false);
           setResult({
             success: false,
-            msg: "Rebalance timed out after 10 minutes. The job may still be running — check Activity Log for results.",
+            msg: "Rebalance timed out after 10 minutes. Check Activity Log for status.",
           });
           return;
         }
@@ -84,7 +84,7 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
             const firstResult = st.results?.[0];
             setResult({
               success: true,
-              msg: st.message || "Rebalance orders submitted to Alpaca!",
+              msg: st.message || "Rebalance orders executed and submitted to Alpaca.",
               stocks: firstResult?.target_stocks || [],
               elapsed: st.elapsed_seconds,
             });
@@ -94,7 +94,7 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
             setSubmitting(false);
             setResult({
               success: false,
-              msg: st.error || st.message || "Rebalance background task failed",
+              msg: st.error || st.message || "Rebalance execution failed.",
               elapsed: st.elapsed_seconds,
             });
           } else if (st.status === "idle") {
@@ -102,10 +102,9 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
             setSubmitting(false);
             setResult({
               success: false,
-              msg: "The server restarted while the rebalance was running. Please check the Activity Log to see if orders were placed, then re-run if needed.",
+              msg: "The server state was re-initialized during execution. Please check the Activity Log.",
             });
           } else if (st.status === "running") {
-            // Update step tracker from backend progress
             if (st.step_key) {
               setCurrentStep({
                 key: st.step_key,
@@ -121,17 +120,14 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
     }
 
     return () => { if (timer) clearInterval(timer); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [polling, isOpen, onSuccess]);
 
   if (!isOpen) return null;
 
-  const isLive = accountData?.trading_mode === "live";
-
   const handleExecute = async () => {
     setSubmitting(true);
     setResult(null);
-    setCurrentStep({ key: "universe", number: 1, message: "Initiating quantitative model..." });
+    setCurrentStep({ key: "universe", number: 1, message: "Initiating quantitative factor model..." });
     try {
       const res = await api.runManualRebalance();
       if (res.status === "running") {
@@ -141,14 +137,14 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
         const firstResult = res.results?.[0];
         setResult({
           success: true,
-          msg: res.message || "Rebalance submitted successfully",
+          msg: res.message || "Rebalance submitted successfully.",
           stocks: firstResult?.target_stocks || [],
         });
         if (onSuccess) onSuccess();
       }
     } catch (err: any) {
       setSubmitting(false);
-      setResult({ success: false, msg: err.message || "Failed to trigger rebalance" });
+      setResult({ success: false, msg: err.message || "Failed to trigger rebalance." });
     }
   };
 
@@ -157,98 +153,94 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
     : -1;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-[#0E0F12] border border-divider/80 rounded-2xl shadow-2xl overflow-hidden text-foreground">
-
-        {/* Glow accent header */}
-        <div className={`h-1.5 w-full ${isLive ? "bg-gradient-to-r from-rose-500 via-red-500 to-amber-500" : "bg-gradient-to-r from-brand-gold via-amber-400 to-emerald-400"}`} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-lg bg-[#0C0B09] border border-divider shadow-2xl rounded-none text-primary font-sans overflow-hidden">
+        
+        {/* Subtle hairline gold top accent */}
+        <div className="h-[2px] w-full bg-brand-gold" />
 
         {/* Close Button */}
         <button
           onClick={onClose}
           disabled={submitting}
-          className="absolute top-4 right-4 text-muted hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-white/5 cursor-pointer z-10 disabled:opacity-30"
+          className="absolute top-4 right-4 text-muted hover:text-primary transition-colors p-1.5 border border-transparent hover:border-divider cursor-pointer z-10 disabled:opacity-30"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
 
-        <div className="p-6 space-y-5">
-          {/* Environment Header Badge */}
-          <div className="flex items-center gap-2">
-            {isLive ? (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] font-mono font-semibold uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                Live Capital Execution
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/30 text-brand-gold text-[11px] font-mono font-semibold uppercase tracking-wider">
-                <Shield size={12} />
-                Paper Trading Simulation
-              </div>
-            )}
+        <div className="p-6 sm:p-8 space-y-6">
+          
+          {/* Eyebrow Header Badge */}
+          <div className="flex items-center justify-between pb-2 border-b border-divider">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-brand-gold flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-brand-gold animate-pulse" />
+              Factor Engine Trigger
+            </span>
+            <span className="font-mono text-[10px] text-muted uppercase">
+              Paper Sandbox
+            </span>
           </div>
 
-          {/* Modal Title */}
+          {/* Modal Header */}
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Zap className="text-brand-gold" size={20} />
+            <h2 className="font-serif text-2xl sm:text-3xl text-primary font-normal leading-tight tracking-wide">
               Execute Portfolio Rebalance
             </h2>
-            <p className="text-xs text-muted mt-1 leading-relaxed">
-              Triggers quantitative multi-factor ranking (Momentum, Quality, Low Volatility, Value) across the Shariah-compliant universe (<code className="font-mono text-brand-gold">SPUS</code> / <code className="font-mono text-brand-gold">HLAL</code>) to re-align position weights.
+            <p className="text-xs text-muted mt-2 leading-relaxed">
+              Triggers quantitative multi-factor ranking (Momentum, Quality, Low Volatility, Value) across the Shariah-screened universe (<code className="font-mono text-brand-gold">SPUS</code> / <code className="font-mono text-brand-gold">HLAL</code>) to re-align position weights.
             </p>
           </div>
 
           {/* ─── LIVE PROGRESS TRACKER ─── */}
           {submitting && !result && (
-            <div className="rounded-xl border border-brand-gold/25 bg-brand-gold/5 overflow-hidden animate-fadeIn">
+            <div className="border border-brand-gold/30 bg-[#12110E] p-4 space-y-3 animate-fadeIn">
               {/* Header bar with elapsed time */}
-              <div className="px-4 py-2.5 border-b border-brand-gold/15 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-brand-gold">
+              <div className="flex items-center justify-between pb-2.5 border-b border-divider">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-brand-gold uppercase tracking-wider">
                   <Loader2 size={13} className="animate-spin" />
-                  Running Quantitative Model...
+                  <span>Computing Factor Model...</span>
                 </div>
-                <div className="flex items-center gap-1 text-[11px] font-mono text-muted">
-                  <Clock size={11} />
+                <div className="flex items-center gap-1.5 text-xs font-mono text-muted">
+                  <Clock size={12} />
                   <span>{formatElapsed(elapsed)}</span>
                 </div>
               </div>
 
               {/* Step-by-step tracker */}
-              <div className="px-4 py-3 space-y-2">
+              <div className="space-y-2.5 pt-1">
                 {STEPS.map((step, idx) => {
                   const isActive = idx === activeStepIndex;
                   const isDone = idx < activeStepIndex;
                   const isPending = idx > activeStepIndex;
 
                   return (
-                    <div key={step.key} className={`flex items-start gap-3 py-1.5 transition-opacity duration-300 ${isPending ? "opacity-35" : "opacity-100"}`}>
-                      {/* Status icon */}
+                    <div key={step.key} className={`flex items-start gap-3 transition-opacity duration-300 ${isPending ? "opacity-35" : "opacity-100"}`}>
+                      {/* Status marker */}
                       <div className="mt-0.5 shrink-0">
                         {isDone ? (
-                          <CheckCircle2 size={15} className="text-emerald-400" />
+                          <CheckCircle2 size={14} className="text-brand-green" />
                         ) : isActive ? (
-                          <Loader2 size={15} className="text-brand-gold animate-spin" />
+                          <Loader2 size={14} className="text-brand-gold animate-spin" />
                         ) : (
-                          <div className="w-[15px] h-[15px] rounded-full border border-white/20" />
+                          <div className="w-3.5 h-3.5 border border-divider" />
                         )}
                       </div>
 
-                      {/* Step label + hint */}
+                      {/* Step details */}
                       <div className="flex-1 min-w-0">
-                        <div className={`text-[12px] font-semibold leading-tight ${
-                          isDone ? "text-emerald-300" : isActive ? "text-foreground" : "text-muted"
+                        <div className={`text-xs font-mono leading-tight ${
+                          isDone ? "text-brand-green font-bold" : isActive ? "text-primary font-bold" : "text-muted"
                         }`}>
                           {step.label}
                         </div>
                         {(isActive || isDone) && (
-                          <div className="text-[10px] text-muted mt-0.5 leading-tight">{step.hint}</div>
+                          <div className="text-[10px] font-sans text-muted mt-0.5 leading-tight">{step.hint}</div>
                         )}
                       </div>
 
                       {/* Timing badge for active step */}
                       {isActive && elapsed > 0 && (
-                        <div className="shrink-0 text-[10px] font-mono text-brand-gold/70 bg-brand-gold/10 px-1.5 py-0.5 rounded">
+                        <div className="shrink-0 text-[10px] font-mono text-brand-gold border border-brand-gold/40 px-1.5 py-0.5">
                           {formatElapsed(elapsed)}
                         </div>
                       )}
@@ -257,16 +249,16 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
                 })}
               </div>
 
-              {/* Animated progress bar */}
-              <div className="h-0.5 bg-black/40">
+              {/* Progress bar */}
+              <div className="h-1 bg-page border border-divider mt-2">
                 <div
-                  className="h-full bg-gradient-to-r from-brand-gold to-emerald-400 transition-all duration-700"
+                  className="h-full bg-brand-gold transition-all duration-700"
                   style={{ width: `${activeStepIndex < 0 ? 5 : Math.round(((activeStepIndex + 0.5) / STEPS.length) * 100)}%` }}
                 />
               </div>
 
-              <p className="px-4 py-2 text-[10px] text-muted/70 font-mono">
-                Quality factor fetches ~200 tickers from Yahoo Finance — typically takes 2–4 min on first run, near-instant on subsequent runs (12h cache).
+              <p className="text-[10px] text-faint font-mono leading-relaxed pt-1">
+                Quality factor calculates AAOIFI debt ratios from financial statements (~200 stocks). First run takes 2–4 min; subsequent runs complete in &lt;30s using cache.
               </p>
             </div>
           )}
@@ -274,23 +266,25 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
           {/* ─── RESULT ALERT ─── */}
           {result && (
             <div
-              className={`p-4 rounded-xl border text-xs font-mono space-y-2 animate-fadeIn ${
+              className={`p-4 border text-xs font-mono space-y-3 animate-fadeIn ${
                 result.success
-                  ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
-                  : "bg-rose-950/40 border-rose-500/40 text-rose-300"
+                  ? "bg-brand-green/10 border-brand-green/40 text-brand-green"
+                  : "bg-brand-red/10 border-brand-red/40 text-brand-red"
               }`}
             >
               <div className="flex items-start gap-2.5">
                 {result.success ? (
-                  <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
                 ) : (
-                  <AlertCircle size={18} className="text-rose-400 shrink-0 mt-0.5" />
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 )}
                 <div>
-                  <div className="font-bold">{result.success ? "Rebalance Orders Submitted!" : "Rebalance Error"}</div>
-                  <div className="text-[11px] opacity-90 mt-0.5">{result.msg}</div>
+                  <div className="font-bold uppercase tracking-wider">
+                    {result.success ? "Rebalance Orders Executed" : "Rebalance Execution Error"}
+                  </div>
+                  <div className="text-[11px] opacity-90 mt-1">{result.msg}</div>
                   {result.elapsed !== undefined && (
-                    <div className="text-[10px] opacity-60 mt-1 flex items-center gap-1">
+                    <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1">
                       <Clock size={10} /> Completed in {formatElapsed(result.elapsed)}
                     </div>
                   )}
@@ -298,11 +292,13 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
               </div>
 
               {result.stocks && result.stocks.length > 0 && (
-                <div className="pt-2 border-t border-emerald-500/20">
-                  <div className="text-[10px] uppercase font-bold text-emerald-400/80 mb-1">Target Portfolio ({result.stocks.length} stocks):</div>
-                  <div className="flex flex-wrap gap-1">
+                <div className="pt-2.5 border-t border-brand-green/20">
+                  <div className="text-[10px] uppercase font-bold text-brand-green tracking-wider mb-1.5">
+                    Target Portfolio Allocation ({result.stocks.length} equities):
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
                     {result.stocks.map((sym) => (
-                      <span key={sym} className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-200">
+                      <span key={sym} className="px-2 py-0.5 bg-sidebar border border-brand-green/40 text-[10px] font-bold text-primary font-mono">
                         {sym}
                       </span>
                     ))}
@@ -312,75 +308,86 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
             </div>
           )}
 
-          {/* ─── PRE-RUN INFO (idle state) ─── */}
+          {/* ─── PRE-RUN INFO MATRIX (idle state) ─── */}
           {!result && !submitting && (
-            <>
+            <div className="space-y-4">
               {accountData && (
-                <div className="grid grid-cols-2 gap-3 bg-page/60 border border-divider/60 rounded-xl p-3.5 text-xs">
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold block">Portfolio Equity</span>
-                    <span className="text-sm font-bold font-mono text-foreground mt-0.5 block">
+                <div className="border border-divider grid grid-cols-2 divide-x divide-divider bg-[#141210]">
+                  <div className="p-3.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted block">
+                      Portfolio Equity
+                    </span>
+                    <span className="text-sm font-mono font-bold text-primary mt-1 block">
                       {formatCurrency(accountData.portfolio_value)}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold block">Available Cash</span>
-                    <span className="text-sm font-bold font-mono text-brand-gold mt-0.5 block">
+                  <div className="p-3.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted block">
+                      Available Cash
+                    </span>
+                    <span className="text-sm font-mono font-bold text-brand-gold mt-1 block">
                       {formatCurrency(accountData.cash)}
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-muted block">Execution Strategy Model</span>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="p-2.5 rounded-lg bg-sidebar border border-divider/50 flex items-center gap-2">
-                    <BarChart2 size={14} className="text-brand-gold shrink-0" />
-                    <div>
-                      <div className="font-semibold text-foreground">Top 20 Factor Ranked</div>
-                      <div className="text-[10px] text-faint">Composite Z-Score</div>
+              {/* Execution Matrix */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted block">
+                  Factor Model & Constraints
+                </span>
+                <div className="border border-divider grid grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-divider bg-[#141210] text-xs">
+                  <div className="p-3 space-y-1">
+                    <div className="font-mono text-xs font-bold text-primary flex items-center gap-1.5">
+                      <BarChart2 size={13} className="text-brand-gold shrink-0" />
+                      <span>Top 20 Factor Ranked</span>
                     </div>
+                    <p className="text-[10px] text-muted">Composite Z-Score</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-sidebar border border-divider/50 flex items-center gap-2">
-                    <RefreshCw size={14} className="text-emerald-400 shrink-0" />
-                    <div>
-                      <div className="font-semibold text-foreground">Inverse Volatility</div>
-                      <div className="text-[10px] text-faint">Risk Parity Weights</div>
+                  <div className="p-3 space-y-1">
+                    <div className="font-mono text-xs font-bold text-primary flex items-center gap-1.5">
+                      <RefreshCw size={13} className="text-brand-green shrink-0" />
+                      <span>Inverse Volatility</span>
                     </div>
+                    <p className="text-[10px] text-muted">Risk Parity Weights</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-sidebar border border-divider/50 flex items-center gap-2">
-                    <Shield size={14} className="text-sky-400 shrink-0" />
-                    <div>
-                      <div className="font-semibold text-foreground">20% Sector Cap</div>
-                      <div className="text-[10px] text-faint">GICS Diversification</div>
+                </div>
+                <div className="border border-divider border-t-0 grid grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-divider bg-[#141210] text-xs">
+                  <div className="p-3 space-y-1">
+                    <div className="font-mono text-xs font-bold text-primary flex items-center gap-1.5">
+                      <Layers size={13} className="text-brand-blue shrink-0" />
+                      <span>20% Sector Cap</span>
                     </div>
+                    <p className="text-[10px] text-muted">GICS Diversification</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-sidebar border border-divider/50 flex items-center gap-2">
-                    <CheckCircle2 size={14} className="text-brand-gold shrink-0" />
-                    <div>
-                      <div className="font-semibold text-foreground">AAOIFI Compliant</div>
-                      <div className="text-[10px] text-faint">Debt Screen &lt; 33%</div>
+                  <div className="p-3 space-y-1">
+                    <div className="font-mono text-xs font-bold text-brand-green flex items-center gap-1.5">
+                      <Shield size={13} className="text-brand-green shrink-0" />
+                      <span>AAOIFI Compliant</span>
                     </div>
+                    <p className="text-[10px] text-muted">Debt-to-Market-Cap &lt; 33%</p>
                   </div>
                 </div>
               </div>
 
-              {/* Estimated duration hint */}
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/3 border border-white/8 text-[11px] text-muted">
-                <Clock size={13} className="text-brand-gold/70 shrink-0" />
-                <span>First run takes <strong className="text-foreground">2–4 minutes</strong> (fetching fundamentals for ~200 stocks). Subsequent runs complete in <strong className="text-foreground">under 30 seconds</strong> using the 12-hour cache.</span>
+              {/* Duration Notice */}
+              <div className="p-3 bg-[#12110E] border border-divider flex items-start gap-2.5 text-xs text-muted font-sans">
+                <Clock size={14} className="text-brand-gold shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  Initial run takes <strong className="text-primary font-mono">2–4 minutes</strong> to compute fundamental financial statements for ~200 equities. Subsequent runs complete in <strong className="text-primary font-mono">&lt;30s</strong> using the 12-hour cache.
+                </span>
               </div>
-            </>
+            </div>
           )}
 
           {/* Modal Action Footer */}
-          <div className="pt-4 border-t border-divider/60 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-divider flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2.5 text-xs font-semibold text-muted hover:text-foreground transition-colors rounded-xl hover:bg-white/5 cursor-pointer disabled:opacity-40"
+              className="px-5 py-2.5 border border-divider hover:border-muted text-muted hover:text-primary font-mono text-xs uppercase tracking-widest rounded-none transition-colors cursor-pointer disabled:opacity-40"
             >
               {result ? "Close" : "Cancel"}
             </button>
@@ -390,21 +397,17 @@ export function RebalanceModal({ isOpen, onClose, onSuccess, accountData }: Reba
                 type="button"
                 onClick={handleExecute}
                 disabled={submitting}
-                className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 ${
-                  isLive
-                    ? "bg-rose-500 text-white hover:bg-rose-600 shadow-rose-500/20"
-                    : "bg-brand-gold text-slate-950 hover:bg-brand-gold/90 shadow-brand-gold/20"
-                }`}
+                className="px-6 py-2.5 bg-brand-gold hover:bg-brand-gold/90 text-page font-bold font-mono text-xs uppercase tracking-widest rounded-none transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {submitting ? (
                   <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Calculating & Submitting...
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Calculating &amp; Submitting...</span>
                   </>
                 ) : (
                   <>
-                    <span>Confirm & Execute Rebalance</span>
-                    <ArrowRight size={14} />
+                    <span>Confirm &amp; Execute Rebalance</span>
+                    <ArrowRight size={13} />
                   </>
                 )}
               </button>
