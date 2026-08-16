@@ -90,7 +90,7 @@ export function Settings() {
   });
 
   if (isDemo) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   const handleVerify = async (e: React.FormEvent) => {

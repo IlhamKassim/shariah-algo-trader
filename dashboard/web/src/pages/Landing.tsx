@@ -20,7 +20,6 @@ import {
 
 export function Landing() {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isNavigatingToLogin, setIsNavigatingToLogin] = useState(false);
   const [connectionMode, setConnectionMode] = useState("ALPACA PAPER");
   const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [showDevModal, setShowDevModal] = useState(
@@ -29,13 +28,16 @@ export function Landing() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState<string>("overview");
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [waitlistMessage, setWaitlistMessage] = useState("");
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ["overview", "terminal", "compliance", "universe", "faqs"];
+      const sections = ["overview", "terminal", "compliance", "universe", "waitlist", "faqs"];
       const scrollPosition = window.scrollY + 140;
 
       if (window.scrollY < 100) {
@@ -83,6 +85,15 @@ export function Landing() {
     }
   };
 
+  const { data: auth } = useQuery({
+    queryKey: ["authStatus"],
+    queryFn: api.authStatus,
+    refetchOnWindowFocus: false,
+  });
+
+  const isDemo = typeof window !== "undefined" && localStorage.getItem("shariah_demo_mode") === "true";
+  const isAuthed = Boolean(auth?.authenticated || isDemo);
+
   const handleStartConnection = (mode: string) => {
     setConnectionMode(mode);
     setShowBrokerModal(false);
@@ -93,15 +104,52 @@ export function Landing() {
     localStorage.setItem("shariah_demo_mode", "true");
     await queryClient.invalidateQueries();
     window.scrollTo(0, 0);
-    navigate("/");
+    navigate("/app");
   };
 
   const handleNavigateToLogin = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    setIsNavigatingToLogin(true);
-    setTimeout(() => {
+    localStorage.setItem("shariah_dev_risk_acknowledged", "true");
+    setShowDevModal(false);
+    if (isAuthed) {
+      navigate("/app");
+    } else {
       navigate("/login");
-    }, 220);
+    }
+  };
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail.trim()) {
+      setWaitlistStatus("error");
+      setWaitlistMessage("Please enter a valid email address");
+      return;
+    }
+
+    setWaitlistStatus("loading");
+    try {
+      const response = await fetch("/api/public/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail }),
+      });
+
+      if (response.ok) {
+        setWaitlistStatus("success");
+        setWaitlistMessage("Thanks for joining! We'll be in touch soon.");
+        setWaitlistEmail("");
+        setTimeout(() => {
+          setWaitlistStatus("idle");
+          setWaitlistMessage("");
+        }, 3000);
+      } else {
+        setWaitlistStatus("error");
+        setWaitlistMessage("Something went wrong. Please try again.");
+      }
+    } catch {
+      setWaitlistStatus("error");
+      setWaitlistMessage("Network error. Please try again.");
+    }
   };
 
   const toggleFaq = (index: number) => {
@@ -159,17 +207,17 @@ export function Landing() {
     <div className="min-h-screen bg-transparent text-white font-sans overflow-x-hidden antialiased selection:bg-[#ffdca1] selection:text-black relative z-10">
       {/* Animated WebGL Mesh Drift Shader Background */}
       <MeshDriftShaderBackground />
-      {/* Top Transition Loader */}
-      {isNavigatingToLogin && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[#1a1a1a] overflow-hidden">
-          <div className="h-full bg-[#ffdca1] w-full transition-all duration-200 ease-out animate-pulse" />
-        </div>
-      )}
 
       {/* Development Mode Notice Popup Modal */}
       <DevWarningModal
         isOpen={showDevModal}
-        onClose={() => setShowDevModal(false)}
+        onClose={() => {
+          // X button = dismiss permanently too, so the modal (which covers
+          // the whole page at z-[9999]) stops blocking first-time visitors'
+          // clicks on Login/nav on every return visit.
+          localStorage.setItem("shariah_dev_risk_acknowledged", "true");
+          setShowDevModal(false);
+        }}
       />
 
       {/* Connection Overlay Simulator */}
@@ -258,7 +306,7 @@ export function Landing() {
               onClick={handleNavigateToLogin}
               className="border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] px-6 py-2 hover:bg-[#DAF1DE] hover:text-[#051F20] transition-all duration-300 font-mono text-[11px] uppercase tracking-widest cursor-pointer shadow-md"
             >
-              Login
+              {isAuthed ? "Dashboard" : "Login"}
             </button>
           </div>
         </div>
@@ -326,10 +374,10 @@ export function Landing() {
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => handleStartConnection("ALPACA PAPER")}
+                  onClick={(e) => scrollToSection(e, "waitlist")}
                   className="bg-[#DAF1DE] text-[#051F20] font-semibold px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest hover:bg-[#c2e8c8] transition-all cursor-pointer text-center shadow-lg shadow-[#DAF1DE]/10"
                 >
-                  Demo Mode
+                  Join Waitlist
                 </button>
               </div>
             </div>
@@ -619,11 +667,7 @@ export function Landing() {
             {/* Explore Full Universe CTA Button */}
             <div className="mt-8 flex flex-col items-center gap-3">
               <button
-                onClick={() => {
-                  localStorage.setItem("shariah_demo_mode", "true");
-                  window.scrollTo(0, 0);
-                  navigate("/universe");
-                }}
+                onClick={(e) => scrollToSection(e, "waitlist")}
                 className="group flex items-center gap-3 border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] hover:bg-[#DAF1DE] hover:text-[#051F20] px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer"
               >
                 <span>Explore Full Universe (200+ Equities)</span>
@@ -682,14 +726,42 @@ export function Landing() {
         </section>
 
         {/* Final Call to Action */}
-        <section className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
+        <section id="waitlist" className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
           <div className="max-w-screen-xl mx-auto px-4 sm:px-12 flex flex-col items-center text-center">
             <h2 className="font-serif text-[56px] sm:text-[80px] md:text-[96px] mb-8 leading-none font-normal text-[#DAF1DE]">
               Ready to deploy.
             </h2>
             <p className="text-[#8EB69B] mb-12 font-sans max-w-2xl text-lg">
-              Join 500+ institutional and retail investors building the future of ethical finance. Get started in minutes.
+              Join the waitlist for early access. We're building the future of ethical finance.
             </p>
+            
+            {/* Waitlist Signup Form */}
+            <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto mb-8">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={waitlistEmail}
+                onChange={(e) => setWaitlistEmail(e.target.value)}
+                className="bg-[#0B2B26] border border-[#235347] text-[#DAF1DE] px-6 py-4 font-mono text-[11px] uppercase tracking-widest placeholder-[#8EB69B]/50 focus:outline-none focus:border-[#8EB69B] transition-colors"
+                disabled={waitlistStatus === "loading"}
+              />
+              <button
+                type="submit"
+                disabled={waitlistStatus === "loading"}
+                className="bg-[#DAF1DE] text-[#051F20] font-semibold px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:bg-[#c2e8c8] transition-all cursor-pointer shadow-lg shadow-[#DAF1DE]/10 disabled:opacity-50"
+              >
+                {waitlistStatus === "loading" ? "Joining..." : "Join Waitlist"}
+              </button>
+            </form>
+
+            {/* Waitlist Status Message */}
+            {waitlistStatus === "success" && (
+              <p className="text-[#8EB69B] font-sans text-sm mb-6">{waitlistMessage}</p>
+            )}
+            {waitlistStatus === "error" && (
+              <p className="text-red-400 font-sans text-sm mb-6">{waitlistMessage}</p>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto">
               <button
                 onClick={() => handleStartConnection("ALPACA PAPER")}

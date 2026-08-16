@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, ShieldAlert, Check, X, Info } from "lucide-react";
 
@@ -10,6 +10,16 @@ interface DevWarningModalProps {
 export function DevWarningModal({ isOpen, onClose }: DevWarningModalProps) {
   const [isChecked, setIsChecked] = useState(false);
 
+  // ESC dismisses the notice too (persisted by the parent's onClose).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleAcknowledge = () => {
@@ -20,16 +30,19 @@ export function DevWarningModal({ isOpen, onClose }: DevWarningModalProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn select-none">
-        {/* Background ambient radial glow */}
-        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-950/20 via-transparent to-transparent" />
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 animate-fadeIn select-none">
+        {/* Clickable backdrop overlay */}
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+        />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="relative w-full max-w-lg bg-[#0C0C0C] border border-amber-500/40 rounded-xl shadow-[0_0_50px_rgba(217,119,6,0.15)] overflow-hidden font-sans text-white"
+          className="relative z-10 w-full max-w-lg bg-[#0C0C0C] border border-amber-500/40 rounded-xl shadow-[0_0_50px_rgba(217,119,6,0.15)] overflow-hidden font-sans text-white"
         >
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-amber-950/80 via-yellow-950/60 to-amber-950/80 border-b border-amber-500/30 px-6 py-4 flex items-center justify-between">

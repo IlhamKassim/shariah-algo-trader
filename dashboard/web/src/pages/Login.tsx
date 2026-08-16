@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, ShieldAlert, ArrowLeft } from "lucide-react";
@@ -17,14 +17,21 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionMode, setConnectionMode] = useState("SECURE PORT 8000");
+  const [connectionMode, setConnectionMode] = useState("SECURE CONSOLE");
   const [pendingTarget, setPendingTarget] = useState<"demo" | "auth" | null>(null);
-  const [isNavigatingToLanding, setIsNavigatingToLanding] = useState(false);
-
 
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+
+  // Pilot invite link support: /login?invite=CODE — claim the single-use
+  // invite after a successful login/signup (any auth path). The admin app
+  // issues these links; without this the code was silently ignored.
+  const [inviteCode] = useState<string | null>(() =>
+    new URLSearchParams(location.search).get("invite"),
+  );
+  const inviteClaimedRef = useRef(false);
+  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
 
   const { data: auth, isLoading } = useQuery({
     queryKey: ["authStatus"],
@@ -34,27 +41,50 @@ export function Login() {
 
   const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
 
-  // Redirect to home if already authenticated (unless in password recovery mode)
+  // Claim the invite once the user is authenticated (covers Clerk OAuth,
+  // Supabase email/password login, and signup — whichever path lands first).
   useEffect(() => {
+    if (!inviteCode || inviteClaimedRef.current) return;
+    const authed = auth?.clerk_enabled
+      ? clerkLoaded && isSignedIn
+      : Boolean(auth?.authenticated);
+    if (!authed) return;
+    inviteClaimedRef.current = true;
+    api
+      .claimInvite(inviteCode)
+      .then((res) => {
+        if (res.state === "pending") {
+          setInviteMsg(
+            "Invite accepted — your pilot access is pending admin approval.",
+          );
+        } else {
+          setInviteMsg(`Invite accepted — pilot status: ${res.state}.`);
+        }
+      })
+      .catch((err) => {
+        setError(
+          err instanceof Error
+            ? `Invite claim failed: ${err.message}`
+            : "Invite claim failed.",
+        );
+      });
+  }, [inviteCode, auth, clerkLoaded, isSignedIn]);
+
+  // Redirect to app dashboard if already authenticated
+  useEffect(() => {
+    const isRecovery =
+      sessionStorage.getItem("shariah_recovery_mode") === "true" ||
+      window.location.hash.includes("type=recovery") ||
+      window.location.search.includes("type=recovery");
+    if (isRecovery) return;
+
     if (auth) {
-      const hash = window.location.hash || "";
-      const search = window.location.search || "";
-      const isRecovery =
-        hash.includes("type=recovery") ||
-        search.includes("type=recovery") ||
-        sessionStorage.getItem("shariah_recovery_mode") === "true";
-
-      if (isRecovery) {
-        navigate("/reset-password", { replace: true });
-        return;
-      }
-
       if (auth.clerk_enabled) {
         if (clerkLoaded && isSignedIn) {
-          navigate("/", { replace: true });
+          navigate("/app", { replace: true });
         }
       } else if (auth.auth_enabled && auth.authenticated) {
-        navigate("/", { replace: true });
+        navigate("/app", { replace: true });
       }
     }
   }, [auth, navigate, clerkLoaded, isSignedIn]);
@@ -80,19 +110,6 @@ export function Login() {
     }
   }, [location]);
 
-  // Beta pilot invite gating (Q2=A): an invite link
-  // (https://shariahtrading.my/login?invite=CODE) stores the code so the
-  // first authenticated call can redeem it and provision a pending pilot
-  // account. Persisted in localStorage so a fresh tab after email
-  // confirmation still redeems it.
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const invite = (params.get("invite") || "").trim();
-    if (invite) {
-      localStorage.setItem("shariah_pending_invite", invite);
-    }
-  }, [location]);
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0C0B09] flex items-center justify-center font-mono text-[#ECE5D5]">
@@ -103,6 +120,29 @@ export function Login() {
       </div>
     );
   }
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError("Enter your email address first to reset your password.");
+      return;
+    }
+    setError(null);
+    try {
+      if (!supabase) throw new Error("Supabase client is not configured.");
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: `${window.location.origin}/reset-password` },
+      );
+      if (resetError) throw resetError;
+      setSupabaseSuccessMsg(
+        `Password reset link sent to ${email.trim()} — check your inbox.`,
+      );
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to send password reset link.",
+      );
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,50 +319,6 @@ export function Login() {
     window.location.href = "/api/auth/google/login";
   };
 
-  const handleForgotPassword = async () => {
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setError("Enter your email address above to request a password reset link.");
-      return;
-    }
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setError("Please enter a valid email address (e.g. user@example.com).");
-      return;
-    }
-    if (!supabase) {
-      setError("Authentication system is not configured. Contact the administrator.");
-      return;
-    }
-    setError(null);
-    setSupabaseSuccessMsg(null);
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
-      setSupabaseSuccessMsg(
-        `✅ If an account exists for ${trimmedEmail}, a password reset link has been sent. Please check your inbox.`
-      );
-    } catch (err: any) {
-      const msg = err?.message || "";
-      if (msg.toLowerCase().includes("load failed") || msg.toLowerCase().includes("failed to fetch")) {
-        setError(
-          "Network request failed or Supabase email rate limit reached (max 3 emails/hour on free tier)."
-        );
-      } else if (msg.includes("rate limit") || msg.includes("429") || msg.includes("over_email_send_rate_limit")) {
-        setError(
-          "Supabase email rate limit reached (max 3 emails/hour). Please wait a few minutes before trying again."
-        );
-      } else {
-        setError(msg || "Failed to send password reset link. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
 
   const handleDemoLogin = () => {
     setConnectionMode("DEMO CONSOLE");
@@ -332,10 +328,7 @@ export function Login() {
 
   const handleNavigateToLanding = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    setIsNavigatingToLanding(true);
-    setTimeout(() => {
-      navigate("/landing");
-    }, 220);
+    navigate("/");
   };
 
   const handleCompleteConnection = async () => {
@@ -359,39 +352,14 @@ export function Login() {
           // ignore session fetch error
         }
       }
-
-      // Beta pilot: redeem the pending invite on the first authenticated call.
-      // An invalid/expired/used code blocks entry with the server's reason.
-      const pendingInvite = localStorage.getItem("shariah_pending_invite");
-      if (pendingInvite) {
-        try {
-          const claim = await api.claimInvite(pendingInvite);
-          if (claim?.status === "success") {
-            localStorage.removeItem("shariah_pending_invite");
-          }
-        } catch (err: unknown) {
-          localStorage.removeItem("shariah_pending_invite");
-          const msg = err instanceof Error ? err.message : "Invite code could not be redeemed.";
-          setError(`${msg} Please contact the administrator for a valid invite link.`);
-          setIsConnecting(false);
-          setIsSubmitting(false);
-          return; // stay on the login page
-        }
-      }
     }
     await queryClient.invalidateQueries();
     window.scrollTo(0, 0);
-    navigate("/");
+    navigate("/app");
   };
 
   return (
     <div className="min-h-screen bg-[#070709] text-white flex flex-col lg:flex-row font-sans select-none relative overflow-hidden animate-fadeIn">
-      {/* Top Page Transition Loader Bar */}
-      {isNavigatingToLanding && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-neutral-900 overflow-hidden">
-          <div className="h-full bg-emerald-500 w-full transition-all duration-200 ease-out animate-pulse" />
-        </div>
-      )}
 
       {isConnecting && (
         <ConnectionOverlay
@@ -572,6 +540,12 @@ export function Login() {
             </div>
           )}
 
+          {inviteMsg && (
+            <div className="bg-[#0B2B26] border border-[#8EB69B]/40 p-3.5 rounded-xl text-xs text-[#DAF1DE] font-medium">
+              {inviteMsg}
+            </div>
+          )}
+
           {/* Main Auth Form */}
           {auth?.supabase_enabled ? (
             <form onSubmit={handleSupabaseAuth} className="space-y-4">
@@ -652,16 +626,13 @@ export function Login() {
                   </p>
                 )}
                 {!isSignUpMode && (
-                  <div className="flex justify-end mt-1">
-                    <button
-                      type="button"
-                      onClick={handleForgotPassword}
-                      disabled={isSubmitting}
-                      className="text-xs font-semibold text-[#8EB69B] hover:text-[#DAF1DE] underline-offset-2 hover:underline transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-xs text-[#8EB69B] hover:text-[#DAF1DE] transition-colors mt-1.5 cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
                 )}
               </div>
 

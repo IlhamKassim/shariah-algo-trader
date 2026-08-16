@@ -27,8 +27,8 @@ import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
-import { ResetPassword } from "./pages/ResetPassword";
 import { Landing } from "./pages/Landing";
+import { ResetPassword } from "./pages/ResetPassword";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
 import { api, setTokenProvider } from "./lib/api";
@@ -36,46 +36,46 @@ import { useAuth } from "@clerk/react";
 import { supabase } from "./lib/supabaseClient";
 
 const NAV = [
-  { to: "/", label: "Overview", end: true, icon: LayoutDashboard },
-  { to: "/portfolio", label: "Portfolio", end: false, icon: Briefcase },
-  { to: "/universe", label: "Universe", end: false, icon: Globe },
-  { to: "/activity", label: "Activity", end: false, icon: ScrollText },
-  { to: "/compare", label: "Compare", end: false, icon: GitCompareArrows },
-  { to: "/day-trader", label: "Day Trader", end: false, icon: Zap },
-  { to: "/learn", label: "Learn", end: false, icon: BookOpen },
-  { to: "/settings", label: "Settings", end: false, icon: SlidersHorizontal },
+  { to: "/app", label: "Overview", end: true, icon: LayoutDashboard },
+  { to: "/app/portfolio", label: "Portfolio", end: false, icon: Briefcase },
+  { to: "/app/universe", label: "Universe", end: false, icon: Globe },
+  { to: "/app/activity", label: "Activity", end: false, icon: ScrollText },
+  { to: "/app/compare", label: "Compare", end: false, icon: GitCompareArrows },
+  { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
+  { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
+  { to: "/app/settings", label: "Settings", end: false, icon: SlidersHorizontal },
 ];
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
-  "/": {
+  "/app": {
     title: "Overview",
     sub: "Portfolio health, performance and compliance at a glance",
   },
-  "/portfolio": {
+  "/app/portfolio": {
     title: "Portfolio",
     sub: "Open positions held in the Shariah-compliant strategy",
   },
-  "/universe": {
+  "/app/universe": {
     title: "Universe",
     sub: "Eligible stocks ranked by composite Factor Score",
   },
-  "/activity": {
+  "/app/activity": {
     title: "Activity Log",
     sub: "Audit trail of compliance checks, rebalances and orders",
   },
-  "/compare": {
+  "/app/compare": {
     title: "Strategy Comparison",
     sub: "Shariah Algo vs Day Trader — risk-adjusted performance side by side",
   },
-  "/day-trader": {
+  "/app/day-trader": {
     title: "Day Trader",
     sub: "Gap & Go intraday positions, fills and scanner config",
   },
-  "/learn": {
+  "/app/learn": {
     title: "Learn",
     sub: "Understanding factor investing, strategy logic, and Shariah compliance",
   },
-  "/settings": {
+  "/app/settings": {
     title: "Settings Profile",
     sub: "Manage Alpaca API credentials, ETF targets, factor weights, and user authentication",
   },
@@ -89,7 +89,7 @@ interface TopbarProps {
 function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const isDayTraderPage = location.pathname === "/day-trader";
+  const isDayTraderPage = location.pathname === "/app/day-trader";
   const [time, setTime] = useState(new Date());
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
@@ -188,7 +188,7 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
     "/portfolio": positions?.length,
     "/universe": universe?.stocks.length,
   };  
-  const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/settings") : NAV;
+  const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/app/settings") : NAV;
 
   return (
     <header className={`border-b border-divider shrink-0 px-6 ${isV2UI ? "bg-[#0B0D14] border-white/10" : "bg-sidebar"}`}>
@@ -235,7 +235,7 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
             )}
             {!isDemo && (
               <NavLink
-                to="/settings"
+                to="/app/settings"
                 className="w-7 h-7 rounded-full flex items-center justify-center select-none shrink-0"
                 title="User Profile & Settings"
               >
@@ -315,7 +315,7 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
             )}
             {!isDemo && (
               <NavLink
-                to="/settings"
+                to="/app/settings"
                 className="hidden md:flex w-7 h-7 rounded-full items-center justify-center select-none shrink-0"
                 title="User Profile & Settings"
               >
@@ -362,7 +362,7 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
 
 function PageHeading() {
   const location = useLocation();
-  const meta = PAGE_META[location.pathname] ?? PAGE_META["/"];
+  const meta = PAGE_META[location.pathname] ?? PAGE_META["/app"];
   return (
     <div className="mb-6">
       <h1 className="text-[15px] font-semibold text-primary leading-tight">{meta.title}</h1>
@@ -409,40 +409,6 @@ export default function App() {
     }
   }, [getToken, isLoaded]);
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Intercept password recovery flows globally and ensure user lands on /reset-password
-  useEffect(() => {
-    const hash = window.location.hash || "";
-    const search = window.location.search || "";
-    const isRecovery =
-      hash.includes("type=recovery") ||
-      search.includes("type=recovery") ||
-      sessionStorage.getItem("shariah_recovery_mode") === "true";
-
-    if (isRecovery && location.pathname !== "/reset-password") {
-      sessionStorage.setItem("shariah_recovery_mode", "true");
-      navigate(`/reset-password${search}${hash}`, { replace: true });
-      return;
-    }
-
-    if (!supabase) return;
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        sessionStorage.setItem("shariah_recovery_mode", "true");
-        if (window.location.pathname !== "/reset-password") {
-          navigate("/reset-password", { replace: true });
-        }
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [location.pathname, navigate]);
-
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
   return (
@@ -450,11 +416,11 @@ export default function App() {
       <ServerStatusBanner />
       <ScrollToTop />
       <Routes>
-        <Route path="/landing" element={<Landing />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route
-          path="*"
+          path="/app/*"
           element={
             <ProtectedRoute>
               <div className={`min-h-screen ${isV2UI ? "bg-[#08090E] text-slate-100" : "bg-page"} flex flex-col`}>
@@ -469,13 +435,14 @@ export default function App() {
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/day-trader" element={<DayTrader />} />
                     <Route path="/learn" element={<Learn />} />
-                    <Route path="/settings" element={isDemo ? <Navigate to="/" replace /> : <Settings />} />
+                    <Route path="/settings" element={isDemo ? <Navigate to="/app" replace /> : <Settings />} />
                   </Routes>
                 </main>
               </div>
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
