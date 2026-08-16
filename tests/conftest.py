@@ -59,3 +59,18 @@ def _alpaca_env_defaults(monkeypatch):
     for key, val in defaults.items():
         if not os.environ.get(key):
             monkeypatch.setenv(key, val)
+
+
+@pytest.fixture(autouse=True)
+def _mock_dns_for_alpaca(monkeypatch):
+    """Ensure socket.getaddrinfo never flakes on external DNS lookups for Alpaca hosts in CI."""
+    import socket
+    real_getaddrinfo = socket.getaddrinfo
+
+    def _safe_getaddrinfo(host, port, *args, **kwargs):
+        if host and isinstance(host, str) and (host == "alpaca.markets" or host.endswith(".alpaca.markets")):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("104.22.66.1", port or 443))]
+        return real_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", _safe_getaddrinfo)
+
