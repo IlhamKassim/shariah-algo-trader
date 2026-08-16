@@ -27,19 +27,9 @@ export default {
         "brand-red": "#D16A5B",
         "brand-gold": "#D1A92E",
         "brand-blue": "#7FB4FF",
-        // Quantix Glass V2 Theme Tokens
-        "glass-page": "#08090E",
-        "glass-sidebar": "#0B0D14",
-        "glass-card": "rgba(18, 21, 32, 0.65)",
-        "glass-card-hover": "rgba(25, 30, 45, 0.8)",
-        "glass-border": "rgba(255, 255, 255, 0.08)",
-        "glass-border-glow": "rgba(255, 255, 255, 0.18)",
-        "glass-accent-emerald": "#10B981",
-        "glass-accent-rose": "#F43F5E",
-        "glass-accent-amber": "#F59E0B",
-        "glass-accent-indigo": "#6366F1",
       },
     },
   },
+
   plugins: [],
 };
