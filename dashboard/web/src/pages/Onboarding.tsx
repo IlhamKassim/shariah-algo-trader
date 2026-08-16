@@ -6,12 +6,11 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  Sparkles,
-  Globe2,
   KeyRound,
-  Cpu,
-  UserCheck,
+  ExternalLink,
+  Info,
 } from "lucide-react";
+
 import { api } from "../lib/api";
 import { MeshDriftShaderBackground } from "../components/MeshDriftShaderBackground";
 
@@ -55,17 +54,11 @@ const INVESTOR_TYPES = [
   },
 ];
 
-const CAPITAL_TIERS = [
-  { amount: 25000, label: "$25,000 USD", desc: "Starter paper sandbox" },
-  { amount: 50000, label: "$50,000 USD", desc: "Growth quant node" },
-  { amount: 100000, label: "$100,000 USD", desc: "Standard institutional pilot (Recommended)" },
-  { amount: 500000, label: "$500,000 USD", desc: "High-allocation tier" },
-];
-
 export function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -76,9 +69,7 @@ export function Onboarding() {
     country: "Malaysia",
     investorType: "individual",
 
-    // Step 2: Sandbox Node & Execution
-    paperCapital: 100000,
-    executionMode: "managed", // "managed" | "custom_keys"
+    // Step 2: Alpaca Paper API Keys (Required)
     alpacaApiKey: "",
     alpacaApiSecret: "",
     riskAcknowledged: true,
@@ -94,25 +85,37 @@ export function Onboarding() {
       : "Quant Pilot";
 
   const handleNext = () => {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setErrorMsg("Please enter both your first and last name to continue.");
+      return;
+    }
+    setErrorMsg(null);
     if (step < 2) setStep(2);
   };
 
   const handleBack = () => {
+    setErrorMsg(null);
     if (step > 1) setStep(1);
   };
 
   const handleComplete = async () => {
+    if (!formData.alpacaApiKey.trim() || !formData.alpacaApiSecret.trim()) {
+      setErrorMsg("Alpaca Paper API Key and Secret Key are required to connect your terminal.");
+      return;
+    }
+
     setSubmitting(true);
+    setErrorMsg(null);
+
     try {
       // Save profile metadata locally
       const userProfile = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
         displayName: displayName,
-        quantHandle: formData.quantHandle || `@${(formData.firstName || "pilot").toLowerCase()}`,
+        quantHandle: formData.quantHandle.trim() || `@${(formData.firstName || "pilot").toLowerCase()}`,
         country: formData.country,
         investorType: formData.investorType,
-        paperCapital: formData.paperCapital,
         completedAt: new Date().toISOString(),
       };
       localStorage.setItem("shariah_user_profile", JSON.stringify(userProfile));
@@ -126,45 +129,40 @@ export function Onboarding() {
         quant_handle: formData.quantHandle.trim() || `@${(formData.firstName || "pilot").toLowerCase()}`,
         country: formData.country,
         investor_type: formData.investorType,
-        paper_capital: formData.paperCapital,
-        onboarding_completed_at: new Date().toISOString(),
+        alpaca_api_key: formData.alpacaApiKey.trim(),
+        alpaca_api_secret: formData.alpacaApiSecret.trim(),
+        alpaca_base_url: "https://paper-api.alpaca.markets",
         trading_mode: "paper",
         shariah_trader_enabled: true,
+        onboarding_completed_at: new Date().toISOString(),
       };
 
-
-      if (formData.executionMode === "custom_keys" && formData.alpacaApiKey && formData.alpacaApiSecret) {
-        settingsPayload.alpaca_api_key = formData.alpacaApiKey;
-        settingsPayload.alpaca_api_secret = formData.alpacaApiSecret;
-      }
-
-      await api.updateSettings(settingsPayload).catch((e) => {
-        console.warn("Non-fatal settings sync during onboarding:", e);
-      });
+      await api.updateSettings(settingsPayload);
 
       // Brief cinematic delay before entering console
       setTimeout(() => {
         navigate("/app", { replace: true });
-      }, 700);
-    } catch (err) {
+      }, 500);
+    } catch (err: any) {
       console.error("Onboarding setup failed:", err);
-      navigate("/app", { replace: true });
+      setErrorMsg(err.message || "Failed to save broker credentials. Please verify your keys and try again.");
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#040706] text-[#F0FDF4] selection:bg-emerald-500/30 selection:text-[#F0FDF4] relative font-sans flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#040706] text-[#ECE5D5] selection:bg-brand-gold/30 selection:text-[#ECE5D5] relative font-sans flex flex-col justify-between overflow-x-hidden">
       {/* Background WebGL Shader */}
       <MeshDriftShaderBackground />
 
       {/* Top Header */}
-      <header className="relative z-20 border-b border-[#16382E] bg-[#060A08]/90 backdrop-blur-md px-6 sm:px-12 py-4 flex items-center justify-between">
+      <header className="relative z-20 border-b border-[#29241B] bg-[#0C0B09]/95 backdrop-blur-md px-6 sm:px-12 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded border border-[#1F4A3E] bg-[#090E0C] flex items-center justify-center text-emerald-400 font-mono font-bold text-xs group-hover:text-[#F0FDF4] group-hover:border-emerald-400 transition-all">
+          <div className="w-8 h-8 rounded-none border border-[#D1A92E]/40 bg-[#0C0B09] flex items-center justify-center text-brand-gold font-mono font-bold text-xs group-hover:text-primary group-hover:border-brand-gold transition-all">
             ST
           </div>
-          <span className="font-serif text-2xl tracking-wide text-[#F0FDF4]">
-            SHARIAH<span className="italic text-emerald-400">TRADING</span>
+          <span className="font-serif text-2xl tracking-wide text-primary">
+            SHARIAH<span className="italic text-brand-gold">TRADING</span>
           </span>
         </Link>
 
@@ -172,46 +170,39 @@ export function Onboarding() {
         <div className="hidden md:flex items-center gap-6 font-mono text-xs">
           <div className="flex items-center gap-2">
             <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold ${
                 step >= 1
-                  ? "bg-emerald-400 text-[#041F16]"
-                  : "bg-[#090E0C] text-slate-500 border border-[#16382E]"
+                  ? "bg-brand-gold text-page"
+                  : "bg-sidebar text-muted border border-divider"
               }`}
             >
               1
             </span>
-            <span className={step === 1 ? "text-[#F0FDF4] font-semibold" : "text-slate-500"}>
+            <span className={step === 1 ? "text-primary font-semibold" : "text-muted"}>
               Quant Identity
             </span>
           </div>
 
-          <div className="w-8 h-[1px] bg-[#16382E]" />
+          <div className="w-8 h-[1px] bg-divider" />
 
           <div className="flex items-center gap-2">
             <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold ${
                 step >= 2
-                  ? "bg-emerald-400 text-[#041F16]"
-                  : "bg-[#090E0C] text-slate-500 border border-[#16382E]"
+                  ? "bg-brand-gold text-page"
+                  : "bg-sidebar text-muted border border-divider"
               }`}
             >
               2
             </span>
-            <span className={step === 2 ? "text-[#F0FDF4] font-semibold" : "text-slate-500"}>
-              Sandbox Node
+            <span className={step === 2 ? "text-primary font-semibold" : "text-muted"}>
+              Alpaca Paper Keys
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 font-mono text-xs text-slate-400">
+        <div className="flex items-center gap-4 font-mono text-xs text-muted">
           <span>Step {step} of 2</span>
-          <button
-            type="button"
-            onClick={() => navigate("/app")}
-            className="text-slate-400 hover:text-emerald-300 transition-colors text-xs underline cursor-pointer"
-          >
-            Skip for now
-          </button>
         </div>
       </header>
 
@@ -220,15 +211,25 @@ export function Onboarding() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left / Center Form Container (Col 7) */}
-          <div className="lg:col-span-7 bg-[#080D0B]/95 backdrop-blur-2xl border border-[#16382E] p-6 sm:p-10 shadow-[0_20px_70px_rgba(0,0,0,0.8)] relative">
+          <div className="lg:col-span-7 bg-[#0C0B09]/95 backdrop-blur-2xl border border-divider p-6 sm:p-10 shadow-2xl relative">
             
             {/* Header Badge */}
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#16382E]">
-              <span className="font-mono text-[10px] text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Account Setup
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-divider">
+              <span className="font-mono text-[10px] text-brand-gold uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse" />
+                Terminal Activation
+              </span>
+              <span className="font-mono text-[10px] text-muted uppercase">
+                Paper Trading Mode
               </span>
             </div>
+
+            {errorMsg && (
+              <div className="mb-5 p-3.5 border border-brand-red/40 bg-brand-red/10 text-brand-red text-xs font-mono flex items-center gap-2.5">
+                <Info size={15} className="shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
             {/* STEP 1: QUANT IDENTITY */}
             {step === 1 && (
@@ -240,17 +241,17 @@ export function Onboarding() {
                 className="space-y-6"
               >
                 <div>
-                  <h1 className="font-serif text-3xl sm:text-4xl text-[#F0FDF4] font-normal leading-tight">
+                  <h1 className="font-serif text-3xl sm:text-4xl text-primary font-normal leading-tight">
                     Personal &amp; Trader Profile
                   </h1>
-                  <p className="font-sans text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                  <p className="font-sans text-xs sm:text-sm text-muted mt-2 leading-relaxed">
                     Set up your institutional operator credentials and configure your Shariah trading account profile.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
+                    <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
                       First Name *
                     </label>
                     <input
@@ -258,13 +259,14 @@ export function Onboarding() {
                       placeholder="e.g. John"
                       value={formData.firstName}
                       onChange={(e) => updateForm("firstName", e.target.value)}
-                      className="w-full bg-[#050807] border border-[#16382E] focus:border-emerald-400 px-4 py-3 text-sm font-sans text-[#F0FDF4] placeholder-slate-600 focus:outline-none transition-colors"
+                      className="w-full bg-[#050807] border border-divider focus:border-brand-gold px-4 py-3 text-sm font-sans text-primary placeholder-faint focus:outline-none transition-colors"
                       autoFocus
+                      required
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
+                    <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
                       Last Name *
                     </label>
                     <input
@@ -272,18 +274,19 @@ export function Onboarding() {
                       placeholder="e.g. Cena"
                       value={formData.lastName}
                       onChange={(e) => updateForm("lastName", e.target.value)}
-                      className="w-full bg-[#050807] border border-[#16382E] focus:border-emerald-400 px-4 py-3 text-sm font-sans text-[#F0FDF4] placeholder-slate-600 focus:outline-none transition-colors"
+                      className="w-full bg-[#050807] border border-divider focus:border-brand-gold px-4 py-3 text-sm font-sans text-primary placeholder-faint focus:outline-none transition-colors"
+                      required
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
+                    <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
                       Trader Handle / Alias
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-xs">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-faint font-mono text-xs">
                         @
                       </span>
                       <input
@@ -291,22 +294,22 @@ export function Onboarding() {
                         placeholder="john_trader"
                         value={formData.quantHandle}
                         onChange={(e) => updateForm("quantHandle", e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
-                        className="w-full bg-[#050807] border border-[#16382E] focus:border-emerald-400 pl-8 pr-4 py-3 text-sm font-mono text-[#F0FDF4] placeholder-slate-600 focus:outline-none transition-colors"
+                        className="w-full bg-[#050807] border border-divider focus:border-brand-gold pl-8 pr-4 py-3 text-sm font-mono text-brand-gold placeholder-faint focus:outline-none transition-colors"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
+                    <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
                       Country / Jurisdiction
                     </label>
                     <select
                       value={formData.country}
                       onChange={(e) => updateForm("country", e.target.value)}
-                      className="w-full bg-[#050807] border border-[#16382E] focus:border-emerald-400 px-4 py-3 text-sm font-sans text-[#F0FDF4] focus:outline-none transition-colors cursor-pointer"
+                      className="w-full bg-[#050807] border border-divider focus:border-brand-gold px-4 py-3 text-sm font-sans text-primary focus:outline-none transition-colors cursor-pointer"
                     >
                       {COUNTRIES.map((c) => (
-                        <option key={c} value={c} className="bg-[#050807] text-[#F0FDF4]">
+                        <option key={c} value={c} className="bg-[#0C0B09] text-primary">
                           {c}
                         </option>
                       ))}
@@ -314,12 +317,11 @@ export function Onboarding() {
                   </div>
                 </div>
 
-                {/* Investor Persona Selector */}
                 <div className="space-y-2 pt-2">
-                  <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
-                    Account Classification
+                  <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
+                    Investor Classification Persona
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {INVESTOR_TYPES.map((type) => {
                       const isSelected = formData.investorType === type.id;
                       return (
@@ -328,17 +330,15 @@ export function Onboarding() {
                           onClick={() => updateForm("investorType", type.id)}
                           className={`p-3.5 border transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-[#0E1714] border-emerald-400 text-[#F0FDF4] shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                              : "bg-[#050807] border-[#16382E] text-slate-400 hover:border-emerald-500/40"
+                              ? "bg-brand-gold/10 border-brand-gold text-primary"
+                              : "bg-[#050807] border-divider text-muted hover:border-muted hover:text-primary"
                           }`}
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono text-xs font-semibold text-[#F0FDF4]">
-                              {type.label}
-                            </span>
-                            {isSelected && <CheckCircle2 size={14} className="text-emerald-400" />}
+                            <span className="font-sans font-semibold text-xs text-primary">{type.label}</span>
+                            {isSelected && <CheckCircle2 size={14} className="text-brand-gold" />}
                           </div>
-                          <p className="text-[11px] text-slate-400 leading-snug">{type.desc}</p>
+                          <p className="text-[11px] text-muted leading-relaxed">{type.desc}</p>
                         </div>
                       );
                     })}
@@ -347,7 +347,7 @@ export function Onboarding() {
               </motion.div>
             )}
 
-            {/* STEP 2: SANDBOX NODE & EXECUTION */}
+            {/* STEP 2: MANDATORY ALPACA PAPER KEYS */}
             {step === 2 && (
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
@@ -357,142 +357,94 @@ export function Onboarding() {
                 className="space-y-6"
               >
                 <div>
-                  <h1 className="font-serif text-3xl sm:text-4xl text-[#F0FDF4] font-normal leading-tight">
-                    Execution Node &amp; Paper Sandbox
+                  <h1 className="font-serif text-3xl sm:text-4xl text-primary font-normal leading-tight">
+                    Connect Alpaca Paper API Keys
                   </h1>
-                  <p className="font-sans text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                    Select your initial simulated capital and configure your paper trading environment.
+                  <p className="font-sans text-xs sm:text-sm text-muted mt-2 leading-relaxed">
+                    To execute algorithmic Shariah rebalancing in the paper trading sandbox, connect your personal Alpaca Paper API credentials.
                   </p>
                 </div>
 
-                {/* Capital Tier Selector */}
-                <div className="space-y-2">
-                  <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
-                    Simulated Paper Capital Allocation
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {CAPITAL_TIERS.map((tier) => {
-                      const isSelected = formData.paperCapital === tier.amount;
-                      return (
-                        <div
-                          key={tier.amount}
-                          onClick={() => updateForm("paperCapital", tier.amount)}
-                          className={`p-4 border transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-[#0E1714] border-emerald-400 text-[#F0FDF4] shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                              : "bg-[#050807] border-[#16382E] text-slate-400 hover:border-emerald-500/40"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono text-sm font-bold text-[#F0FDF4]">
-                              {tier.label}
-                            </span>
-                            {isSelected && <CheckCircle2 size={16} className="text-emerald-400" />}
-                          </div>
-                          <p className="text-[11px] text-slate-400">{tier.desc}</p>
-                        </div>
-                      );
-                    })}
+                {/* Alpaca Setup Instruction Card */}
+                <div className="bg-[#12110E] border border-divider p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-mono text-xs font-bold text-brand-gold uppercase">
+                      <KeyRound size={15} />
+                      <span>How to obtain free Paper API keys</span>
+                    </div>
+                    <a
+                      href="https://app.alpaca.markets"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-mono text-brand-gold hover:underline flex items-center gap-1"
+                    >
+                      <span>alpaca.markets</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                  <ol className="list-decimal list-inside text-xs font-mono text-muted space-y-1.5 pl-1">
+                    <li>Log into your free Alpaca account at <strong className="text-primary">app.alpaca.markets</strong>.</li>
+                    <li>Switch the toggle at the top/left to <strong className="text-brand-gold">Paper Trading</strong>.</li>
+                    <li>On the right side of the dashboard, click <strong className="text-primary">Generate API Key</strong>.</li>
+                    <li>Copy and paste your <strong className="text-primary">Key ID</strong> and <strong className="text-primary">Secret Key</strong> below.</li>
+                  </ol>
+                </div>
+
+                {/* API Key Inputs */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
+                      Alpaca Paper API Key ID *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="PKI4MGJIDVVHHTZOG37RMREWGB"
+                      value={formData.alpacaApiKey}
+                      onChange={(e) => updateForm("alpacaApiKey", e.target.value.trim())}
+                      className="w-full bg-[#050807] border border-divider focus:border-brand-gold px-4 py-3 text-xs font-mono text-primary placeholder-faint focus:outline-none transition-colors"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] uppercase text-brand-gold tracking-widest block">
+                      Alpaca Paper Secret Key *
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="••••••••••••••••••••••••••••••••••••••••"
+                      value={formData.alpacaApiSecret}
+                      onChange={(e) => updateForm("alpacaApiSecret", e.target.value.trim())}
+                      className="w-full bg-[#050807] border border-divider focus:border-brand-gold px-4 py-3 text-xs font-mono text-primary placeholder-faint focus:outline-none transition-colors"
+                      required
+                    />
                   </div>
                 </div>
 
-                {/* Brokerage Connectivity Option */}
-                <div className="space-y-3 pt-2">
-                  <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest block">
-                    Brokerage Sandbox Connection
-                  </label>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div
-                      onClick={() => updateForm("executionMode", "managed")}
-                      className={`p-4 border transition-all cursor-pointer ${
-                        formData.executionMode === "managed"
-                          ? "bg-[#0E1714] border-emerald-400"
-                          : "bg-[#050807] border-[#16382E] hover:border-emerald-500/40"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Cpu size={16} className="text-emerald-400" />
-                        <span className="font-mono text-xs font-bold text-[#F0FDF4]">
-                          Instant Managed Sandbox
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        Zero setup required. Automated paper execution with live Shariah screening.
-                      </p>
-                    </div>
-
-                    <div
-                      onClick={() => updateForm("executionMode", "custom_keys")}
-                      className={`p-4 border transition-all cursor-pointer ${
-                        formData.executionMode === "custom_keys"
-                          ? "bg-[#0E1714] border-emerald-400"
-                          : "bg-[#050807] border-[#16382E] hover:border-emerald-500/40"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <KeyRound size={16} className="text-emerald-400" />
-                        <span className="font-mono text-xs font-bold text-[#F0FDF4]">
-                          Custom Alpaca Keys
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        Optionally connect your personal Alpaca Paper API keys.
-                      </p>
-                    </div>
-                  </div>
-
-                  {formData.executionMode === "custom_keys" && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="bg-[#050807] border border-[#16382E] p-4 space-y-3 mt-2"
-                    >
-                      <div className="space-y-1">
-                        <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest">
-                          Alpaca Paper API Key
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="PK..."
-                          value={formData.alpacaApiKey}
-                          onChange={(e) => updateForm("alpacaApiKey", e.target.value.trim())}
-                          className="w-full bg-[#090E0C] border border-[#16382E] focus:border-emerald-400 px-3 py-2 text-xs font-mono text-[#F0FDF4] placeholder-slate-600 focus:outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-mono text-[10px] uppercase text-emerald-400 tracking-widest">
-                          Alpaca Paper Secret Key
-                        </label>
-                        <input
-                          type="password"
-                          placeholder="••••••••••••••••••••"
-                          value={formData.alpacaApiSecret}
-                          onChange={(e) => updateForm("alpacaApiSecret", e.target.value.trim())}
-                          className="w-full bg-[#090E0C] border border-[#16382E] focus:border-emerald-400 px-3 py-2 text-xs font-mono text-[#F0FDF4] placeholder-slate-600 focus:outline-none"
-                        />
-                      </div>
-                    </motion.div>
-                  )}
+                {/* Endpoint Confirmation */}
+                <div className="bg-[#050807] border border-divider p-3.5 flex items-center justify-between text-xs font-mono">
+                  <span className="text-muted uppercase text-[10px]">Execution Endpoint:</span>
+                  <span className="text-brand-green font-semibold">https://paper-api.alpaca.markets</span>
                 </div>
 
-                {/* Consent Box */}
-                <div className="bg-[#050807] border border-[#16382E] p-4 flex items-start gap-3">
-                  <ShieldCheck size={18} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                    By launching the trading console, you acknowledge that execution operates in a paper sandbox environment adhering to automated AAOIFI compliance rules.
+                {/* Shariah Safety Consent */}
+                <div className="bg-[#050807] border border-divider p-4 flex items-start gap-3">
+                  <ShieldCheck size={18} className="text-brand-green shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted leading-relaxed font-sans">
+                    All algorithmic executions strictly adhere to <strong>AAOIFI Standard No. 21</strong> (100% cash-backed spot equity, zero shorting, zero margin leverage) in your isolated Alpaca Paper sandbox.
                   </p>
                 </div>
               </motion.div>
             )}
 
             {/* Navigation Action Buttons */}
-            <div className="flex items-center justify-between pt-8 border-t border-[#16382E] mt-8">
+            <div className="flex items-center justify-between pt-8 border-t border-divider mt-8">
               {step > 1 ? (
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="border border-[#16382E] bg-[#090E0C] hover:border-emerald-500/40 text-slate-300 hover:text-[#F0FDF4] px-6 py-3 font-mono text-xs uppercase tracking-widest flex items-center gap-2 transition-all cursor-pointer"
+                  className="border border-divider bg-sidebar hover:border-brand-gold/40 text-muted hover:text-primary px-6 py-3 font-mono text-xs uppercase tracking-widest flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <ArrowLeft size={14} />
                   <span>Back</span>
@@ -505,7 +457,7 @@ export function Onboarding() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="bg-emerald-400 hover:bg-emerald-300 text-[#041F16] font-bold px-8 py-3.5 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+                  className="bg-brand-gold hover:bg-brand-gold/90 text-page font-bold px-8 py-3.5 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2"
                 >
                   <span>Continue</span>
                   <ArrowRight size={14} />
@@ -514,11 +466,11 @@ export function Onboarding() {
                 <button
                   type="button"
                   onClick={handleComplete}
-                  disabled={submitting}
-                  className="bg-emerald-400 hover:bg-emerald-300 text-[#041F16] font-bold px-8 py-3.5 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-500/10 disabled:opacity-50"
+                  disabled={submitting || !formData.alpacaApiKey.trim() || !formData.alpacaApiSecret.trim()}
+                  className="bg-brand-gold hover:bg-brand-gold/90 text-page font-bold px-8 py-3.5 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <Sparkles size={14} />
-                  <span>{submitting ? "Launching..." : "Enter Trading Console"}</span>
+                  <span>{submitting ? "Connecting Keys..." : "Connect & Launch Terminal"}</span>
+                  <ArrowRight size={14} />
                 </button>
               )}
             </div>
@@ -528,91 +480,76 @@ export function Onboarding() {
           <div className="lg:col-span-5 space-y-6">
             
             {/* Live Identity Badge */}
-            <div className="bg-[#080D0B]/95 backdrop-blur-2xl border border-[#16382E] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-                <UserCheck size={160} className="text-emerald-400" />
-              </div>
-
-              <div className="flex justify-between items-center pb-4 mb-6 border-b border-[#16382E]">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-400 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="bg-[#0C0B09]/95 backdrop-blur-2xl border border-divider p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+              <div className="flex justify-between items-center pb-4 mb-6 border-b border-divider">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-brand-gold flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse" />
                   Trader Profile Card
                 </span>
-                <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest">
+                <span className="font-mono text-[10px] text-muted uppercase tracking-widest">
                   PILOT NODE
                 </span>
               </div>
 
               {/* Avatar & User Details */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded border border-emerald-500/40 bg-[#0E1714] flex items-center justify-center text-emerald-400 font-serif text-xl font-bold">
+                <div className="w-14 h-14 rounded-none border border-brand-gold/60 bg-sidebar flex items-center justify-center text-brand-gold font-serif text-xl font-bold">
                   {(formData.firstName?.[0] || "T").toUpperCase()}
                   {(formData.lastName?.[0] || "P").toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-serif text-2xl text-[#F0FDF4] leading-tight">
+                  <h3 className="font-sans font-bold text-lg text-primary tracking-tight">
                     {displayName}
                   </h3>
-                  <span className="font-mono text-xs text-emerald-400 block mt-0.5">
-                    {formData.quantHandle ? `@${formData.quantHandle}` : "@pilot.trader"}
-                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-xs text-brand-gold font-semibold">
+                      {formData.quantHandle || `@${(formData.firstName || "pilot").toLowerCase()}`}
+                    </span>
+                    <span className="text-muted text-xs">·</span>
+                    <span className="font-sans text-xs text-muted">
+                      {formData.country}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Profile Telemetry Specs */}
-              <div className="space-y-3.5 font-mono text-xs border-t border-[#16382E] pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 uppercase text-[10px]">Jurisdiction</span>
-                  <span className="text-[#F0FDF4] flex items-center gap-1.5">
-                    <Globe2 size={12} className="text-emerald-400" />
-                    {formData.country}
+              {/* Status Grid */}
+              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-divider text-xs font-mono">
+                <div className="p-3 bg-sidebar border border-divider">
+                  <span className="text-muted text-[10px] uppercase block">Mandate:</span>
+                  <span className="font-bold text-brand-green mt-0.5 block">AAOIFI No. 21</span>
+                </div>
+                <div className="p-3 bg-sidebar border border-divider">
+                  <span className="text-muted text-[10px] uppercase block">Target:</span>
+                  <span className="font-bold text-primary mt-0.5 block">SPUS Top 20</span>
+                </div>
+                <div className="p-3 bg-sidebar border border-divider col-span-2">
+                  <span className="text-muted text-[10px] uppercase block">Broker Endpoint:</span>
+                  <span className="font-bold text-brand-gold mt-0.5 block truncate">
+                    {formData.alpacaApiKey ? "Alpaca Paper (Connected)" : "Alpaca Paper (Pending Key)"}
                   </span>
                 </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 uppercase text-[10px]">Account Class</span>
-                  <span className="text-emerald-300 font-semibold">
-                    {INVESTOR_TYPES.find((t) => t.id === formData.investorType)?.label}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 uppercase text-[10px]">Compliance Standard</span>
-                  <span className="text-[#F0FDF4]">
-                    AAOIFI Standard No. 21
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 uppercase text-[10px]">Equity Universe</span>
-                  <span className="text-[#F0FDF4]">Top 20 SPUS Equities</span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 uppercase text-[10px]">Sandbox Capital</span>
-                  <span className="text-emerald-400 font-bold">
-                    ${formData.paperCapital.toLocaleString()} USD
-                  </span>
-                </div>
-              </div>
-
-              {/* Live Status Pill */}
-              <div className="mt-6 pt-4 border-t border-[#16382E] flex items-center justify-between font-mono text-[10px]">
-                <span className="text-slate-500 uppercase">Engine Status</span>
-                <span className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 font-bold uppercase tracking-wider">
-                  100% Spot Halal
-                </span>
               </div>
             </div>
 
+            {/* Quick Helper Note */}
+            <div className="bg-[#0C0B09]/95 border border-divider p-6 text-xs text-muted space-y-2">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-primary font-bold block">
+                Security & Encryption
+              </span>
+              <p className="leading-relaxed">
+                All Alpaca API secrets are encrypted using AES-256-GCM before saving to your isolated database record. Your keys are never exposed in plaintext.
+              </p>
+            </div>
           </div>
 
         </div>
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="relative z-20 py-4 px-6 text-center font-mono text-[10px] text-slate-500 border-t border-[#16382E]">
-        <span>© 2026 Shariah Algo Trader · Institutional Quantitative Infrastructure</span>
+      {/* Footer */}
+      <footer className="relative z-20 border-t border-divider bg-[#0C0B09]/95 px-6 sm:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-muted">
+        <span>&copy; {new Date().getFullYear()} Shariah Algo Trader · Algorithmic Halal Engine</span>
+        <span>Paper Sandbox Execution Only</span>
       </footer>
     </div>
   );

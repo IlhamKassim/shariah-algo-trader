@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   ShieldCheck,
   Sliders,
-  DollarSign,
   CheckCircle2,
   Save,
   ArrowUpRight,
@@ -12,6 +11,7 @@ import {
   Info,
   UserCheck,
 } from "lucide-react";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type SettingsResponse } from "../lib/api";
 import { UserAvatar } from "../components/UserAvatar";
@@ -59,13 +59,6 @@ const INVESTOR_TYPES = [
   },
 ];
 
-const CAPITAL_TIERS = [
-  { value: 50000, label: "$50,000", desc: "Starter allocation" },
-  { value: 100000, label: "$100,000", desc: "Standard pilot (Recommended)" },
-  { value: 250000, label: "$250,000", desc: "Growth sandbox" },
-  { value: 500000, label: "$500,000", desc: "Institutional tier" },
-];
-
 export function Profile() {
   const queryClient = useQueryClient();
 
@@ -84,7 +77,6 @@ export function Profile() {
   const [quantHandle, setQuantHandle] = useState("");
   const [country, setCountry] = useState("Malaysia");
   const [investorType, setInvestorType] = useState("individual");
-  const [paperCapital, setPaperCapital] = useState(100000);
   const [userEmail, setUserEmail] = useState("");
 
   const [saving, setSaving] = useState(false);
@@ -98,7 +90,6 @@ export function Profile() {
       if (settings.quant_handle) setQuantHandle(settings.quant_handle);
       if (settings.country) setCountry(settings.country);
       if (settings.investor_type) setInvestorType(settings.investor_type);
-      if (settings.paper_capital) setPaperCapital(settings.paper_capital);
     }
   }, [settings]);
 
@@ -130,7 +121,7 @@ export function Profile() {
         quant_handle: displayHandle.trim(),
         country: country,
         investor_type: investorType,
-        paper_capital: paperCapital,
+        trading_mode: "paper",
         onboarding_completed_at: settings?.onboarding_completed_at || new Date().toISOString(),
       });
 
@@ -211,11 +202,11 @@ export function Profile() {
 
           <div className="p-4">
             <span className="text-[10px] font-semibold text-section uppercase tracking-[0.09em] block">
-              Sandbox Allocation
+              Alpaca Paper Key
             </span>
-            <div className="font-mono text-xs text-brand-gold font-bold flex items-center gap-1.5 mt-1">
-              <DollarSign size={13} />
-              <span>${Number(paperCapital).toLocaleString()} USD</span>
+            <div className="font-mono text-xs text-brand-gold font-bold flex items-center gap-1.5 mt-1 truncate">
+              <KeyRound size={13} className="shrink-0" />
+              <span>{settings?.alpaca_api_key_masked || "Connected"}</span>
             </div>
           </div>
 
@@ -245,7 +236,7 @@ export function Profile() {
               {saveSuccess && (
                 <div className="mb-5 p-3 border border-brand-green/40 bg-brand-green/10 text-brand-green text-xs font-mono flex items-center gap-2">
                   <CheckCircle2 size={14} className="shrink-0" />
-                  <span>Profile updated and synced with cloud PostgreSQL database.</span>
+                  <span>Profile updated and synced with cloud database.</span>
                 </div>
               )}
 
@@ -355,33 +346,6 @@ export function Profile() {
                   </div>
                 </div>
 
-                {/* Paper Capital Sandbox Tier */}
-                <div>
-                  <label className="text-[10px] font-mono text-muted uppercase tracking-wider block mb-2">
-                    Simulated Paper Capital Tier
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {CAPITAL_TIERS.map((tier) => {
-                      const active = paperCapital === tier.value;
-                      return (
-                        <button
-                          key={tier.value}
-                          type="button"
-                          onClick={() => setPaperCapital(tier.value)}
-                          className={`p-3 border text-center transition-colors cursor-pointer ${
-                            active
-                              ? "border-brand-gold bg-brand-gold/10 text-brand-gold font-bold"
-                              : "border-divider bg-page/40 text-muted hover:border-muted hover:text-primary"
-                          }`}
-                        >
-                          <span className="block font-mono text-xs text-primary">{tier.label}</span>
-                          <span className="text-[10px] text-muted block mt-0.5">{tier.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 {/* Submit Action */}
                 <div className="pt-4 border-t border-divider flex justify-end">
                   <button
@@ -406,7 +370,7 @@ export function Profile() {
             </CardHeader>
             <CardContent className="space-y-4 text-xs font-mono">
               <p className="text-muted leading-relaxed font-sans text-xs">
-                Simulated execution node configured with Alpaca Paper API. All automated rebalances execute in accordance with the Shariah mandate.
+                Execution node configured strictly with Alpaca Paper API. All automated rebalances execute in accordance with the Shariah mandate.
               </p>
 
               <div className="space-y-2">
@@ -415,8 +379,12 @@ export function Profile() {
                   <span className="text-primary font-semibold">Alpaca Paper API</span>
                 </div>
                 <div className="p-2.5 border border-divider flex justify-between items-center">
+                  <span className="text-muted uppercase text-[10px]">Active Key:</span>
+                  <span className="text-brand-gold font-semibold">{settings?.alpaca_api_key_masked || "Configured"}</span>
+                </div>
+                <div className="p-2.5 border border-divider flex justify-between items-center">
                   <span className="text-muted uppercase text-[10px]">Trading Mode:</span>
-                  <span className="text-brand-gold font-semibold uppercase">{settings?.trading_mode || "PAPER"}</span>
+                  <span className="text-brand-green font-semibold uppercase">PAPER ONLY</span>
                 </div>
                 <div className="p-2.5 border border-divider flex justify-between items-center">
                   <span className="text-muted uppercase text-[10px]">Rebalance Engine:</span>
@@ -429,7 +397,7 @@ export function Profile() {
                 className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 border border-divider hover:border-brand-gold/40 text-muted hover:text-brand-gold text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
               >
                 <KeyRound size={13} />
-                <span>Configure API Keys</span>
+                <span>Update Broker API Keys</span>
               </Link>
             </CardContent>
           </Card>
@@ -443,7 +411,7 @@ export function Profile() {
                 The Shariah Algo Trader platform strictly abides by the <strong>Accounting and Auditing Organization for Islamic Financial Institutions (AAOIFI)</strong> Standard No. 21 rules:
               </p>
               <ul className="space-y-2 text-muted list-disc list-inside font-mono text-[11px]">
-                <li>Zero Interest (Riba) & Margin Borrowing</li>
+                <li>Zero Interest (Riba) &amp; Margin Borrowing</li>
                 <li>Zero Short Selling (Qimar / Gharar)</li>
                 <li>100% Cash-Backed Spot Equity Ownership</li>
                 <li>Debt-to-Market-Cap Ratio &lt; 33% Verified</li>

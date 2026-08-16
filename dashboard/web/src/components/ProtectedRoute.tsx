@@ -22,6 +22,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   const { isSignedIn, isLoaded } = useAuth();
   const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
+
+  const { data: settings } = useQuery({
+
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    enabled: Boolean(!isDemo && (auth?.authenticated || isSignedIn)),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const [timedOut, setTimedOut] = useState(false);
   const [showMfaChallenge, setShowMfaChallenge] = useState(false);
 
@@ -116,6 +126,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       return <Navigate to="/login" replace />;
     }
   }
+
+  // Ensure Alpaca Paper API keys are configured before entering trading console
+  if (settings && (!settings.onboarding_completed_at || !settings.alpaca_api_key_masked)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
 
   return (
     <>

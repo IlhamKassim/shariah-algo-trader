@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Save, Key, Sliders, Shield, ShieldCheck, Loader2, CheckCircle2, AlertCircle, Mail, Lock, Flame } from "lucide-react";
+import { Eye, EyeOff, Save, Key, Sliders, Shield, ShieldCheck, Loader2, CheckCircle2, AlertCircle, Mail, Lock, Zap } from "lucide-react";
+
 
 import { api } from "../lib/api";
 import type { SettingsUpdateRequest } from "../lib/api";
@@ -40,7 +41,7 @@ export function Settings() {
 
   // State values for forms
   const [keyVisible, setKeyVisible] = useState(false);
-  const [liveKeyVisible, setLiveKeyVisible] = useState(false);
+
   const [passVisible, setPassVisible] = useState(false);
   const [googleIdVisible, setGoogleIdVisible] = useState(false);
   const [googleSecretVisible, setGoogleSecretVisible] = useState(false);
@@ -133,12 +134,10 @@ export function Settings() {
   }
 
   // Helper values
-  const currentTradingMode = formData.trading_mode ?? settings.trading_mode ?? "paper";
   const currentAlpacaKey = formData.alpaca_api_key ?? settings.alpaca_api_key_masked;
   const currentAlpacaSecret = formData.alpaca_api_secret ?? settings.alpaca_api_secret_masked;
-  const currentAlpacaLiveKey = formData.alpaca_live_api_key ?? settings.alpaca_live_api_key_masked ?? "";
-  const currentAlpacaLiveSecret = formData.alpaca_live_api_secret ?? settings.alpaca_live_api_secret_masked ?? "";
   const currentAlpacaUrl = formData.alpaca_base_url ?? settings.alpaca_base_url;
+
 
   const currentEtfSymbol = formData.etf_symbol ?? settings.etf_symbol;
   const currentTopN = formData.top_n ?? settings.top_n;
@@ -270,107 +269,65 @@ export function Settings() {
               {activeTab === "broker" && (
                 <div className="space-y-6">
                   <div className="border-b border-divider pb-2">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Trading Environment & Broker API Setup</h3>
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Alpaca Broker API Setup</h3>
                     <p className="text-[10px] text-faint mt-1">
-                      Manage active execution environment (Paper vs Live Real Money) and credentials.
+                      Algorithmic execution runs strictly in Paper Trading mode against your Alpaca Paper account.
                     </p>
                   </div>
                   
-                  {/* ENVIRONMENT SELECTOR CARDS */}
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-muted">
-                      Active Execution Mode
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div
-                        onClick={() => {
-                          handleInputChange("trading_mode", "paper");
-                          handleInputChange("alpaca_base_url", "https://paper-api.alpaca.markets");
-                        }}
-                        className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
-                          currentTradingMode === "paper"
-                            ? "border-brand-gold bg-brand-gold/10"
-                            : "border-divider bg-page hover:border-brand-gold/40"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Shield size={16} className="text-brand-gold" />
-                          <div>
-                            <div className="font-mono text-xs font-bold uppercase text-primary">Paper Trading</div>
-                            <div className="text-[10px] text-muted">Simulated · Zero Financial Risk</div>
-                          </div>
-                        </div>
-                        {currentTradingMode === "paper" && (
-                          <span className="text-[10px] font-mono text-brand-gold border border-brand-gold/40 px-2 py-0.5 uppercase font-bold">
-                            Active
-                          </span>
-                        )}
-                      </div>
-
-                      <div
-                        onClick={() => {
-                          handleInputChange("trading_mode", "live");
-                          handleInputChange("alpaca_base_url", "https://api.alpaca.markets");
-                        }}
-                        className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
-                          currentTradingMode === "live"
-                            ? "border-rose-500 bg-rose-950/20"
-                            : "border-divider bg-page hover:border-rose-500/40"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Flame size={16} className="text-rose-400 animate-pulse" />
-                          <div>
-                            <div className="font-mono text-xs font-bold uppercase text-rose-400">Live Real Money</div>
-                            <div className="text-[10px] text-muted">Real Capital Execution</div>
-                          </div>
-                        </div>
-                        {currentTradingMode === "live" && (
-                          <span className="text-[10px] font-mono text-rose-400 border border-rose-500/40 px-2 py-0.5 uppercase font-bold">
-                            Active Live
-                          </span>
-                        )}
+                  {/* ENVIRONMENT STATUS BADGE */}
+                  <div className="p-3.5 border border-brand-gold/40 bg-brand-gold/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Shield size={16} className="text-brand-gold" />
+                      <div>
+                        <div className="font-mono text-xs font-bold uppercase text-primary">Paper Trading Sandbox</div>
+                        <div className="text-[10px] text-muted">100% Halal Spot Equity · Zero Financial Risk</div>
                       </div>
                     </div>
+                    <span className="text-[10px] font-mono text-brand-gold border border-brand-gold/40 px-2 py-0.5 uppercase font-bold">
+                      Active Sandbox
+                    </span>
                   </div>
 
                   {/* PAPER CREDENTIALS */}
-                  <div className="bg-[#12110E] border border-divider rounded-lg p-4 space-y-3">
+                  <div className="bg-[#12110E] border border-divider p-4 space-y-4">
                     <div className="flex items-center justify-between border-b border-divider/50 pb-2">
                       <div className="flex items-center gap-2">
-                        <Shield size={14} className="text-brand-gold" />
+                        <Key size={14} className="text-brand-gold" />
                         <span className="font-mono text-xs font-bold uppercase tracking-wider text-primary">
-                          Paper Trading Credentials
+                          Alpaca Paper API Credentials
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono text-faint">https://paper-api.alpaca.markets</span>
+                      <span className="text-[10px] font-mono text-brand-green">https://paper-api.alpaca.markets</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
-                          Paper API Key
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                          Alpaca Paper API Key ID *
                         </label>
                         <input
                           type="text"
                           value={currentAlpacaKey}
                           onChange={(e) => handleInputChange("alpaca_api_key", e.target.value)}
-                          className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
-                          placeholder="PK..."
+                          className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs font-mono focus:border-brand-gold focus:outline-none transition-colors"
+                          placeholder="PKI4MGJIDVVHHTZOG37RMREWGB"
+                          required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
-                          Paper Secret Key
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                          Alpaca Paper Secret Key *
                         </label>
                         <div className="relative">
                           <input
                             type={keyVisible ? "text" : "password"}
                             value={currentAlpacaSecret}
                             onChange={(e) => handleInputChange("alpaca_api_secret", e.target.value)}
-                            className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors"
+                            className="w-full bg-page border border-divider text-primary pl-3 pr-10 py-2 text-xs font-mono focus:border-brand-gold focus:outline-none transition-colors"
                             placeholder="Enter paper secret"
+                            required
                           />
                           <button
                             type="button"
@@ -384,66 +341,17 @@ export function Settings() {
                     </div>
                   </div>
 
-                  {/* LIVE REAL MONEY CREDENTIALS */}
-                  <div className="bg-[#140D0E] border border-rose-900/30 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between border-b border-rose-900/40 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Flame size={14} className="text-rose-400" />
-                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-300">
-                          Live Real Money Credentials
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono text-rose-400/70">https://api.alpaca.markets</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-rose-200/70 mb-1">
-                          Live API Key ID
-                        </label>
-                        <input
-                          type="text"
-                          value={currentAlpacaLiveKey}
-                          onChange={(e) => handleInputChange("alpaca_live_api_key", e.target.value)}
-                          className="w-full bg-page border border-rose-900/40 text-primary px-3 py-2 text-xs focus:border-rose-500 focus:outline-none transition-colors"
-                          placeholder="AK..."
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-rose-200/70 mb-1">
-                          Live Secret Key
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={liveKeyVisible ? "text" : "password"}
-                            value={currentAlpacaLiveSecret}
-                            onChange={(e) => handleInputChange("alpaca_live_api_secret", e.target.value)}
-                            className="w-full bg-page border border-rose-900/40 text-primary pl-3 pr-10 py-2 text-xs focus:border-rose-500 focus:outline-none transition-colors"
-                            placeholder="Enter live secret"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setLiveKeyVisible(!liveKeyVisible)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {liveKeyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                      Resolved Alpaca Endpoint URL
+                      Resolved Alpaca Base URL
                     </label>
                     <input
                       type="text"
-                      value={currentAlpacaUrl}
+                      value={currentAlpacaUrl || "https://paper-api.alpaca.markets"}
                       onChange={(e) => handleInputChange("alpaca_base_url", e.target.value)}
                       className="w-full bg-page border border-divider text-primary px-3 py-2 text-xs focus:border-brand-gold focus:outline-none transition-colors font-mono"
                       placeholder="https://paper-api.alpaca.markets"
+                      readOnly
                     />
                   </div>
                 </div>
@@ -483,7 +391,7 @@ export function Settings() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-bold text-xs uppercase tracking-wider text-muted flex items-center gap-2">
-                            <Flame size={16} className="text-muted" />
+                            <Zap size={16} className="text-muted" />
                             <span>Day Trader Strategy (Benchmark Engine)</span>
                           </div>
                           <p className="text-[11px] text-faint mt-1 leading-relaxed">
@@ -583,7 +491,7 @@ export function Settings() {
                   <div className="bg-brand-gold/10 border border-brand-gold/40 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
                     <div>
                       <div className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-                        <Flame size={14} className="text-brand-gold animate-pulse" />
+                        <Zap size={14} className="text-brand-gold" />
                         <span>Instant Manual Rebalance Trigger</span>
                       </div>
                       <div className="text-[11px] text-muted mt-0.5">
