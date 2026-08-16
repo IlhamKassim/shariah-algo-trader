@@ -68,10 +68,13 @@ export default function App() {
         return;
       }
       setError(e.detail);
+    } else if (e instanceof Error) {
+      setError(e.message);
     } else {
       setError("Unexpected error — check that the admin API is running on :8002.");
     }
   }, []);
+
 
 
   const refresh = useCallback(async () => {
