@@ -147,6 +147,13 @@ def list_testers() -> dict:
             "approved_by": user["approved_by"],
             "created_at": user["created_at"],
             "updated_at": user["updated_at"],
+            "first_name": meta.get("first_name"),
+            "last_name": meta.get("last_name"),
+            "quant_handle": meta.get("quant_handle"),
+            "country": meta.get("country"),
+            "investor_type": meta.get("investor_type"),
+            "paper_capital": meta.get("paper_capital", 100000.0),
+            "onboarding_completed_at": meta.get("onboarding_completed_at"),
             "trading_mode": meta.get("trading_mode", "paper"),
             "shariah_trader_enabled": meta.get("shariah_trader_enabled", 0),
             "has_paper_keys": meta.get("has_paper_keys", False),
@@ -154,6 +161,7 @@ def list_testers() -> dict:
             "last_activity_at": activity[0]["created_at"] if activity else None,
         })
     return {"testers": testers, "count": len(testers)}
+
 
 
 # ── A2: approve ──────────────────────────────────────────────────────────────
@@ -379,6 +387,13 @@ def customer_profile(user_id: str, cache=Depends(get_universe_cache)) -> dict:
         "approved_by": user["approved_by"],
         "created_at": user["created_at"],
         "updated_at": user["updated_at"],
+        "first_name": meta.get("first_name"),
+        "last_name": meta.get("last_name"),
+        "quant_handle": meta.get("quant_handle"),
+        "country": meta.get("country"),
+        "investor_type": meta.get("investor_type"),
+        "paper_capital": meta.get("paper_capital", 100000.0),
+        "onboarding_completed_at": meta.get("onboarding_completed_at"),
         "trading_mode": meta.get("trading_mode", "paper"),
         "shariah_trader_enabled": meta.get("shariah_trader_enabled", 0),
         "has_paper_keys": meta.get("has_paper_keys", False),
@@ -388,6 +403,7 @@ def customer_profile(user_id: str, cache=Depends(get_universe_cache)) -> dict:
         "compliance": compliance,
         "last_activity_at": activity[0]["created_at"] if activity else None,
     }
+
 
 
 # ── B2: aggregate analytics and risk ──────────────────────────────────────────

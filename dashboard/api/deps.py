@@ -1,3 +1,4 @@
+import os
 import jwt
 import json
 import time
@@ -5,6 +6,7 @@ import urllib.request
 from functools import lru_cache
 from fastapi import Request, HTTPException, Depends
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm, HMACAlgorithm
+
 
 from shariah_algo_trader.config import Config
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
@@ -221,9 +223,10 @@ def is_admin(request: Request, cfg: Config | None = None) -> bool:
 
     - Legacy password/OAuth session mode (no Supabase ``user_id`` bound to the
       request) is owner-only, so those callers are admins.
-    - Supabase mode grants admin when the JWT's ``app_metadata.role`` is an
-      admin role, or when the caller's email is in the allowlist configured via
-      ``ALLOWED_GOOGLE_EMAILS``.
+    - Supabase mode grants admin when:
+      1. JWT ``app_metadata.role`` is an admin role.
+      2. Local SQLite ``pilot_users.role`` is 'admin'.
+      3. Caller email is in ``ADMIN_EMAILS`` or ``ALLOWED_GOOGLE_EMAILS``.
     """
     user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
     if not user_id:
@@ -234,10 +237,27 @@ def is_admin(request: Request, cfg: Config | None = None) -> bool:
     app_meta = payload.get("app_metadata") or {}
     if app_meta.get("role") in _ADMIN_APP_METADATA_ROLES:
         return True
-    email = getattr(request.state, "user_email", None)
-    if email and cfg.allowed_google_emails and email.lower() in cfg.allowed_google_emails:
+
+    # Check local SQLite pilot database role
+    from dashboard.api.user_store import get_pilot_role
+    if get_pilot_role(user_id) == "admin":
         return True
+
+    email = getattr(request.state, "user_email", None)
+    if email:
+        email_clean = email.strip().lower()
+        if hasattr(cfg, "admin_emails") and email_clean in cfg.admin_emails:
+            return True
+        if hasattr(cfg, "allowed_google_emails") and email_clean in cfg.allowed_google_emails:
+            return True
+        admin_env = os.environ.get("ADMIN_EMAILS", "") or os.environ.get("ALLOWED_ADMIN_EMAILS", "")
+        if admin_env:
+            allowed_set = {e.strip().lower() for e in admin_env.split(",") if e.strip()}
+            if email_clean in allowed_set:
+                return True
+
     return False
+
 
 
 def is_tester_request(request: Request) -> bool:

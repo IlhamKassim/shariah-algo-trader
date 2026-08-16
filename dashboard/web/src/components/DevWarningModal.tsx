@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, ShieldAlert, Check, X, Info } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
+
 
 interface DevWarningModalProps {
   isOpen: boolean;
@@ -34,100 +35,100 @@ export function DevWarningModal({ isOpen, onClose }: DevWarningModalProps) {
         {/* Clickable backdrop overlay */}
         <div
           onClick={onClose}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+          className="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"
         />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="relative z-10 w-full max-w-lg bg-[#0C0C0C] border border-amber-500/40 rounded-xl shadow-[0_0_50px_rgba(217,119,6,0.15)] overflow-hidden font-sans text-white"
+          exit={{ opacity: 0, scale: 0.96, y: 8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-lg bg-[#080D0B] border border-[#16382E] shadow-[0_25px_80px_rgba(0,0,0,0.95)] overflow-hidden font-sans text-[#F0FDF4]"
         >
-          {/* Header Banner */}
-          <div className="bg-gradient-to-r from-amber-950/80 via-yellow-950/60 to-amber-950/80 border-b border-amber-500/30 px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                <AlertTriangle size={20} className="animate-pulse" />
+          {/* Subtle gold hairline */}
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#ffdca1]/50 to-transparent" />
+
+          {/* Header Bar */}
+          <div className="bg-[#060A08] border-b border-[#16382E] px-6 sm:px-8 py-5 flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#ffdca1] border border-[#ffdca1]/30 bg-[#0E1714] px-2 py-0.5">
+                  Development Mode
+                </span>
+                <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest">
+                  Pre-Alpha Build
+                </span>
               </div>
-              <div>
-                <h3 className="font-mono text-xs uppercase tracking-[0.2em] font-bold text-amber-400">
-                  DEVELOPMENT MODE NOTICE
-                </h3>
-                <p className="text-[11px] text-amber-200/70 font-mono">
-                  Pre-Alpha Experimental Build
-                </p>
-              </div>
+              <h3 className="font-serif text-2xl text-[#F0FDF4] font-normal leading-tight">
+                System Development Notice
+              </h3>
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="text-[#a39d96] hover:text-white transition-colors p-1 rounded-md hover:bg-white/5 cursor-pointer"
+              className="border border-[#16382E] bg-[#090E0C] p-2 text-slate-400 hover:text-[#F0FDF4] hover:border-emerald-500/40 transition-colors cursor-pointer"
               title="Close notice"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
 
           {/* Modal Content Body */}
-          <div className="p-6 space-y-5">
+          <div className="p-6 sm:p-8 space-y-5">
             {/* Core Warning Box */}
-            <div className="bg-[#14120E] border border-amber-900/40 rounded-lg p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <ShieldAlert size={20} className="text-amber-400 shrink-0 mt-0.5" />
-                <div className="space-y-1.5 text-xs text-[#d4ceca]">
-                  <p className="font-semibold text-amber-200 leading-snug">
-                    Notice: Platform in Active Development ("Nothing properly works yet")
-                  </p>
-                  <p className="leading-relaxed text-[#b5aeb7] font-sans">
-                    We are currently in active development mode. Algorithmic trade execution, compliance filtering, quantitative ranking engines, and market feeds are undergoing testing and <strong className="text-amber-300 font-semibold">are not operating properly or reliably</strong> at this time.
-                  </p>
-                </div>
+            <div className="bg-[#040705] border border-[#16382E] border-l-2 border-l-[#ffdca1] p-4 sm:p-5 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-[#ffdca1]">
+                <AlertTriangle size={14} className="text-[#ffdca1]" />
+                <span>Active Testing Environment</span>
               </div>
-            </div>
-
-            {/* Risk Acknowledgement Details */}
-            <div className="space-y-2 text-xs text-[#a39d96] leading-relaxed">
-              <div className="flex items-center gap-2 text-white font-mono text-[11px] uppercase tracking-wider font-semibold">
-                <Info size={14} className="text-amber-400" />
-                <span>Financial Risk Disclosure</span>
-              </div>
-              <p>
-                Do NOT execute trades with live capital or rely on data from this website for actual financial decisions. By proceeding, you acknowledge that you are using an experimental test environment and assume all risks.
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                This platform is in active development. Algorithmic trade execution, automated compliance checks, and market data feeds are undergoing continuous testing and <strong className="text-[#F0FDF4] font-semibold">must not be assumed reliable for live capital</strong>.
               </p>
             </div>
 
-            {/* Checkbox Opt-in */}
+            {/* Risk Disclosure */}
+            <div className="bg-[#040705] border border-[#16382E] p-4 space-y-1.5">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400">
+                Financial Risk Disclosure
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                Do NOT execute trades with real funds or rely on telemetry data for fiduciary decisions. All users must operate strictly on paper sandbox accounts.
+              </p>
+            </div>
+
+            {/* Checkbox Agreement */}
             <label
               onClick={() => setIsChecked(!isChecked)}
-              className="flex items-start gap-3 p-3.5 rounded-lg border border-[#2a2824] bg-[#11100E] hover:border-amber-500/40 transition-all cursor-pointer group"
+              className="flex items-start gap-3 p-3.5 border border-[#16382E] bg-[#040705] hover:border-emerald-500/40 transition-colors cursor-pointer group select-none"
             >
               <div
-                className={`w-5 h-5 rounded border shrink-0 mt-0.5 flex items-center justify-center transition-all ${
+                className={`w-4 h-4 border shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
                   isChecked
-                    ? "bg-amber-400 border-amber-400 text-black"
-                    : "border-[#444] bg-black/40 group-hover:border-amber-400/60"
+                    ? "bg-[#DAF1DE] border-[#DAF1DE] text-[#051F20]"
+                    : "border-[#1F4A3E] bg-[#090E0C] group-hover:border-emerald-400"
                 }`}
               >
-                {isChecked && <Check size={14} strokeWidth={3} />}
+                {isChecked && <Check size={12} strokeWidth={3} />}
               </div>
-              <span className="text-xs text-[#d4ceca] leading-snug font-sans">
-                I understand that this site is in active development mode, features may not work properly, and I acknowledge and accept all risks.
+              <span className="text-xs text-slate-300 leading-snug font-sans">
+                I understand that this system is an experimental preview, and I acknowledge the sandbox testing requirements.
               </span>
             </label>
 
-            {/* Action Buttons */}
-            <div className="pt-2 flex items-center justify-end gap-3">
+            {/* Action Button */}
+            <div className="pt-2">
               <button
+                type="button"
                 onClick={handleAcknowledge}
                 disabled={!isChecked}
-                className={`w-full py-3 px-6 font-mono text-[11px] font-bold uppercase tracking-widest rounded transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                className={`w-full py-3.5 px-6 font-mono text-[11px] uppercase tracking-widest font-semibold transition-all flex items-center justify-center gap-2 ${
                   isChecked
-                    ? "bg-amber-400 text-black shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:bg-amber-300"
-                    : "bg-[#1f1d19] text-[#666] border border-[#2a2824] cursor-not-allowed"
+                    ? "bg-[#DAF1DE] text-[#051F20] hover:bg-[#c2e8c8] shadow-lg shadow-[#DAF1DE]/10 cursor-pointer"
+                    : "bg-[#040705] text-slate-600 border border-[#16382E] cursor-not-allowed"
                 }`}
               >
-                <span>Acknowledge & Proceed</span>
+                <span>Acknowledge &amp; Enter</span>
               </button>
             </div>
           </div>

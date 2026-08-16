@@ -1,11 +1,21 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { signIn } from "../lib/auth";
 
-export function LoginCard() {
+interface LoginCardProps {
+  initialError?: string | null;
+}
+
+export function LoginCard({ initialError }: LoginCardProps = {}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
+
+  useEffect(() => {
+    if (initialError) {
+      setError(initialError);
+    }
+  }, [initialError]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -15,6 +25,7 @@ export function LoginCard() {
     if (signInError) setError(signInError);
     setBusy(false);
   };
+
 
   const inputClasses =
     "w-full bg-[#0a0a0a] border-2 border-[#333333] px-3 py-2.5 text-xs font-mono text-[#ffffff] outline-none focus:border-[#ffffff] placeholder:text-secondary-fixed-dim rounded-none";

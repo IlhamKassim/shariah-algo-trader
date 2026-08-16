@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Flame,
   Shield,
+  User,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountModeModal } from "./components/AccountModeModal";
@@ -28,10 +29,14 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
 import { Landing } from "./pages/Landing";
+import { Invite } from "./pages/Invite";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
+import { Profile } from "./pages/Profile";
+import { PlatformGuideModal } from "./components/PlatformGuideModal";
 import { api, setTokenProvider } from "./lib/api";
+
 import { useAuth } from "@clerk/react";
 import { supabase } from "./lib/supabaseClient";
 
@@ -43,8 +48,10 @@ const NAV = [
   { to: "/app/compare", label: "Compare", end: false, icon: GitCompareArrows },
   { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
   { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
+  { to: "/app/profile", label: "Profile", end: false, icon: User },
   { to: "/app/settings", label: "Settings", end: false, icon: SlidersHorizontal },
 ];
+
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/app": {
@@ -75,18 +82,25 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
     title: "Learn",
     sub: "Understanding factor investing, strategy logic, and Shariah compliance",
   },
+  "/app/profile": {
+    title: "Quant Profile",
+    sub: "Quant trader identity, Shariah mandate pass and sandbox allocation",
+  },
   "/app/settings": {
     title: "Settings Profile",
     sub: "Manage Alpaca API credentials, ETF targets, factor weights, and user authentication",
   },
 };
 
+
 interface TopbarProps {
   isV2UI?: boolean;
   onToggleV2UI?: () => void;
+  onOpenGuide?: () => void;
 }
 
-function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
+function Topbar({ isV2UI = false, onToggleV2UI, onOpenGuide }: TopbarProps) {
+
   const location = useLocation();
   const navigate = useNavigate();
   const isDayTraderPage = location.pathname === "/app/day-trader";
@@ -300,6 +314,17 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
                 <span>PAPER ACCOUNT</span>
               </button>
             )}
+            {onOpenGuide && (
+              <button
+                type="button"
+                onClick={onOpenGuide}
+                className="hidden sm:flex items-center gap-1.5 border border-divider hover:border-brand-gold/40 text-muted hover:text-brand-gold text-[10px] font-semibold px-2.5 py-1 rounded-none tracking-wider whitespace-nowrap cursor-pointer transition-all"
+                title="Platform Architecture & Strategy Guide"
+              >
+                <BookOpen size={11} className="text-brand-gold" />
+                <span>HOW IT WORKS</span>
+              </button>
+            )}
             <div className="hidden md:flex">
               <NotificationBell />
             </div>
@@ -315,13 +340,14 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
             )}
             {!isDemo && (
               <NavLink
-                to="/app/settings"
+                to="/app/profile"
                 className="hidden md:flex w-7 h-7 rounded-full items-center justify-center select-none shrink-0"
-                title="User Profile & Settings"
+                title="Quant Operator Profile"
               >
                 <UserAvatar />
               </NavLink>
             )}
+
           </div>
         </div>
 
@@ -387,9 +413,13 @@ function ScrollToTop() {
 
 import { ServerStatusBanner } from "./components/ServerStatusBanner";
 
+import { Onboarding } from "./pages/Onboarding";
+
 export default function App() {
+
   const { getToken, isLoaded } = useAuth();
   const [isV2UI, setIsV2UI] = useState(() => localStorage.getItem("shariah_ui_v2_enabled") === "true");
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   const toggleV2UI = () => {
     const next = !isV2UI;
@@ -414,17 +444,22 @@ export default function App() {
   return (
     <>
       <ServerStatusBanner />
+      <PlatformGuideModal isOpen={showGuideModal} onClose={() => setShowGuideModal(false)} />
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Landing onOpenGuide={() => setShowGuideModal(true)} />} />
+        <Route path="/invite/:code" element={<Invite />} />
+        <Route path="/invite" element={<Invite />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
         <Route
           path="/app/*"
           element={
             <ProtectedRoute>
               <div className={`min-h-screen ${isV2UI ? "bg-[#08090E] text-slate-100" : "bg-page"} flex flex-col`}>
-                <Topbar isV2UI={isV2UI} onToggleV2UI={toggleV2UI} />
+                <Topbar isV2UI={isV2UI} onToggleV2UI={toggleV2UI} onOpenGuide={() => setShowGuideModal(true)} />
                 <main className={`flex-1 overflow-y-auto ${isV2UI ? "px-2 sm:px-6 py-4 max-w-[1500px]" : "px-6 py-6 max-w-[1400px]"} w-full mx-auto`}>
                   {!isV2UI && <PageHeading />}
                   <Routes>
@@ -435,8 +470,10 @@ export default function App() {
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/day-trader" element={<DayTrader />} />
                     <Route path="/learn" element={<Learn />} />
+                    <Route path="/profile" element={isDemo ? <Navigate to="/app" replace /> : <Profile />} />
                     <Route path="/settings" element={isDemo ? <Navigate to="/app" replace /> : <Settings />} />
                   </Routes>
+
                 </main>
               </div>
             </ProtectedRoute>
@@ -447,3 +484,4 @@ export default function App() {
     </>
   );
 }
+

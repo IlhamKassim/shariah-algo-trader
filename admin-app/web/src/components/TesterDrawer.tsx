@@ -309,17 +309,42 @@ export function TesterDrawer({ tester, api, onClose }: TesterDrawerProps) {
         {/* Drawer Header */}
         <div className="flex items-start justify-between border-b-2 border-[#333333] bg-[#242322] px-6 py-4">
           <div>
-            <h2 className="text-base font-headline font-bold text-[#ffffff] uppercase tracking-wider">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-headline font-bold text-[#ffffff] uppercase tracking-wider">
+                {tester.first_name || tester.last_name
+                  ? `${tester.first_name ?? ""} ${tester.last_name ?? ""}`.trim()
+                  : tester.email}
+              </h2>
+              {tester.quant_handle && (
+                <span className="text-xs font-mono text-[#10b981] font-bold">
+                  {tester.quant_handle}
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-mono text-secondary-fixed-dim mt-0.5">
               {tester.email}
-            </h2>
-            <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-secondary-fixed-dim">
-              <span>CUST_ID: {custId}</span>
+            </p>
+            <div className="mt-1.5 flex items-center gap-2 font-mono text-[10px] text-secondary-fixed-dim">
+              <span>CUST_ID: <strong className="text-[#3366cc]">{custId}</strong></span>
+              {tester.country && (
+                <>
+                  <span>·</span>
+                  <span className="text-[#f9e37a] uppercase">{tester.country}</span>
+                </>
+              )}
+              {tester.investor_type && (
+                <>
+                  <span>·</span>
+                  <span className="text-[#ffffff] uppercase">{tester.investor_type.replace("_", " ")}</span>
+                </>
+              )}
               <span>·</span>
               <span className="uppercase text-[#10b981]">{tester.state}</span>
               <span>·</span>
               <span title={tester.user_id}>{truncateMiddle(tester.user_id)}</span>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}

@@ -21,12 +21,20 @@ export interface Tester {
   approved_by: string | null;
   created_at: string;
   updated_at: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  quant_handle?: string | null;
+  country?: string | null;
+  investor_type?: string | null;
+  paper_capital?: number | null;
+  onboarding_completed_at?: string | null;
   trading_mode: string;
   shariah_trader_enabled: number;
   has_paper_keys: boolean;
   has_live_keys: boolean;
   last_activity_at: string | null;
 }
+
 
 export interface TesterList {
   testers: Tester[];
@@ -143,6 +151,13 @@ export interface CustomerProfile {
   approved_by: string | null;
   created_at: string;
   updated_at: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  quant_handle?: string | null;
+  country?: string | null;
+  investor_type?: string | null;
+  paper_capital?: number | null;
+  onboarding_completed_at?: string | null;
   trading_mode: string;
   shariah_trader_enabled: number;
   has_paper_keys: boolean;
@@ -152,6 +167,7 @@ export interface CustomerProfile {
   compliance: CustomerProfileCompliance;
   last_activity_at: string | null;
 }
+
 
 export interface RiskKpis {
   total_customers: number;

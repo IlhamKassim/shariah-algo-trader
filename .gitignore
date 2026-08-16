@@ -16,6 +16,8 @@ day_trader/.runtime/
 .claude/
 .codex/
 .worktrees/
+agent/
+
 
 # Backtesting
 shariah_algo_trader/backtesting/.cache/

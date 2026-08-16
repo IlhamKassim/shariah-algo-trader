@@ -70,22 +70,41 @@ export function CustomersView({
     return testers.filter((t) => {
       const matchesState = stateFilter === "ALL" || t.state === stateFilter;
       const q = searchQuery.toLowerCase().trim();
+      const fullName = `${t.first_name ?? ""} ${t.last_name ?? ""}`.toLowerCase();
       const matchesQuery =
         !q ||
         t.email.toLowerCase().includes(q) ||
         t.user_id.toLowerCase().includes(q) ||
+        fullName.includes(q) ||
+        (t.quant_handle && t.quant_handle.toLowerCase().includes(q)) ||
+        (t.country && t.country.toLowerCase().includes(q)) ||
+        (t.investor_type && t.investor_type.toLowerCase().includes(q)) ||
         (t.invite_code && t.invite_code.toLowerCase().includes(q));
       return matchesState && matchesQuery;
     });
   }, [testers, stateFilter, searchQuery]);
 
   const initials = selectedTester
-    ? selectedTester.email.split("@")[0].slice(0, 2).toUpperCase()
+    ? selectedTester.first_name && selectedTester.last_name
+      ? (selectedTester.first_name[0] + selectedTester.last_name[0]).toUpperCase()
+      : selectedTester.email.split("@")[0].slice(0, 2).toUpperCase()
     : "—";
 
   const custId = selectedTester
     ? selectedTester.user_id.replace(/-/g, "").slice(0, 8).toUpperCase()
     : "—";
+
+  const displayName = selectedTester
+    ? selectedTester.first_name || selectedTester.last_name
+      ? `${selectedTester.first_name ?? ""} ${selectedTester.last_name ?? ""}`.trim()
+      : selectedTester.email.split("@")[0]
+    : "—";
+
+  const quantHandle = selectedTester?.quant_handle ?? (profile?.quant_handle ?? null);
+  const country = selectedTester?.country ?? (profile?.country ?? null);
+  const investorType = selectedTester?.investor_type ?? (profile?.investor_type ?? null);
+  const paperCapital = selectedTester?.paper_capital ?? (profile?.paper_capital ?? 100000.0);
+
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -110,19 +129,32 @@ export function CustomersView({
               {/* Profile Header */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3 border-b-2 border-[#333333] pb-4">
-                  <div className="w-12 h-12 bg-[#242322] border-2 border-[#333333] flex items-center justify-center text-lg font-mono font-bold text-[#ffffff]">
+                  <div className="w-12 h-12 bg-[#242322] border-2 border-[#333333] flex items-center justify-center text-lg font-mono font-bold text-[#ffffff] shrink-0">
                     {initials}
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-base font-headline font-bold text-[#ffffff] truncate uppercase">
-                      {selectedTester.email.split("@")[0]}
-                    </h3>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-headline font-bold text-[#ffffff] truncate uppercase">
+                        {displayName}
+                      </h3>
+                      {quantHandle && (
+                        <span className="text-xs font-mono text-[#10b981] font-bold">
+                          {quantHandle}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs font-mono text-secondary-fixed-dim truncate">
                       {selectedTester.email}
                     </p>
-                    <p className="text-[10px] font-mono text-secondary-fixed-dim uppercase tracking-wider mt-0.5">
-                      CUST_ID: <span className="text-[#3366cc] font-bold">{custId}</span>
-                    </p>
+                    <div className="flex items-center gap-2 mt-1 font-mono text-[10px] text-secondary-fixed-dim">
+                      <span>CUST_ID: <strong className="text-[#3366cc]">{custId}</strong></span>
+                      {country && (
+                        <>
+                          <span>·</span>
+                          <span className="text-[#f9e37a] uppercase">{country}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -130,10 +162,10 @@ export function CustomersView({
                 <div className="data-grid grid-cols-2 text-xs">
                   <div>
                     <div className="text-[10px] font-mono text-secondary-fixed-dim uppercase tracking-wider">
-                      ACCOUNT TIER
+                      INVESTOR PERSONA
                     </div>
-                    <div className="font-mono font-bold text-[#ffffff] uppercase mt-0.5">
-                      {selectedTester.role}
+                    <div className="font-mono font-bold text-[#ffffff] uppercase mt-0.5 truncate">
+                      {investorType ? investorType.replace("_", " ") : selectedTester.role}
                     </div>
                   </div>
                   <div>
@@ -166,10 +198,10 @@ export function CustomersView({
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-secondary-fixed-dim uppercase tracking-wider">
-                      ENGINE VISIBILITY
+                      PAPER CAPITAL
                     </div>
                     <div className="font-mono font-bold text-[#ffffff] uppercase mt-0.5">
-                      {selectedTester.shariah_trader_enabled === 1 ? "ENABLED" : "DISABLED"}
+                      ${Number(paperCapital).toLocaleString()}
                     </div>
                   </div>
                   <div>
@@ -191,6 +223,7 @@ export function CustomersView({
                     </div>
                   </div>
                 </div>
+
 
                 {/* Portfolio & Preferences Snapshot */}
                 <div className="bg-[#242322] border-2 border-[#333333] p-3 space-y-2 text-xs font-mono">
@@ -299,8 +332,8 @@ export function CustomersView({
           <div className="data-grid grid-cols-5 border-2 border-[#333333]">
             {/* Header */}
             <div className="data-grid-header">Cust ID</div>
-            <div className="data-grid-header">Email / User</div>
-            <div className="data-grid-header text-right">Role</div>
+            <div className="data-grid-header">Trader / Email</div>
+            <div className="data-grid-header text-right">Jurisdiction</div>
             <div className="data-grid-header text-center">Keys</div>
             <div className="data-grid-header text-center">Status</div>
 
@@ -313,6 +346,7 @@ export function CustomersView({
               filteredTesters.map((t) => {
                 const isSelected = selectedTester?.user_id === t.user_id;
                 const rowCustId = t.user_id.replace(/-/g, "").slice(0, 8).toUpperCase();
+                const rowName = t.first_name || t.last_name ? `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim() : null;
                 return (
                   <React.Fragment key={t.user_id}>
                     <div
@@ -331,7 +365,17 @@ export function CustomersView({
                         isSelected ? "bg-[#242322] text-[#ffffff]" : "bg-[#1a1918] text-[#f2f0f1]"
                       }`}
                     >
-                      {t.email}
+                      {rowName ? (
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-[#ffffff] truncate">
+                            {rowName}{" "}
+                            {t.quant_handle && <span className="text-[#10b981] font-normal text-[10px]">{t.quant_handle}</span>}
+                          </span>
+                          <span className="text-[10px] text-secondary-fixed-dim truncate">{t.email}</span>
+                        </div>
+                      ) : (
+                        <span>{t.email}</span>
+                      )}
                     </div>
                     <div
                       onClick={() => onSelectTester(t)}
@@ -339,7 +383,11 @@ export function CustomersView({
                         isSelected ? "bg-[#242322] text-[#ffffff]" : "bg-[#1a1918] text-secondary-fixed-dim"
                       }`}
                     >
-                      {t.role}
+                      {t.country ? (
+                        <span className="text-[#f9e37a] font-bold">{t.country}</span>
+                      ) : (
+                        <span>{t.role}</span>
+                      )}
                     </div>
                     <div
                       onClick={() => onSelectTester(t)}
@@ -376,6 +424,7 @@ export function CustomersView({
               })
             )}
           </div>
+
         </div>
       </div>
     </div>

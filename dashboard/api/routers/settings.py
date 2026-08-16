@@ -103,42 +103,64 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
     admin = is_admin(request, cfg)
     user_data = get_user_settings(user_id) if user_id else None
 
-    trading_mode = "paper"
-    raw_live_key = ""
-    raw_live_secret = ""
-    shariah_trader_enabled = True
-    day_trader_enabled = False
+    first_name = None
+    last_name = None
+    quant_handle = None
+    country = None
+    investor_type = None
+    paper_capital = 100000.0
+    onboarding_completed_at = None
 
     if user_id:
-        if user_data:
-            trading_mode = user_data.get("trading_mode") or "paper"
-            raw_key = user_data.get("alpaca_api_key") or ""
-            raw_secret = user_data.get("alpaca_api_secret") or ""
-            raw_live_key = user_data.get("alpaca_live_api_key") or ""
-            raw_live_secret = user_data.get("alpaca_live_api_secret") or ""
-            base_url = user_data.get("alpaca_base_url") or ("https://api.alpaca.markets" if trading_mode == "live" else cfg.alpaca_base_url)
-            etf_symbol = user_data.get("etf_symbol") or cfg.etf_symbol
-            top_n = user_data.get("top_n") or cfg.top_n
-            sector_cap = user_data.get("sector_cap") if user_data.get("sector_cap") is not None else cfg.sector_cap
-            drift_threshold = user_data.get("drift_threshold") if user_data.get("drift_threshold") is not None else cfg.drift_threshold
-            shariah_trader_enabled = bool(user_data.get("shariah_trader_enabled") if user_data.get("shariah_trader_enabled") is not None else True)
-            day_trader_enabled = bool(user_data.get("day_trader_enabled") if user_data.get("day_trader_enabled") is not None else False)
+        user_row = get_user_settings(user_id)
+        if user_row:
+            raw_key = user_row.get("alpaca_api_key_encrypted") or user_row.get("alpaca_api_key") or ""
+            raw_secret = user_row.get("alpaca_api_secret_encrypted") or user_row.get("alpaca_api_secret") or ""
+            raw_live_key = user_row.get("alpaca_live_api_key_encrypted") or user_row.get("alpaca_live_api_key") or ""
+            raw_live_secret = user_row.get("alpaca_live_api_secret_encrypted") or user_row.get("alpaca_live_api_secret") or ""
+            trading_mode = user_row.get("trading_mode", "paper")
+            base_url = user_row.get("alpaca_base_url", "https://paper-api.alpaca.markets")
+            etf_symbol = user_row.get("etf_symbol", getattr(cfg, "etf_symbol", "SPUS"))
+            top_n = user_row.get("top_n", getattr(cfg, "top_n", 20))
+            sector_cap = user_row.get("sector_cap", getattr(cfg, "sector_cap", 0.20))
+            drift_threshold = user_row.get("drift_threshold", getattr(cfg, "drift_threshold", 0.03))
+            shariah_trader_enabled = bool(user_row.get("shariah_trader_enabled", 1))
+            day_trader_enabled = bool(user_row.get("day_trader_enabled", 0))
+            first_name = user_row.get("first_name")
+            last_name = user_row.get("last_name")
+            quant_handle = user_row.get("quant_handle")
+            country = user_row.get("country")
+            investor_type = user_row.get("investor_type")
+            paper_capital = user_row.get("paper_capital") or 100000.0
+            onboarding_completed_at = user_row.get("onboarding_completed_at")
         else:
             raw_key = ""
             raw_secret = ""
-            base_url = cfg.alpaca_base_url
-            etf_symbol = cfg.etf_symbol
-            top_n = cfg.top_n
-            sector_cap = cfg.sector_cap
-            drift_threshold = cfg.drift_threshold
+            raw_live_key = ""
+            raw_live_secret = ""
+            trading_mode = "paper"
+            base_url = getattr(cfg, "alpaca_base_url", "https://paper-api.alpaca.markets")
+            etf_symbol = getattr(cfg, "etf_symbol", "SPUS")
+            top_n = getattr(cfg, "top_n", 20)
+            sector_cap = getattr(cfg, "sector_cap", 0.20)
+            drift_threshold = getattr(cfg, "drift_threshold", 0.03)
+            shariah_trader_enabled = True
+            day_trader_enabled = False
     else:
-        raw_key = cfg.alpaca_api_key
-        raw_secret = os.environ.get("ALPACA_API_SECRET", "")
-        base_url = cfg.alpaca_base_url
-        etf_symbol = cfg.etf_symbol
-        top_n = cfg.top_n
-        sector_cap = cfg.sector_cap
-        drift_threshold = cfg.drift_threshold
+        raw_key = getattr(cfg, "alpaca_api_key", "")
+        raw_secret = getattr(cfg, "alpaca_api_secret", "")
+        raw_live_key = getattr(cfg, "alpaca_live_api_key", "")
+        raw_live_secret = getattr(cfg, "alpaca_live_api_secret", "")
+        trading_mode = getattr(cfg, "trading_mode", "paper")
+        base_url = getattr(cfg, "alpaca_base_url", "https://paper-api.alpaca.markets")
+        etf_symbol = getattr(cfg, "etf_symbol", "SPUS")
+        top_n = getattr(cfg, "top_n", 20)
+        sector_cap = getattr(cfg, "sector_cap", 0.20)
+        drift_threshold = getattr(cfg, "drift_threshold", 0.03)
+        shariah_trader_enabled = True
+        day_trader_enabled = False
+
+
 
     raw_pass = os.environ.get("DASHBOARD_PASSWORD", "")
     raw_google_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
@@ -157,6 +179,13 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
         drift_threshold=drift_threshold,
         shariah_trader_enabled=shariah_trader_enabled,
         day_trader_enabled=day_trader_enabled,
+        first_name=first_name,
+        last_name=last_name,
+        quant_handle=quant_handle,
+        country=country,
+        investor_type=investor_type,
+        paper_capital=paper_capital,
+        onboarding_completed_at=onboarding_completed_at,
         # Admin-only block: omitted entirely (exclude_none) for non-admins.
         dashboard_password_masked=mask_value(raw_pass) if admin else None,
         google_client_id_masked=mask_value(cfg.google_client_id) if admin else None,
@@ -246,6 +275,21 @@ def update_settings(
             user_updates["shariah_trader_enabled"] = payload.shariah_trader_enabled
         if payload.day_trader_enabled is not None:
             user_updates["day_trader_enabled"] = payload.day_trader_enabled
+        if payload.first_name is not None:
+            user_updates["first_name"] = _sanitize_val(payload.first_name)
+        if payload.last_name is not None:
+            user_updates["last_name"] = _sanitize_val(payload.last_name)
+        if payload.quant_handle is not None:
+            user_updates["quant_handle"] = _sanitize_val(payload.quant_handle)
+        if payload.country is not None:
+            user_updates["country"] = _sanitize_val(payload.country)
+        if payload.investor_type is not None:
+            user_updates["investor_type"] = _sanitize_val(payload.investor_type)
+        if payload.paper_capital is not None:
+            user_updates["paper_capital"] = payload.paper_capital
+        if payload.onboarding_completed_at is not None:
+            user_updates["onboarding_completed_at"] = payload.onboarding_completed_at
+
 
         try:
             save_user_settings(user_id, user_updates)

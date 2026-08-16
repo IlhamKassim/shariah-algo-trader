@@ -32,6 +32,13 @@ def init_user_store() -> None:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS user_settings (
                     user_id                          TEXT PRIMARY KEY,
+                    first_name                       TEXT,
+                    last_name                        TEXT,
+                    quant_handle                     TEXT,
+                    country                          TEXT,
+                    investor_type                    TEXT,
+                    paper_capital                    REAL DEFAULT 100000.0,
+                    onboarding_completed_at          TEXT,
                     alpaca_api_key_encrypted          TEXT,
                     alpaca_api_secret_encrypted       TEXT,
                     alpaca_live_api_key_encrypted     TEXT,
@@ -83,6 +90,20 @@ def init_user_store() -> None:
             cursor.execute("PRAGMA table_info(user_settings)")
             existing_cols = {row[1] for row in cursor.fetchall()}
 
+            if "first_name" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN first_name TEXT")
+            if "last_name" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN last_name TEXT")
+            if "quant_handle" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN quant_handle TEXT")
+            if "country" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN country TEXT")
+            if "investor_type" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN investor_type TEXT")
+            if "paper_capital" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN paper_capital REAL DEFAULT 100000.0")
+            if "onboarding_completed_at" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN onboarding_completed_at TEXT")
             if "trading_mode" not in existing_cols:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN trading_mode TEXT DEFAULT 'paper'")
             if "alpaca_live_api_key_encrypted" not in existing_cols:
@@ -99,6 +120,7 @@ def init_user_store() -> None:
             _initialized = True
         finally:
             conn.close()
+
 
 
 def _ensure_initialized() -> None:
@@ -302,6 +324,14 @@ def save_user_settings(user_id: str, settings: dict) -> None:
     sector_cap = settings.get("sector_cap") if settings.get("sector_cap") is not None else existing.get("sector_cap", 0.20)
     drift_threshold = settings.get("drift_threshold") if settings.get("drift_threshold") is not None else existing.get("drift_threshold", 0.03)
 
+    first_name = settings.get("first_name") if "first_name" in settings else existing.get("first_name")
+    last_name = settings.get("last_name") if "last_name" in settings else existing.get("last_name")
+    quant_handle = settings.get("quant_handle") if "quant_handle" in settings else existing.get("quant_handle")
+    country = settings.get("country") if "country" in settings else existing.get("country")
+    investor_type = settings.get("investor_type") if "investor_type" in settings else existing.get("investor_type")
+    paper_capital = float(settings["paper_capital"]) if "paper_capital" in settings and settings["paper_capital"] is not None else float(existing.get("paper_capital", 100000.0) or 100000.0)
+    onboarding_completed_at = settings.get("onboarding_completed_at") if "onboarding_completed_at" in settings else existing.get("onboarding_completed_at")
+
     shariah_enabled = int(settings["shariah_trader_enabled"]) if "shariah_trader_enabled" in settings and settings["shariah_trader_enabled"] is not None else int(existing.get("shariah_trader_enabled", 1))
     day_enabled = int(settings["day_trader_enabled"]) if "day_trader_enabled" in settings and settings["day_trader_enabled"] is not None else int(existing.get("day_trader_enabled", 0))
 
@@ -309,6 +339,13 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 
     record = {
         "user_id": user_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "quant_handle": quant_handle,
+        "country": country,
+        "investor_type": investor_type,
+        "paper_capital": paper_capital,
+        "onboarding_completed_at": onboarding_completed_at,
         "alpaca_api_key_encrypted": enc_key,
         "alpaca_api_secret_encrypted": enc_secret,
         "alpaca_live_api_key_encrypted": enc_live_key,
@@ -333,6 +370,13 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                 """
                 INSERT INTO user_settings (
                     user_id,
+                    first_name,
+                    last_name,
+                    quant_handle,
+                    country,
+                    investor_type,
+                    paper_capital,
+                    onboarding_completed_at,
                     alpaca_api_key_encrypted,
                     alpaca_api_secret_encrypted,
                     alpaca_live_api_key_encrypted,
@@ -348,8 +392,15 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     risk_acknowledged_at,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
+                    first_name = excluded.first_name,
+                    last_name = excluded.last_name,
+                    quant_handle = excluded.quant_handle,
+                    country = excluded.country,
+                    investor_type = excluded.investor_type,
+                    paper_capital = excluded.paper_capital,
+                    onboarding_completed_at = excluded.onboarding_completed_at,
                     alpaca_api_key_encrypted = excluded.alpaca_api_key_encrypted,
                     alpaca_api_secret_encrypted = excluded.alpaca_api_secret_encrypted,
                     alpaca_live_api_key_encrypted = excluded.alpaca_live_api_key_encrypted,
@@ -367,6 +418,13 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                 """,
                 (
                     user_id,
+                    first_name,
+                    last_name,
+                    quant_handle,
+                    country,
+                    investor_type,
+                    paper_capital,
+                    onboarding_completed_at,
                     enc_key,
                     enc_secret,
                     enc_live_key,
@@ -387,6 +445,7 @@ def save_user_settings(user_id: str, settings: dict) -> None:
             conn.commit()
         finally:
             conn.close()
+
 
     # Sync to Supabase PostgreSQL database
     _sync_to_supabase(user_id, record)
@@ -479,12 +538,13 @@ def get_pilot_invite(code: str) -> dict | None:
         conn = _connect()
         try:
             row = conn.execute(
-                "SELECT code, created_by, max_uses, uses, expires_at, created_at FROM pilot_invites WHERE code = ?",
+                "SELECT code, created_by, max_uses, uses, expires_at, created_at FROM pilot_invites WHERE code = ? COLLATE NOCASE",
                 (code,),
             ).fetchone()
             return dict(row) if row else None
         finally:
             conn.close()
+
 
 
 def list_pilot_invites() -> list[dict]:
@@ -573,6 +633,7 @@ def get_user_settings_meta(user_id: str) -> dict | None:
         try:
             row = conn.execute(
                 "SELECT trading_mode, shariah_trader_enabled, "
+                "first_name, last_name, quant_handle, country, investor_type, paper_capital, onboarding_completed_at, "
                 "alpaca_api_key_encrypted, alpaca_api_secret_encrypted, "
                 "alpaca_live_api_key_encrypted, alpaca_live_api_secret_encrypted "
                 "FROM user_settings WHERE user_id = ?",
@@ -585,9 +646,17 @@ def get_user_settings_meta(user_id: str) -> dict | None:
     return {
         "trading_mode": row["trading_mode"] or "paper",
         "shariah_trader_enabled": int(row["shariah_trader_enabled"] or 0),
+        "first_name": row["first_name"],
+        "last_name": row["last_name"],
+        "quant_handle": row["quant_handle"],
+        "country": row["country"],
+        "investor_type": row["investor_type"],
+        "paper_capital": float(row["paper_capital"] or 100000.0),
+        "onboarding_completed_at": row["onboarding_completed_at"],
         "has_paper_keys": bool(row["alpaca_api_key_encrypted"] and row["alpaca_api_secret_encrypted"]),
         "has_live_keys": bool(row["alpaca_live_api_key_encrypted"] and row["alpaca_live_api_secret_encrypted"]),
     }
+
 
 
 def get_paper_credentials(user_id: str) -> dict | None:
@@ -710,11 +779,12 @@ def claim_pilot_invite(
         )
         return {"ok": False, "reason": validation["reason"]}
 
+    canonical_code = validation["invite"]["code"] if validation.get("invite") else code
     now = _utcnow_iso()
     with _lock:
         conn = _connect()
         try:
-            conn.execute("UPDATE pilot_invites SET uses = uses + 1 WHERE code = ?", (code,))
+            conn.execute("UPDATE pilot_invites SET uses = uses + 1 WHERE code = ? COLLATE NOCASE", (canonical_code,))
             conn.execute(
                 """
                 INSERT INTO pilot_users (
@@ -725,11 +795,12 @@ def claim_pilot_invite(
                     state = 'pending',
                     updated_at = excluded.updated_at
                 """,
-                (user_id, email, code, linkedin_url, notes, now, now),
+                (user_id, email, canonical_code, linkedin_url, notes, now, now),
             )
             conn.commit()
         finally:
             conn.close()
 
-    log_audit_event("INVITE_CLAIMED", user_id, "user", f"Pilot invite {code} claimed; state=pending")
+    log_audit_event("INVITE_CLAIMED", user_id, "user", f"Pilot invite {canonical_code} claimed; state=pending")
+
     return {"ok": True, "state": "pending"}

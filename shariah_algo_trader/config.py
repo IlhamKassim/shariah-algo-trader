@@ -55,6 +55,13 @@ class Config:
             for e in os.environ.get("ALLOWED_GOOGLE_EMAILS", "").split(",")
             if e.strip()
         }
+        admin_emails_raw = os.environ.get("ADMIN_EMAILS", "") or os.environ.get("ALLOWED_ADMIN_EMAILS", "")
+        self.admin_emails: set[str] = {
+            e.strip().lower()
+            for e in admin_emails_raw.split(",")
+            if e.strip()
+        }
+
 
         # Clerk Authentication
         self.clerk_jwt_verification_key: str | None = os.environ.get("CLERK_JWT_VERIFICATION_KEY")

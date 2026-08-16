@@ -395,3 +395,30 @@ def verify_password(payload: LoginRequest, cfg: Config = Depends(get_config)):
     if payload.password != cfg.dashboard_password:
         raise HTTPException(status_code=401, detail="Incorrect password")
     return {"status": "success"}
+
+
+@router.get("/api/auth/validate-invite")
+def validate_invite(code: str = ""):
+    """Public validation endpoint for pilot invite codes before registration/login."""
+    code_clean = code.strip() if code else ""
+    if not code_clean:
+        return {"valid": False, "code": "", "reason": "Invite code is required."}
+
+    from dashboard.api.user_store import validate_invite_code
+    result = validate_invite_code(code_clean)
+    if not result["valid"]:
+        return {
+            "valid": False,
+            "code": code_clean,
+            "reason": result["reason"],
+        }
+
+    invite = result.get("invite") or {}
+    return {
+        "valid": True,
+        "code": invite.get("code", code_clean),
+        "expires_at": invite.get("expires_at"),
+        "max_uses": invite.get("max_uses"),
+        "uses": invite.get("uses"),
+    }
+

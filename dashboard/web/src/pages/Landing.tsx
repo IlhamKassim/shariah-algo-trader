@@ -18,8 +18,14 @@ import {
   Info,
 } from "lucide-react";
 
-export function Landing() {
+interface LandingProps {
+  onOpenGuide?: () => void;
+}
+
+export function Landing({ onOpenGuide }: LandingProps = {}) {
+
   const [isConnecting, setIsConnecting] = useState(false);
+
   const [connectionMode, setConnectionMode] = useState("ALPACA PAPER");
   const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [showDevModal, setShowDevModal] = useState(
@@ -294,6 +300,17 @@ export function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
+            {onOpenGuide && (
+              <button
+                type="button"
+                onClick={onOpenGuide}
+                className="hidden sm:flex items-center gap-1.5 border border-[#235347] bg-[#0B2B26] text-[#8EB69B] hover:text-[#DAF1DE] hover:border-[#8EB69B]/40 px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-widest cursor-pointer transition-colors"
+                title="How the Trading Strategy Works"
+              >
+                <Info size={12} />
+                <span>How It Works</span>
+              </button>
+            )}
             <button
               onClick={() => setShowDevModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 rounded font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.15)]"
@@ -379,8 +396,18 @@ export function Landing() {
                 >
                   Join Waitlist
                 </button>
+                {onOpenGuide && (
+                  <button
+                    type="button"
+                    onClick={onOpenGuide}
+                    className="border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] hover:bg-[#163832] hover:border-[#8EB69B]/60 font-semibold px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest transition-all cursor-pointer text-center flex items-center justify-center gap-2"
+                  >
+                    <Info size={14} /> How Strategy Works
+                  </button>
+                )}
               </div>
             </div>
+
 
             {/* Right Side Widgets */}
             <div className="lg:col-span-4 flex flex-col gap-4">
@@ -445,6 +472,8 @@ export function Landing() {
                 </div>
               </div>
             </div>
+
+
           </div>
         </section>
 

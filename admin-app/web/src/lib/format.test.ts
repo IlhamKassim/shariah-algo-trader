@@ -119,12 +119,13 @@ describe("truncateMiddle", () => {
 
 describe("inviteLink", () => {
   it("builds the tester-facing invite URL", () => {
-    expect(inviteLink("ABC12345")).toBe("https://shariahtrading.my/login?invite=ABC12345");
+    expect(inviteLink("ABC12345")).toBe("https://shariahtrading.my/invite/ABC12345");
   });
 
   it("honours a custom base", () => {
     expect(inviteLink("ABC12345", "http://127.0.0.1:5173")).toBe(
-      "http://127.0.0.1:5173/login?invite=ABC12345",
+      "http://127.0.0.1:5173/invite/ABC12345",
     );
   });
 });
+

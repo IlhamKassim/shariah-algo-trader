@@ -61,11 +61,18 @@ export default function App() {
         setSession(null);
         return;
       }
+      if (e.status === 403) {
+        void signOut();
+        setSession(null);
+        setError("Access Denied: Your account does not have administrator privileges.");
+        return;
+      }
       setError(e.detail);
     } else {
       setError("Unexpected error — check that the admin API is running on :8002.");
     }
   }, []);
+
 
   const refresh = useCallback(async () => {
     if (!api) return;
@@ -147,9 +154,10 @@ export default function App() {
           </div>
         ) : !session ? (
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <LoginCard />
+            <LoginCard initialError={error} />
           </div>
         ) : (
+
           <>
             <TickerBar
               totalTesters={testers.length}

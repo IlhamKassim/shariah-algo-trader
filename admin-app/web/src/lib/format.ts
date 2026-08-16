@@ -84,5 +84,6 @@ export function truncateMiddle(value: string, maxStart = 8, maxEnd = 4): string 
 
 /** Tester-facing signup URL carrying the single-use code (SPEC §7). */
 export function inviteLink(code: string, base = "https://shariahtrading.my"): string {
-  return `${base}/login?invite=${encodeURIComponent(code)}`;
+  return `${base}/invite/${encodeURIComponent(code)}`;
 }
+
