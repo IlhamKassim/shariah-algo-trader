@@ -74,3 +74,15 @@ def _mock_dns_for_alpaca(monkeypatch):
 
     monkeypatch.setattr(socket, "getaddrinfo", _safe_getaddrinfo)
 
+
+@pytest.fixture(autouse=True)
+def _mock_supabase_sync(monkeypatch):
+    """Ensure all Supabase sync/delete helpers are stubbed out by default in tests."""
+    from dashboard.api import user_store
+    monkeypatch.setattr(user_store, "_sync_to_supabase", lambda *a, **k: None)
+    monkeypatch.setattr(user_store, "_sync_pilot_user_to_supabase", lambda *a, **k: None)
+    monkeypatch.setattr(user_store, "_sync_invite_to_supabase", lambda *a, **k: None)
+    monkeypatch.setattr(user_store, "_delete_invite_from_supabase", lambda *a, **k: None)
+    monkeypatch.setattr(user_store, "_delete_user_from_supabase", lambda *a, **k: None)
+
+
