@@ -1,0 +1,15 @@
+[Unit]
+Description=Shariah Local Dashboard (audit + monitor pages, localhost only)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shariah-algo-trader
+ExecStart=/home/ubuntu/shariah-algo-trader/.venv/bin/python -m uvicorn dashboard.api.local_server:app --host 127.0.0.1 --port 8111
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
