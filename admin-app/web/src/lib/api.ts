@@ -330,6 +330,12 @@ export class AdminApi {
     });
   }
 
+  async deleteTester(userId: string): Promise<{ user_id: string; deleted: boolean }> {
+    return this.request<{ user_id: string; deleted: boolean }>(`/testers/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    });
+  }
+
   async testerPortfolio(userId: string): Promise<PortfolioResponse> {
     return this.request<PortfolioResponse>(`/testers/${encodeURIComponent(userId)}/portfolio`);
   }
@@ -349,9 +355,16 @@ export class AdminApi {
     });
   }
 
+  async deleteInvite(code: string): Promise<{ code: string; deleted: boolean }> {
+    return this.request<{ code: string; deleted: boolean }>(`/invites/${encodeURIComponent(code)}`, {
+      method: "DELETE",
+    });
+  }
+
   async listInvites(): Promise<InviteList> {
     return this.request<InviteList>("/invites");
   }
+
 
   async getCustomerProfile(userId: string): Promise<CustomerProfile> {
     return this.request<CustomerProfile>(`/customers/${encodeURIComponent(userId)}/profile`);

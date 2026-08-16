@@ -155,6 +155,96 @@ def _sync_to_supabase(user_id: str, record: dict) -> None:
         logger.warning("Supabase user_settings sync exception: %s", exc)
 
 
+def _sync_pilot_user_to_supabase(record: dict) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_users"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        }
+        res = requests.post(url, json=record, headers=headers, timeout=5)
+        if res.status_code not in (200, 201):
+            logger.warning("Supabase pilot_users sync status: %s %s", res.status_code, res.text)
+    except Exception as exc:
+        logger.warning("Supabase pilot_users sync exception: %s", exc)
+
+
+def _sync_invite_to_supabase(record: dict) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_invites"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        }
+        res = requests.post(url, json=record, headers=headers, timeout=5)
+        if res.status_code not in (200, 201):
+            logger.warning("Supabase pilot_invites sync status: %s %s", res.status_code, res.text)
+    except Exception as exc:
+        logger.warning("Supabase pilot_invites sync exception: %s", exc)
+
+
+def _delete_invite_from_supabase(code: str) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_invites?code=eq.{code}"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+        }
+        res = requests.delete(url, headers=headers, timeout=5)
+        if res.status_code not in (200, 204):
+            logger.warning("Supabase pilot_invites delete status: %s %s", res.status_code, res.text)
+    except Exception as exc:
+        logger.warning("Supabase pilot_invites delete exception: %s", exc)
+
+
+def _delete_user_from_supabase(user_id: str) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}",
+    }
+    # 1. Delete from user_settings
+    try:
+        url = f"{supabase_url}/rest/v1/user_settings?user_id=eq.{user_id}"
+        requests.delete(url, headers=headers, timeout=5)
+    except Exception as exc:
+        logger.warning("Supabase user_settings delete exception: %s", exc)
+
+    # 2. Delete from pilot_users
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_users?user_id=eq.{user_id}"
+        requests.delete(url, headers=headers, timeout=5)
+    except Exception as exc:
+        logger.warning("Supabase pilot_users delete exception: %s", exc)
+
+    # 3. Delete from Supabase Auth admin if user exists
+    try:
+        admin_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
+        requests.delete(admin_url, headers=headers, timeout=5)
+    except Exception as exc:
+        logger.warning("Supabase auth user delete exception: %s", exc)
+
+
+
 def _fetch_from_supabase(user_id: str) -> dict | None:
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
@@ -515,21 +605,51 @@ def create_pilot_invite(
 
     for _ in range(5):
         token = code or secrets.token_urlsafe(6)[:8]
+        now = _utcnow_iso()
         with _lock:
             conn = _connect()
             try:
                 cur = conn.execute(
                     "INSERT OR IGNORE INTO pilot_invites (code, created_by, max_uses, uses, expires_at, created_at) "
                     "VALUES (?, ?, ?, 0, ?, ?)",
-                    (token, created_by, max_uses, expires_at, _utcnow_iso()),
+                    (token, created_by, max_uses, expires_at, now),
                 )
                 conn.commit()
                 inserted = cur.rowcount == 1
             finally:
                 conn.close()
         if inserted or code is not None:
+            _sync_invite_to_supabase({
+                "code": token,
+                "created_by": created_by,
+                "max_uses": max_uses,
+                "uses": 0,
+                "expires_at": expires_at,
+                "created_at": now,
+            })
             return token
     raise RuntimeError("Unable to allocate a unique pilot invite code")
+
+
+def delete_pilot_invite(code: str) -> bool:
+    """Delete an invite code locally and remove it from Supabase."""
+    _ensure_initialized()
+    deleted = False
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute(
+                "DELETE FROM pilot_invites WHERE code = ? COLLATE NOCASE",
+                (code,),
+            )
+            conn.commit()
+            deleted = cur.rowcount > 0
+        finally:
+            conn.close()
+
+    _delete_invite_from_supabase(code)
+    return deleted
+
 
 
 def get_pilot_invite(code: str) -> dict | None:
@@ -602,16 +722,52 @@ def list_pilot_users() -> list[dict]:
 def set_pilot_user_state(user_id: str, state: str, approved_by: str | None = None) -> None:
     """Advance a pilot user's lifecycle state ('pending' | 'active' | 'revoked')."""
     _ensure_initialized()
+    now = _utcnow_iso()
     with _lock:
         conn = _connect()
         try:
             conn.execute(
                 "UPDATE pilot_users SET state = ?, approved_by = COALESCE(?, approved_by), updated_at = ? WHERE user_id = ?",
-                (state, approved_by, _utcnow_iso(), user_id),
+                (state, approved_by, now, user_id),
             )
             conn.commit()
         finally:
             conn.close()
+
+    # Sync state update to Supabase
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if supabase_url and supabase_key:
+        try:
+            url = f"{supabase_url}/rest/v1/pilot_users?user_id=eq.{user_id}"
+            headers = {
+                "apikey": supabase_key,
+                "Authorization": f"Bearer {supabase_key}",
+                "Content-Type": "application/json",
+            }
+            body: dict = {"state": state, "updated_at": now}
+            if approved_by:
+                body["approved_by"] = approved_by
+            requests.patch(url, json=body, headers=headers, timeout=5)
+        except Exception as exc:
+            logger.warning("Supabase pilot_users patch exception: %s", exc)
+
+
+def delete_pilot_user(user_id: str) -> bool:
+    """Completely remove a customer/tester: deletes pilot_user and user_settings locally & in Supabase."""
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute("DELETE FROM pilot_users WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    _delete_user_from_supabase(user_id)
+    return True
+
 
 
 def get_pilot_role(user_id: str) -> str | None:
@@ -803,4 +959,17 @@ def claim_pilot_invite(
 
     log_audit_event("INVITE_CLAIMED", user_id, "user", f"Pilot invite {canonical_code} claimed; state=pending")
 
+    _sync_pilot_user_to_supabase({
+        "user_id": user_id,
+        "email": email,
+        "role": "tester",
+        "state": "pending",
+        "invite_code": canonical_code,
+        "linkedin_url": linkedin_url,
+        "notes": notes,
+        "created_at": now,
+        "updated_at": now,
+    })
+
     return {"ok": True, "state": "pending"}
+

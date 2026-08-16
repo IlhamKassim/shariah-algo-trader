@@ -47,6 +47,8 @@ from dashboard.api.db import (
 )
 from dashboard.api.user_store import (
     create_pilot_invite,
+    delete_pilot_invite,
+    delete_pilot_user,
     ensure_user_settings_row,
     get_paper_credentials,
     get_pilot_invite,
@@ -57,6 +59,7 @@ from dashboard.api.user_store import (
     list_pilot_users,
     set_pilot_user_state,
 )
+
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 router = APIRouter()
@@ -211,6 +214,33 @@ def revoke_tester(user_id: str, request: Request) -> dict:
     return {"user_id": user_id, "state": "revoked"}
 
 
+@router.delete("/testers/{user_id}")
+@router.delete("/customers/{user_id}")
+def remove_customer(user_id: str, request: Request) -> dict:
+    """Remove a customer/tester completely from SQLite and Supabase."""
+    admin_id = getattr(request.state, "user_id", None) or "unknown-admin"
+
+    if user_id == admin_id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own administrator account")
+
+    user = _require_pilot_user(user_id)
+
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=403, detail="Cannot delete a platform administrator")
+
+    delete_pilot_user(user_id)
+
+    log_audit_event(
+        "TESTER_REMOVED",
+        admin_id,
+        _client_ip(request),
+        f"Customer {user_id} ({user['email']}) deleted from local database and Supabase",
+    )
+    return {"user_id": user_id, "deleted": True}
+
+
+
+
 # ── A4: per-tester paper portfolio (G5) ──────────────────────────────────────
 
 @router.get("/testers/{user_id}/portfolio")
@@ -309,6 +339,26 @@ def list_invites() -> dict:
     """All pilot invites with usage + expiry status (backs the Invites view)."""
     invites = [_serialize_invite(i) for i in list_pilot_invites()]
     return {"invites": invites, "count": len(invites)}
+
+
+@router.delete("/invites/{code}")
+def remove_invite(code: str, request: Request) -> dict:
+    """Delete a pilot invite code locally and from Supabase."""
+    invite = get_pilot_invite(code)
+    if not invite:
+        raise HTTPException(status_code=404, detail=f"Invite code {code!r} not found")
+
+    admin_id = getattr(request.state, "user_id", None) or "unknown-admin"
+    delete_pilot_invite(code)
+
+    log_audit_event(
+        "INVITE_DELETED",
+        admin_id,
+        _client_ip(request),
+        f"Pilot invite {code} deleted from local database and Supabase",
+    )
+    return {"code": code, "deleted": True}
+
 
 
 # ── B1: consolidated customer CRM profile ────────────────────────────────────

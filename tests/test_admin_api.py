@@ -597,3 +597,63 @@ def test_get_paper_credentials_none_when_missing(admin_store):
     assert get_paper_credentials("tester-1") is None
     _seed_user_settings(admin_store["user_db"], "tester-1", enabled=1)
     assert get_paper_credentials("tester-1") is None
+
+
+# ── Customer and invite deletion tests ───────────────────────────────────────
+
+def test_delete_customer_success(admin_client, admin_store):
+    _seed_pilot_user(admin_store["user_db"], "tester-del", "del@example.com", state="active")
+    _seed_user_settings(admin_store["user_db"], "tester-del", enabled=1, paper=("PK", "PS"))
+
+    assert get_pilot_user("tester-del") is not None
+    assert get_user_settings_meta("tester-del") is not None
+
+    res = admin_client().delete("/api/admin/testers/tester-del")
+    assert res.status_code == 200
+    assert res.json() == {"user_id": "tester-del", "deleted": True}
+
+    assert get_pilot_user("tester-del") is None
+    assert get_user_settings_meta("tester-del") is None
+
+    events = [e for e in fetch_audit_logs(limit=10) if e["event_type"] == "TESTER_REMOVED"]
+    assert len(events) == 1
+    assert "tester-del" in events[0]["details"]
+
+
+def test_delete_customer_cannot_delete_self(admin_client, admin_store):
+    res = admin_client(user_id="admin-uid").delete("/api/admin/testers/admin-uid")
+    assert res.status_code == 400
+    assert "own administrator account" in res.json()["detail"]
+
+
+def test_delete_customer_cannot_delete_admin_role(admin_client, admin_store):
+    _seed_pilot_user(admin_store["user_db"], "other-admin", "other@example.com", role="admin", state="active")
+    res = admin_client(user_id="admin-uid").delete("/api/admin/testers/other-admin")
+    assert res.status_code == 403
+    assert "Cannot delete a platform administrator" in res.json()["detail"]
+
+
+def test_delete_customer_nonexistent_404(admin_client, admin_store):
+    res = admin_client().delete("/api/admin/testers/nonexistent-user")
+    assert res.status_code == 404
+
+
+def test_delete_invite_success(admin_client, admin_store):
+    code = create_pilot_invite("admin-uid", max_uses=1)
+    assert get_pilot_invite(code) is not None
+
+    res = admin_client().delete(f"/api/admin/invites/{code}")
+    assert res.status_code == 200
+    assert res.json() == {"code": code, "deleted": True}
+
+    assert get_pilot_invite(code) is None
+
+    events = [e for e in fetch_audit_logs(limit=10) if e["event_type"] == "INVITE_DELETED"]
+    assert len(events) == 1
+    assert code in events[0]["details"]
+
+
+def test_delete_invite_nonexistent_404(admin_client, admin_store):
+    res = admin_client().delete("/api/admin/invites/NONEXISTENT")
+    assert res.status_code == 404
+

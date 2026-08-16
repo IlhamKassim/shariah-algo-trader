@@ -29,10 +29,11 @@ describe("CustomersView component", () => {
     cleanup();
   });
 
-  it("renders customer directory and responds to approve actions", () => {
+  it("renders customer directory and responds to approve and delete actions", () => {
     const onSelect = vi.fn();
     const onApprove = vi.fn();
     const onRevoke = vi.fn();
+    const onDelete = vi.fn();
     const onInspect = vi.fn();
 
     render(
@@ -42,6 +43,7 @@ describe("CustomersView component", () => {
         onSelectTester={onSelect}
         onApprove={onApprove}
         onRevoke={onRevoke}
+        onDelete={onDelete}
         onInspectDrawer={onInspect}
         api={null}
         busyId={null}
@@ -54,5 +56,12 @@ describe("CustomersView component", () => {
 
     fireEvent.click(screen.getByText(/Approve Customer/i));
     expect(onApprove).toHaveBeenCalledWith(MOCK_TESTERS[0]);
+
+    expect(screen.getByText(/Remove Customer/i)).toBeTruthy();
+    fireEvent.click(screen.getByText(/Remove Customer/i));
+    expect(screen.getByText(/Confirm Delete/i)).toBeTruthy();
+    fireEvent.click(screen.getByText(/Confirm Delete/i));
+    expect(onDelete).toHaveBeenCalledWith(MOCK_TESTERS[0]);
   });
+
 });

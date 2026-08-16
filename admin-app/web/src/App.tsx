@@ -102,13 +102,20 @@ export default function App() {
   }, [api, refresh]);
 
   const runAction = useCallback(
-    async (tester: Tester, action: "approve" | "revoke") => {
+    async (tester: Tester, action: "approve" | "revoke" | "delete") => {
       if (!api) return;
       setBusyId(tester.user_id);
       setError(null);
       try {
-        if (action === "approve") await api.approveTester(tester.user_id);
-        else await api.revokeTester(tester.user_id);
+        if (action === "approve") {
+          await api.approveTester(tester.user_id);
+        } else if (action === "revoke") {
+          await api.revokeTester(tester.user_id);
+        } else if (action === "delete") {
+          await api.deleteTester(tester.user_id);
+          if (selectedTesterId === tester.user_id) setSelectedTesterId(null);
+          if (drawerTester?.user_id === tester.user_id) setDrawerTester(null);
+        }
         await refresh();
       } catch (e) {
         handleError(e);
@@ -116,7 +123,7 @@ export default function App() {
         setBusyId(null);
       }
     },
-    [api, refresh, handleError],
+    [api, refresh, handleError, selectedTesterId, drawerTester?.user_id],
   );
 
   const activeTestersCount = testers.filter((t) => t.state === "active").length;
@@ -197,12 +204,14 @@ export default function App() {
                     onSelectTester={(t) => setSelectedTesterId(t?.user_id ?? null)}
                     onApprove={(t) => void runAction(t, "approve")}
                     onRevoke={(t) => void runAction(t, "revoke")}
+                    onDelete={(t) => void runAction(t, "delete")}
                     onInspectDrawer={(t) => setDrawerTester(t)}
                     api={api}
                     busyId={busyId}
                     globalSearch={searchQuery}
                   />
                 )}
+
 
                 {view === "spectate" && (
                   <SpectateView api={api} email={session.user.email ?? null} />

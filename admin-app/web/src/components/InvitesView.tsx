@@ -48,6 +48,7 @@ export function InvitesView({ api }: InvitesViewProps) {
   const [copied, setCopied] = useState(false);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingCode, setDeletingCode] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!api) return;
@@ -66,6 +67,21 @@ export function InvitesView({ api }: InvitesViewProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const removeInvite = async (code: string) => {
+    if (!api) return;
+    setDeletingCode(code);
+    setError(null);
+    try {
+      await api.deleteInvite(code);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete invite");
+    } finally {
+      setDeletingCode(null);
+    }
+  };
+
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
@@ -255,7 +271,7 @@ export function InvitesView({ api }: InvitesViewProps) {
                 <div className="text-[11px] font-mono text-secondary-fixed-dim truncate bg-[#1a1918]">
                   {formatDateTime(inv.created_at)}
                 </div>
-                <div className="text-right bg-[#1a1918]">
+                <div className="text-right bg-[#1a1918] flex items-center justify-end gap-1.5">
                   <button
                     type="button"
                     onClick={() => void copy(inv.code)}
@@ -263,7 +279,16 @@ export function InvitesView({ api }: InvitesViewProps) {
                   >
                     Copy
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => void removeInvite(inv.code)}
+                    disabled={deletingCode === inv.code}
+                    className="border border-[#ba1a1a]/40 bg-[#ba1a1a]/10 px-2 py-0.5 text-[10px] font-mono font-bold uppercase text-[#ba1a1a] hover:bg-[#ba1a1a] hover:text-[#ffffff] transition-none disabled:opacity-50"
+                  >
+                    {deletingCode === inv.code ? "…" : "Remove"}
+                  </button>
                 </div>
+
               </React.Fragment>
             ))
           )}

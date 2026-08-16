@@ -7,6 +7,7 @@ interface CustomersViewProps {
   onSelectTester: (tester: Tester | null) => void;
   onApprove: (tester: Tester) => void;
   onRevoke: (tester: Tester) => void;
+  onDelete: (tester: Tester) => void;
   onInspectDrawer: (tester: Tester) => void;
   api: AdminApi | null;
   busyId: string | null;
@@ -19,6 +20,7 @@ export function CustomersView({
   onSelectTester,
   onApprove,
   onRevoke,
+  onDelete,
   onInspectDrawer,
   api,
   busyId,
@@ -28,6 +30,8 @@ export function CustomersView({
   const [stateFilter, setStateFilter] = useState<"ALL" | TesterState>("ALL");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (globalSearch) {
@@ -284,10 +288,49 @@ export function CustomersView({
                   <span className="material-symbols-outlined text-[16px]">visibility</span>
                   Deep-Dive Portfolio &amp; Logs
                 </button>
+
+                {confirmDeleteId === selectedTester.user_id ? (
+                  <div className="border-2 border-[#ba1a1a] bg-[#ba1a1a]/10 p-3 space-y-2">
+                    <p className="text-[11px] font-mono text-[#ffdad6] font-bold">
+                      Permanently remove customer from SQLite and Supabase?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDelete(selectedTester);
+                          setConfirmDeleteId(null);
+                        }}
+                        disabled={busyId === selectedTester.user_id}
+                        className="flex-1 py-1.5 bg-[#ba1a1a] text-[#ffffff] text-[10px] font-mono font-bold uppercase tracking-wider hover:bg-[#991b1b] disabled:opacity-50"
+                      >
+                        {busyId === selectedTester.user_id ? "Removing…" : "Confirm Delete"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-3 py-1.5 border border-[#333333] bg-[#242322] text-[#f2f0f1] text-[10px] font-mono font-bold uppercase"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(selectedTester.user_id)}
+                    disabled={busyId === selectedTester.user_id}
+                    className="w-full py-2 bg-transparent text-[#ba1a1a] text-xs font-label font-bold uppercase tracking-widest border border-[#ba1a1a]/40 hover:bg-[#ba1a1a]/15 hover:border-[#ba1a1a] transition-none flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">delete</span>
+                    Remove Customer
+                  </button>
+                )}
               </div>
             </>
           ) : (
             <div className="p-8 text-center text-xs font-mono text-secondary-fixed-dim">
+
               No customer selected.
             </div>
           )}
