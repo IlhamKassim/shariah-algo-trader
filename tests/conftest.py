@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -38,3 +39,23 @@ def _encryption_master_key(monkeypatch):
     needs a value present regardless of the local .env.
     """
     monkeypatch.setenv("ENCRYPTION_MASTER_KEY", "test-only-encryption-master-key")
+
+
+@pytest.fixture(autouse=True)
+def _alpaca_env_defaults(monkeypatch):
+    """Config() demands ALPACA_*/ETF_SYMBOL/TOP_N at construction (config.py:6-12).
+
+    On this server they come from the gitignored .env; a fresh checkout or CI
+    runner has none, so Config() raises OSError in any test that constructs it.
+    Fill only the gaps with inert values -- tests never reach the real broker.
+    """
+    defaults = {
+        "ALPACA_API_KEY": "test-key",
+        "ALPACA_API_SECRET": "test-secret",
+        "ALPACA_BASE_URL": "https://paper-api.alpaca.markets",
+        "ETF_SYMBOL": "SPUS",
+        "TOP_N": "20",
+    }
+    for key, val in defaults.items():
+        if not os.environ.get(key):
+            monkeypatch.setenv(key, val)
