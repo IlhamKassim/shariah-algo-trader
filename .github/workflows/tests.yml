@@ -21,7 +21,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
       - name: Run pytest
-        run: uv run pytest -q
+        run: uv run pytest -v
+
 
   frontend-types:
     name: Frontend typecheck (tsc)
