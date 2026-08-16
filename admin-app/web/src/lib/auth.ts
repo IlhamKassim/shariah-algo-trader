@@ -10,8 +10,9 @@ import { createClient, type Session, type SupabaseClient } from "@supabase/supab
  * the same contract the existing dashboard web uses.
  */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://qriwgmxjrocdazqzlpsr.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_BrrYzvksFCM57kwzdpXSDA__a-FmZog";
+
 
 let client: SupabaseClient | null = null;
 
