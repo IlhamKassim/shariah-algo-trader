@@ -617,6 +617,34 @@ def get_paper_credentials(user_id: str) -> dict | None:
     return {"alpaca_api_key": api_key, "alpaca_api_secret": api_secret}
 
 
+def get_trading_prefs(user_id: str) -> dict:
+    """Return the trading preferences for a user, or default values if none exist."""
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT etf_symbol, top_n, sector_cap, drift_threshold "
+                "FROM user_settings WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        return {
+            "etf_symbol": "SPUS",
+            "top_n": 20,
+            "sector_cap": 0.20,
+            "drift_threshold": 0.03,
+        }
+    return {
+        "etf_symbol": row["etf_symbol"] or "SPUS",
+        "top_n": int(row["top_n"]) if row["top_n"] is not None else 20,
+        "sector_cap": float(row["sector_cap"]) if row["sector_cap"] is not None else 0.20,
+        "drift_threshold": float(row["drift_threshold"]) if row["drift_threshold"] is not None else 0.03,
+    }
+
+
 def ensure_user_settings_row(user_id: str, *, enabled: bool = True) -> None:
     """Ensure a local ``user_settings`` row exists with engine visibility set.
 

@@ -15,6 +15,7 @@ from dashboard.api.hardening import (
     build_auth_limiter,
     build_default_limiter,
     build_refresh_limiter,
+    build_waitlist_limiter,
 )
 from dashboard.api.routers import (
     account,
@@ -32,6 +33,7 @@ from dashboard.api.routers import (
     settings,
     status,
     universe,
+    waitlist,
 )
 from dashboard.api.routers.universe import schedule_startup_refresh
 from dashboard.api.notifications_seeder import seed_notifications
@@ -104,6 +106,7 @@ app.add_middleware(
         ("POST", "/api/universe/refresh"): build_refresh_limiter(),
         ("POST", "/api/auth/login"): auth_limiter,
         ("POST", "/api/auth/verify"): auth_limiter,
+        ("POST", "/api/public/waitlist"): build_waitlist_limiter(),
     },
 )
 
@@ -118,6 +121,7 @@ app.add_middleware(
 # Open auth & public router endpoints (login, logout, status, public universe, health)
 app.include_router(auth.router)
 app.include_router(universe.public_router)
+app.include_router(waitlist.public_router)
 app.include_router(health.router)
 
 # Secure all other endpoints
