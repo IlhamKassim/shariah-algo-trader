@@ -37,6 +37,23 @@ def run_rebalance(
 
     eligible_target = {t for t in target if t in eligible_universe}
 
+    # Safety guard: refuse to trade on a degenerate target. If the factor
+    # pipeline returned empty/partial data (e.g. yfinance rate-limit 401s),
+    # `sells = current - eligible_target` would liquidate the whole account.
+    # A healthy run must retain >= 60% of the target (min 1 — an empty
+    # target always aborts).
+    min_target = max(1, int(round(len(target) * 0.6)))
+    if len(eligible_target) < min_target:
+        logger.error(
+            "Rebalance ABORTED — target has only %d eligible ticker(s) "
+            "(expected >= %d). Refusing to trade to avoid mass liquidation. "
+            "target=%s", len(eligible_target), min_target, sorted(target)[:10],
+        )
+        raise RuntimeError(
+            f"Rebalance aborted: degenerate target ({len(eligible_target)} eligible "
+            f"of {len(target)}). Suspected upstream data failure; no orders submitted."
+        )
+
     sells = current - eligible_target
     buys = eligible_target - current
     stays = current & eligible_target
@@ -51,6 +68,11 @@ def run_rebalance(
     # cycle's buys instead of waiting on the broker's balance to settle.
     for ticker in sells:
         executor.sell(ticker, positions.get(ticker, 0.0))
+
+    # 1b. Wait for sell fills to land in the broker's buying power before
+    # submitting any buys. Cash accounts reject buys that spend still-
+    # unsettled proceeds (403) — this was the Aug 3 live-account failure.
+    executor.settle_sells(timeout=30.0)
 
     if not regime_ok:
         logger.warning(

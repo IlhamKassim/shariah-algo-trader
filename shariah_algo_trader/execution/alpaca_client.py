@@ -22,7 +22,19 @@ class AlpacaClient:
             raise AlpacaError(f"HTTP request failed: {exc}") from exc
 
         if not response.ok:
-            raise AlpacaError(f"Alpaca returned {response.status_code} for {path}")
+            # Include the broker's error body — a bare status code (e.g. 403 on
+            # buys right after sells) is undiagnosable without the message.
+            detail = ""
+            try:
+                body = response.json()
+                if isinstance(body, dict):
+                    detail = body.get("message") or body.get("code") or ""
+                if not detail:
+                    detail = str(body)[:200]
+            except Exception:
+                detail = response.text[:200]
+            suffix = f" — {detail}" if detail else ""
+            raise AlpacaError(f"Alpaca returned {response.status_code} for {path}{suffix}")
 
         try:
             return response.json()

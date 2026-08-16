@@ -85,3 +85,28 @@ class TestRebalanceDiff:
             positions={"MSFT": 7500.0},
         )
         executor.sell.assert_called_once_with("MSFT", 7500.0)
+
+
+class TestDegenerateTargetGuard:
+    def test_empty_target_aborts_no_orders(self):
+        executor = make_executor()
+        import pytest
+        with pytest.raises(RuntimeError, match="degenerate target"):
+            _run({"AAPL", "MSFT"}, {"AAPL", "MSFT", "AMZN"}, [], executor)
+        executor.sell.assert_not_called()
+        executor.buy.assert_not_called()
+
+    def test_partial_target_below_threshold_aborts(self):
+        # target=10, only 2 eligible (< 60%) -> abort, no liquidation
+        executor = make_executor()
+        import pytest
+        target = [f"T{i:02d}" for i in range(10)]
+        with pytest.raises(RuntimeError, match="degenerate target"):
+            _run(set(target), {"T00", "T01"}, target, executor)
+        executor.sell.assert_not_called()
+
+    def test_healthy_target_above_threshold_trades(self):
+        executor = make_executor()
+        target = [f"T{i:02d}" for i in range(10)]
+        _run(set(target), set(target), target, executor)
+        executor.buy.assert_not_called()

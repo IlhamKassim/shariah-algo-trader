@@ -1,6 +1,7 @@
 import logging
+import time
 
-from shariah_algo_trader.execution.alpaca_client import AlpacaClient
+from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ class OrderExecutor:
     def __init__(self, client: AlpacaClient):
         self._client = client
         self._cash_remaining: float | None = None
+        self._pending_sells: set[str] = set()
 
     def _account(self) -> dict:
         return self._client.get("/v2/account")
@@ -38,6 +40,44 @@ class OrderExecutor:
         if self._cash_remaining is not None:
             self._cash_remaining += amount
 
+    def settle_sells(self, timeout: float = 30.0) -> None:
+        """Wait for pending sell fills so the broker's buying power reflects them.
+
+        On cash accounts, a sell's proceeds are NOT immediately spendable:
+        submitting a buy 0.2s after a sell (as the old code did) hits Alpaca
+        with the pre-fill buying power and gets 403. This polls the order book
+        until every tracked sell is filled (or the timeout), then re-syncs the
+        internal cash pool to the broker's actual account. Safe no-op when no
+        sells were tracked this cycle.
+        """
+        if self._pending_sells:
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline and self._pending_sells:
+                try:
+                    orders = self._client.get("/v2/orders?status=all&limit=200")
+                    for order in orders:
+                        symbol = order.get("symbol")
+                        if symbol in self._pending_sells and order.get("status") == "filled":
+                            self._pending_sells.discard(symbol)
+                except Exception as exc:
+                    logger.warning("settle_sells poll error (will retry): %s", exc)
+                if self._pending_sells:
+                    time.sleep(1.0)
+            if self._pending_sells:
+                logger.warning(
+                    "settle_sells timed out after %.0fs — %d sell(s) not confirmed filled: %s",
+                    timeout, len(self._pending_sells), sorted(self._pending_sells),
+                )
+        # Re-sync the tracked pool to the broker's real cash so buys can never
+        # overspend the buying power the broker will actually grant.
+        try:
+            account = self._account()
+            broker_cash = float(account.get("cash") or 0.0)
+            buffer = float(account.get("equity") or 0.0) * _CASH_BUFFER_PCT
+            self._cash_remaining = max(broker_cash - buffer, 0.0)
+        except Exception as exc:
+            logger.warning("settle_sells cash re-sync failed: %s", exc)
+
     def _reserve_cash(self, notional: float) -> float:
         """Cap a buy's notional to cash actually available, decrementing a running tally.
 
@@ -59,13 +99,28 @@ class OrderExecutor:
         if notional < _MIN_TRADE_NOTIONAL:
             logger.warning("SKIP BUY %s — insufficient cash ($%.2f available)", ticker, notional)
             return
-        self._client.post("/v2/orders", {
-            "symbol": ticker,
-            "notional": notional,
-            "side": "buy",
-            "type": "market",
-            "time_in_force": "day",
-        })
+        try:
+            self._client.post("/v2/orders", {
+                "symbol": ticker,
+                "notional": notional,
+                "side": "buy",
+                "type": "market",
+                "time_in_force": "day",
+            })
+        except AlpacaError as exc:
+            if "403" not in str(exc):
+                raise
+            # 403 on a buy right after sells = cash-account settlement race.
+            # Re-sync with the broker and retry once; if still 403, surface it.
+            logger.warning("BUY %s hit 403 — re-syncing cash and retrying: %s", ticker, exc)
+            self.settle_sells(timeout=15.0)
+            self._client.post("/v2/orders", {
+                "symbol": ticker,
+                "notional": notional,
+                "side": "buy",
+                "type": "market",
+                "time_in_force": "day",
+            })
         logger.info("BUY %s — $%.2f (%.1f%% of $%.2f equity)", ticker, notional, weight * 100, equity)
 
     def sell(self, ticker: str, value: float = 0.0) -> bool:
@@ -78,6 +133,7 @@ class OrderExecutor:
             self._client.delete(f"/v2/positions/{ticker}")
             logger.info("SELL %s — full position liquidated", ticker)
             self._credit_cash(value)
+            self._pending_sells.add(ticker)
             return True
         except Exception as exc:
             logger.error("SELL %s failed: %s", ticker, exc)
@@ -106,13 +162,28 @@ class OrderExecutor:
             if notional < _MIN_TRADE_NOTIONAL:
                 logger.warning("SKIP ADJUST %s — insufficient cash ($%.2f available)", ticker, notional)
                 return
-        self._client.post("/v2/orders", {
-            "symbol": ticker,
-            "notional": notional,
-            "side": side,
-            "type": "market",
-            "time_in_force": "day",
-        })
+        try:
+            self._client.post("/v2/orders", {
+                "symbol": ticker,
+                "notional": notional,
+                "side": side,
+                "type": "market",
+                "time_in_force": "day",
+            })
+        except AlpacaError as exc:
+            if "403" not in str(exc) or side != "buy":
+                raise
+            # 403 on a buy right after sells = cash-account settlement race.
+            # Re-sync with the broker and retry once; if still 403, surface it.
+            logger.warning("ADJUST %s hit 403 — re-syncing cash and retrying: %s", ticker, exc)
+            self.settle_sells(timeout=15.0)
+            self._client.post("/v2/orders", {
+                "symbol": ticker,
+                "notional": notional,
+                "side": side,
+                "type": "market",
+                "time_in_force": "day",
+            })
         if side == "sell":
             self._credit_cash(notional)
         logger.info(
