@@ -190,16 +190,16 @@ function Topbar({ onOpenGuide }: TopbarProps) {
       }
       queryClient.clear();
       await queryClient.invalidateQueries();
-      navigate("/landing", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       console.error("Logout failed:", err);
-      navigate("/landing", { replace: true });
+      navigate("/", { replace: true });
     }
   };
 
   const navCounts: Record<string, number | undefined> = {
-    "/portfolio": positions?.length,
-    "/universe": universe?.stocks.length,
+    "/app/portfolio": positions?.length,
+    "/app/universe": universe?.stocks.length,
   };  
   const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/app/settings") : NAV;
 
