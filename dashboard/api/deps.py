@@ -221,6 +221,8 @@ _ADMIN_APP_METADATA_ROLES = {"admin", "service_role", "owner", "supabase_admin"}
 def is_admin(request: Request, cfg: Config | None = None) -> bool:
     """Return True for the platform owner/operator.
 
+    - In SaaS mode (Supabase / Clerk enabled), unauthenticated requests (no user_id)
+      fail closed and are NEVER granted admin privileges.
     - Legacy password/OAuth session mode (no Supabase ``user_id`` bound to the
       request) is owner-only, so those callers are admins.
     - Supabase mode grants admin when:
@@ -228,15 +230,19 @@ def is_admin(request: Request, cfg: Config | None = None) -> bool:
       2. Local SQLite ``pilot_users.role`` is 'admin'.
       3. Caller email is in ``ADMIN_EMAILS`` or ``ALLOWED_GOOGLE_EMAILS``.
     """
-    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
-    if not user_id:
-        return True
     if cfg is None:
         cfg = get_config()
+
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    if not user_id:
+        if getattr(cfg, "supabase_enabled", False) or getattr(cfg, "clerk_enabled", False):
+            return False
+        return True
     payload = getattr(request.state, "user", None) or {}
     app_meta = payload.get("app_metadata") or {}
     if app_meta.get("role") in _ADMIN_APP_METADATA_ROLES:
         return True
+
 
     # Check local SQLite pilot database role
     from dashboard.api.user_store import get_pilot_role
