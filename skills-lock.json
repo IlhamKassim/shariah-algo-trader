@@ -19,6 +19,12 @@
       "skillPath": "skills/brandkit/SKILL.md",
       "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
     },
+    "ci-security-scanning-with-strix": {
+      "source": "usestrix/strix",
+      "sourceType": "github",
+      "skillPath": "skills/ci-security-scanning-with-strix/SKILL.md",
+      "computedHash": "399ed462e62310873c665f1a32f6c0f5fdacc90ec790d98b756b8c3e682af9cc"
+    },
     "claude-handoff": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -72,6 +78,12 @@
       "sourceType": "github",
       "skillPath": "skills/personal/edit-article/SKILL.md",
       "computedHash": "cb2a13b2acb6c8a0706eb3a973a2681f30fd74c00784c74ceaa98e12eb2b2fc3"
+    },
+    "fix-security-vulnerabilities-with-strix": {
+      "source": "usestrix/strix",
+      "sourceType": "github",
+      "skillPath": "skills/fix-security-vulnerabilities-with-strix/SKILL.md",
+      "computedHash": "d4c8f204db8861a7fa74515fbc0a37c51fcdcbd7154743bf7493c7fb92f63bb8"
     },
     "full-output-enforcement": {
       "source": "Leonxlnx/taste-skill",
@@ -163,6 +175,12 @@
       "skillPath": "skills/in-progress/loop-me/SKILL.md",
       "computedHash": "e1fcab9b531b338eb540c9d57ee089e2660e4bba1d7623ec566c6f32f77f2d26"
     },
+    "managed-pentesting-with-strix": {
+      "source": "usestrix/strix",
+      "sourceType": "github",
+      "skillPath": "skills/managed-pentesting-with-strix/SKILL.md",
+      "computedHash": "024c5d689a94cefe72b54cf8f942394a904becc7f711cb904ea9258e9c8f978e"
+    },
     "migrate-to-shoehorn": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -180,6 +198,12 @@
       "sourceType": "github",
       "skillPath": "skills/personal/obsidian-vault/SKILL.md",
       "computedHash": "5c08eda96fd76a71793c0a8cb91bef41d518586654a14af4f2edf8f8fd0f96a7"
+    },
+    "penetration-testing-with-strix": {
+      "source": "usestrix/strix",
+      "sourceType": "github",
+      "skillPath": "skills/penetration-testing-with-strix/SKILL.md",
+      "computedHash": "a85180d7e270c4da46cb559aba5320d93cd69b259df62d747e2b5e8662f04f32"
     },
     "prototype": {
       "source": "mattpocock/skills",
