@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import type { ActivityEvent, AdminApi } from "../lib/api";
 import { formatDateTime } from "../lib/format";
+import { ActivityDropdown } from "./ui/activity-dropdown";
+import { Bell } from "lucide-react";
 
 interface ActivityTrailViewProps {
   api: AdminApi | null;
@@ -73,6 +75,15 @@ export function ActivityTrailView({ api }: ActivityTrailViewProps) {
     URL.revokeObjectURL(url);
   };
 
+  const activityDropdownItems = events.slice(0, 5).map((e) => ({
+    id: e.id,
+    icon: <Bell className="h-4 w-4 text-[#D1A92E]" />,
+    iconBg: "bg-neutral-800",
+    title: e.event_type.replace(/_/g, " "),
+    description: e.details,
+    time: formatDateTime(e.created_at),
+  }));
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Title */}
@@ -88,11 +99,21 @@ export function ActivityTrailView({ api }: ActivityTrailViewProps) {
         <button
           type="button"
           onClick={exportCsv}
-          className="px-4 py-2 bg-[#f2f0f1] text-[#0a0a0a] text-xs font-label font-bold uppercase tracking-widest border-2 border-[#f2f0f1] rounded-none flex items-center gap-2 hover:bg-[#d1d1d1] transition-none"
+          disabled={events.length === 0}
+          className="px-4 py-2 border-2 border-[#333333] bg-[#242322] text-[#f2f0f1] text-xs font-label font-bold uppercase tracking-widest hover:bg-[#333333] transition-none disabled:opacity-50 flex items-center gap-2"
         >
-          <span className="material-symbols-outlined text-[16px]">file_download</span>
-          Export CSV
+          <span className="material-symbols-outlined text-[16px]">download</span>
+          Export Audit CSV
         </button>
+      </div>
+
+      {/* Quick Activity Dropdown Widget */}
+      <div className="flex justify-start">
+        <ActivityDropdown
+          activities={activityDropdownItems.length > 0 ? activityDropdownItems : undefined}
+          title={activityDropdownItems.length > 0 ? `${activityDropdownItems.length} Live Audit Events` : undefined}
+          subtitle="Platform activity overview & events"
+        />
       </div>
 
       {/* Filter Bar */}
