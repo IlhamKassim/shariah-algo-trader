@@ -79,6 +79,13 @@ def init_db() -> None:
                 CREATE INDEX IF NOT EXISTS idx_audit_created
                 ON audit_logs (created_at DESC)
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS waitlist (
+                    id         TEXT PRIMARY KEY,
+                    email      TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL
+                )
+            """)
             conn.commit()
             _initialized = True
         finally:
@@ -137,6 +144,49 @@ def fetch_audit_logs(limit: int = 50) -> list[sqlite3.Row]:
             conn.close()
 
 
+# ── Waitlist Helpers ──────────────────────────────────────────────────────────
+
+def add_waitlist_signup(email: str) -> bool:
+    """Add an email to the waitlist. Returns False if email already exists (duplicate), True if added."""
+    _ensure_db_initialized()
+    signup_id = str(uuid.uuid4())
+    created_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute(
+                """
+                INSERT INTO waitlist (id, email, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (signup_id, email, created_at),
+            )
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            # Duplicate email (UNIQUE constraint violation)
+            return False
+        finally:
+            conn.close()
+
+
+def list_waitlist_signups(limit: int = 100) -> list[sqlite3.Row]:
+    """Return the most recent *limit* waitlist signups, newest first."""
+    _ensure_db_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, email, created_at
+                FROM waitlist
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        finally:
+            conn.close()
 
 
 # ── Write helpers ─────────────────────────────────────────────────────────────
