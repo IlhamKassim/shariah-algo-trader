@@ -29,13 +29,16 @@ export function Landing() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState<string>("overview");
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [waitlistMessage, setWaitlistMessage] = useState("");
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ["overview", "terminal", "compliance", "universe", "faqs"];
+      const sections = ["overview", "terminal", "compliance", "universe", "waitlist", "faqs"];
       const scrollPosition = window.scrollY + 140;
 
       if (window.scrollY < 100) {
@@ -102,6 +105,40 @@ export function Landing() {
     setTimeout(() => {
       navigate("/login");
     }, 220);
+  };
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail.trim()) {
+      setWaitlistStatus("error");
+      setWaitlistMessage("Please enter a valid email address");
+      return;
+    }
+
+    setWaitlistStatus("loading");
+    try {
+      const response = await fetch("/api/public/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail }),
+      });
+
+      if (response.ok) {
+        setWaitlistStatus("success");
+        setWaitlistMessage("Thanks for joining! We'll be in touch soon.");
+        setWaitlistEmail("");
+        setTimeout(() => {
+          setWaitlistStatus("idle");
+          setWaitlistMessage("");
+        }, 3000);
+      } else {
+        setWaitlistStatus("error");
+        setWaitlistMessage("Something went wrong. Please try again.");
+      }
+    } catch (error) {
+      setWaitlistStatus("error");
+      setWaitlistMessage("Network error. Please try again.");
+    }
   };
 
   const toggleFaq = (index: number) => {
@@ -326,10 +363,10 @@ export function Landing() {
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => handleStartConnection("ALPACA PAPER")}
+                  onClick={(e) => scrollToSection(e, "waitlist")}
                   className="bg-[#DAF1DE] text-[#051F20] font-semibold px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest hover:bg-[#c2e8c8] transition-all cursor-pointer text-center shadow-lg shadow-[#DAF1DE]/10"
                 >
-                  Demo Mode
+                  Join Waitlist
                 </button>
               </div>
             </div>
@@ -619,11 +656,7 @@ export function Landing() {
             {/* Explore Full Universe CTA Button */}
             <div className="mt-8 flex flex-col items-center gap-3">
               <button
-                onClick={() => {
-                  localStorage.setItem("shariah_demo_mode", "true");
-                  window.scrollTo(0, 0);
-                  navigate("/universe");
-                }}
+                onClick={(e) => scrollToSection(e, "waitlist")}
                 className="group flex items-center gap-3 border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] hover:bg-[#DAF1DE] hover:text-[#051F20] px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer"
               >
                 <span>Explore Full Universe (200+ Equities)</span>
@@ -682,14 +715,42 @@ export function Landing() {
         </section>
 
         {/* Final Call to Action */}
-        <section className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
+        <section id="waitlist" className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
           <div className="max-w-screen-xl mx-auto px-4 sm:px-12 flex flex-col items-center text-center">
             <h2 className="font-serif text-[56px] sm:text-[80px] md:text-[96px] mb-8 leading-none font-normal text-[#DAF1DE]">
               Ready to deploy.
             </h2>
             <p className="text-[#8EB69B] mb-12 font-sans max-w-2xl text-lg">
-              Join 500+ institutional and retail investors building the future of ethical finance. Get started in minutes.
+              Join the waitlist for early access. We're building the future of ethical finance.
             </p>
+            
+            {/* Waitlist Signup Form */}
+            <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto mb-8">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={waitlistEmail}
+                onChange={(e) => setWaitlistEmail(e.target.value)}
+                className="bg-[#0B2B26] border border-[#235347] text-[#DAF1DE] px-6 py-4 font-mono text-[11px] uppercase tracking-widest placeholder-[#8EB69B]/50 focus:outline-none focus:border-[#8EB69B] transition-colors"
+                disabled={waitlistStatus === "loading"}
+              />
+              <button
+                type="submit"
+                disabled={waitlistStatus === "loading"}
+                className="bg-[#DAF1DE] text-[#051F20] font-semibold px-10 py-4 font-mono text-[11px] uppercase tracking-widest hover:bg-[#c2e8c8] transition-all cursor-pointer shadow-lg shadow-[#DAF1DE]/10 disabled:opacity-50"
+              >
+                {waitlistStatus === "loading" ? "Joining..." : "Join Waitlist"}
+              </button>
+            </form>
+
+            {/* Waitlist Status Message */}
+            {waitlistStatus === "success" && (
+              <p className="text-[#8EB69B] font-sans text-sm mb-6">{waitlistMessage}</p>
+            )}
+            {waitlistStatus === "error" && (
+              <p className="text-red-400 font-sans text-sm mb-6">{waitlistMessage}</p>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto">
               <button
                 onClick={() => handleStartConnection("ALPACA PAPER")}

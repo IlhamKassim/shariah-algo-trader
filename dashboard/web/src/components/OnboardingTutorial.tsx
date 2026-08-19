@@ -114,7 +114,7 @@ export function OnboardingTutorial() {
         </div>
 
         <Link
-          to="/settings"
+          to="/app/settings"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-gold hover:text-brand-gold/80 transition-colors uppercase tracking-wider"
         >
           Configure Settings <ArrowRight size={14} />

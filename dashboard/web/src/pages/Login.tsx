@@ -293,7 +293,7 @@ export function Login() {
     }
     await queryClient.invalidateQueries();
     window.scrollTo(0, 0);
-    navigate("/");
+    navigate("/app");
   };
 
   return (

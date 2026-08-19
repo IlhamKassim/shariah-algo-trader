@@ -92,7 +92,7 @@ export function Overview() {
             </div>
           </div>
           <Link
-            to="/settings"
+            to="/app/settings"
             className="px-3.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-200 text-[10px] uppercase font-bold tracking-widest rounded transition-all cursor-pointer whitespace-nowrap"
           >
             Manage Environment
@@ -230,7 +230,7 @@ export function Overview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Top Holdings</CardTitle>
-            <Link to="/portfolio" className="text-[11px] text-brand-blue hover:text-brand-blue/80 transition-colors">
+            <Link to="/app/portfolio" className="text-[11px] text-brand-blue hover:text-brand-blue/80 transition-colors">
               View all →
             </Link>
           </CardHeader>
@@ -249,7 +249,7 @@ export function Overview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Activity</CardTitle>
-            <Link to="/activity" className="text-[11px] text-brand-blue hover:text-brand-blue/80 transition-colors">
+            <Link to="/app/activity" className="text-[11px] text-brand-blue hover:text-brand-blue/80 transition-colors">
               View log →
             </Link>
           </CardHeader>
