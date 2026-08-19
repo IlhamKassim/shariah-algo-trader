@@ -216,7 +216,7 @@ INSERT INTO user_settings (
     trading_mode, alpaca_base_url, etf_symbol, top_n, sector_cap,
     drift_threshold, shariah_trader_enabled, day_trader_enabled,
     risk_acknowledged_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, 'https://paper-api.alpaca.markets', 'SPUS', 20, 0.2, 0.03, 1, 0, NULL, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, 'https://paper-api.alpaca.markets', 'SPUS', 20, 0.2, 0.03, 1, 0, ?, ?, ?)
 """
 
 
@@ -226,7 +226,7 @@ def _enc(value: str) -> str | None:
     return encrypt_credential(value)
 
 
-def _seed_engine_row(db_path, user_id, *, mode, paper=None, live=None):
+def _seed_engine_row(db_path, user_id, *, mode, paper=None, live=None, risk_acknowledged=False):
     conn = sqlite3.connect(str(db_path))
     try:
         now = "2026-08-13T00:00:00+00:00"
@@ -234,6 +234,7 @@ def _seed_engine_row(db_path, user_id, *, mode, paper=None, live=None):
         paper_secret = _enc(paper[1]) if paper is not None else None
         live_key = _enc(live[0]) if live is not None else None
         live_secret = _enc(live[1]) if live is not None else None
+        risk_acknowledged_at = now if risk_acknowledged else None
         conn.execute(
             _ENGINE_INSERT,
             (
@@ -243,6 +244,7 @@ def _seed_engine_row(db_path, user_id, *, mode, paper=None, live=None):
                 live_key,
                 live_secret,
                 mode,
+                risk_acknowledged_at,
                 now,
                 now,
             ),
@@ -304,7 +306,10 @@ def test_g6_tester_with_only_live_keys_yields_zero_entries(engine_db, caplog):
 
 def test_ac12_admin_entries_unchanged_by_guardrails(engine_db):
     """AC-12: aqil-like live+paper admin produces identical live AND paper entries."""
-    _seed_engine_row(engine_db, "5b7fb8dd-admin", mode="live", paper=("PK", "PS"), live=("LK", "LS"))
+    _seed_engine_row(
+        engine_db, "5b7fb8dd-admin", mode="live", paper=("PK", "PS"), live=("LK", "LS"),
+        risk_acknowledged=True,  # a real live admin account would have gone through the ack flow
+    )
     # no pilot_users row → not a tester
 
     accounts = get_active_tenant_accounts(engine="shariah_trader")

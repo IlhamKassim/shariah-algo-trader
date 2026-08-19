@@ -117,6 +117,14 @@ class _FixedWindowLimiter:
             hits.append(now)
             return True
 
+    def reset(self) -> None:
+        """Clear all recorded hits. Test-only escape hatch — this limiter is a
+        process-wide singleton (attached to the app at import time), so
+        without this, tests that share the app instance leak rate-limit state
+        into each other based on execution order."""
+        with self._lock:
+            self._hits.clear()
+
 
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")

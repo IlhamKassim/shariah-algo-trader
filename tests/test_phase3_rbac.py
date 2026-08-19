@@ -8,13 +8,20 @@ from dashboard.api.deps import get_config
 from shariah_algo_trader.config import Config
 
 class MockConfig(Config):
-    supabase_enabled = True
-    enforce_mfa = False
-    dashboard_password = None
-    google_client_id = None
-    google_client_secret = None
-    clerk_enabled = False
-    admin_emails = ["aqilnazri9@gmail.com", "ilhamkassim2003@gmail.com"]
+    # Config.__init__ unconditionally sets these same names as *instance*
+    # attributes from the environment, which would silently shadow plain
+    # class-attribute overrides (instance __dict__ wins over class attrs for
+    # non-descriptor values). Re-apply after super().__init__() so the mock
+    # values actually stick.
+    def __init__(self):
+        super().__init__()
+        self.supabase_enabled = True
+        self.enforce_mfa = False
+        self.dashboard_password = None
+        self.google_client_id = None
+        self.google_client_secret = None
+        self.clerk_enabled = False
+        self.admin_emails = {"aqilnazri9@gmail.com", "ilhamkassim2003@gmail.com"}
 
 @pytest.fixture
 def admin_client():

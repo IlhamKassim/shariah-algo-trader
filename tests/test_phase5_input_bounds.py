@@ -8,8 +8,12 @@ from shariah_algo_trader.config import Config
 from dashboard.api.hardening import validate_alpaca_base_url
 
 class MockConfig(Config):
-    supabase_enabled = True
-    enforce_mfa = False
+    # See tests/test_phase3_rbac.py's MockConfig for why __init__ is needed:
+    # Config.__init__ would otherwise silently overwrite these as instance attrs.
+    def __init__(self):
+        super().__init__()
+        self.supabase_enabled = True
+        self.enforce_mfa = False
 
 @pytest.fixture
 def client():

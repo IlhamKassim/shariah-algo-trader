@@ -101,6 +101,10 @@ def get_active_tenant_accounts(
                     # paper-only — never enter the live/both branches regardless
                     # of the stored trading_mode; live keys present in the DB
                     # are a guardrail violation that is logged and suppressed.
+                    # Checked first (and independent of risk-ack below) so its
+                    # own log line always fires for tester rows regardless of
+                    # risk_acknowledged_at — testers never get a live entry
+                    # either way, for this reason specifically.
                     if pilot_roles.get(user_id or "") == "tester":
                         if has_live:
                             logger.warning(
@@ -121,6 +125,21 @@ def get_active_tenant_accounts(
                                 "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
                             })
                         continue
+
+                    # Server-side risk-acknowledgment gate: a live tenant entry
+                    # must never be spawned for an account that has not recorded
+                    # risk_acknowledged_at, regardless of role or what
+                    # trading_mode is stored — the API's write-path check
+                    # (routers/settings.py) is defense-in-depth, not the only
+                    # enforcement point.
+                    risk_acknowledged = bool(data.get("risk_acknowledged_at"))
+                    if has_live and not risk_acknowledged:
+                        logger.warning(
+                            "RISK_ACK_GUARD: user %s has live credentials but no "
+                            "risk_acknowledged_at — live tenant entry suppressed.",
+                            user_id,
+                        )
+                        has_live = False
 
                     # Determine tenant account targets
                     if active_mode == "live":

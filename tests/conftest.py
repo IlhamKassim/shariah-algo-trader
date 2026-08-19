@@ -76,6 +76,34 @@ def _mock_dns_for_alpaca(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _reset_shared_singletons():
+    """Reset process-wide singletons shared across the whole test session.
+
+    dashboard.api.main.app (and its RateLimitMiddleware's rate limiters) and
+    the UniverseCache are created once at import time and persist for every
+    test in this process — without a reset, tests become order-dependent
+    (e.g. one test's requests exhaust another unrelated test's rate-limit
+    budget purely because it happened to run first).
+    """
+    from dashboard.api.main import app
+    from dashboard.api.cache import get_universe_cache
+
+    for mw in app.user_middleware:
+        if mw.kwargs.get("default_limiter") is not None:
+            mw.kwargs["default_limiter"].reset()
+            for limiter in (mw.kwargs.get("route_limiters") or {}).values():
+                limiter.reset()
+
+    cache = get_universe_cache()
+    cache.computing = False
+    cache.last_computed_at = None
+    cache.stocks = []
+    cache.raw_universe = set()
+
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _mock_supabase_sync(monkeypatch):
     """Ensure all Supabase sync/delete helpers are stubbed out by default in tests."""
     from dashboard.api import user_store

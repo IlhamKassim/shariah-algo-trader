@@ -245,11 +245,19 @@ class TestLiveModeRiskAck:
 # ═════════════════════════════════════════════════════════════════════════════
 
 class TestUniverseRefreshAuthz:
+    # /api/universe/refresh is rate-limited to 2 requests/60s per client IP by
+    # a process-wide, module-level limiter (dashboard/api/main.py's
+    # RateLimitMiddleware instance persists for the whole test session). Give
+    # each test its own X-Forwarded-For so it isn't starved by other tests/
+    # runs that already exercised this same endpoint from the default IP.
     def test_non_admin_cannot_trigger_refresh(self, client, supabase_env):
         app.dependency_overrides[get_config] = lambda: SupabaseMockConfig()
         with patch("dashboard.api.deps._decode_supabase_jwt") as mock_decode:
             mock_decode.return_value = {"sub": "strix_fix_tenant", "aal": "aal1"}
-            res = client.post("/api/universe/refresh", headers={"Authorization": "Bearer x"})
+            res = client.post(
+                "/api/universe/refresh",
+                headers={"Authorization": "Bearer x", "X-Forwarded-For": "10.10.10.1"},
+            )
             assert res.status_code == 403
         app.dependency_overrides.clear()
 
@@ -264,7 +272,10 @@ class TestUniverseRefreshAuthz:
                 "email": "aqilnazri9@gmail.com",
                 "aal": "aal1",
             }
-            res = client.post("/api/universe/refresh", headers={"Authorization": "Bearer x"})
+            res = client.post(
+                "/api/universe/refresh",
+                headers={"Authorization": "Bearer x", "X-Forwarded-For": "10.10.10.2"},
+            )
             assert res.status_code == 200
             assert res.json()["status"] == "computing"
         app.dependency_overrides.clear()
