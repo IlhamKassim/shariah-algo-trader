@@ -28,6 +28,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
 import { Landing } from "./pages/Landing";
+import { RiskDisclosure } from "./pages/RiskDisclosure";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
 import { api, setTokenProvider } from "./lib/api";
@@ -417,6 +418,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/risk-disclosure" element={<RiskDisclosure />} />
         <Route
           path="/app/*"
           element={

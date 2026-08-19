@@ -7,8 +7,15 @@ import { api } from "../lib/api";
 import { SignIn, useAuth } from "@clerk/react";
 import { ConnectionOverlay } from "../components/ConnectionOverlay";
 import { supabase } from "../lib/supabaseClient";
+import { useDocumentMeta } from "../hooks/useDocumentMeta";
 
 export function Login() {
+  useDocumentMeta({
+    title: "Login · ShariahTrading",
+    description: "Sign in to your ShariahTrading account to access your Shariah-screened portfolio dashboard.",
+    noindex: true,
+  });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

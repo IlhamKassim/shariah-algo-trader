@@ -19,6 +19,91 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "ShariahTrading",
+      "url": "https://shariahtrading.my/",
+      "logo": "https://shariahtrading.my/og-image.png",
+      "description": "Institutional-grade, Shariah-screened algorithmic trading infrastructure. Automated screening, zero leverage, long-only equity strategy for educational purposes."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "ShariahTrading",
+      "url": "https://shariahtrading.my/"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does the engine enforce AAOIFI Standard No. 21 compliance daily?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our core engine runs an automated Compliance Audit at 09:30 AM ET before market execution. It synchronizes with daily S&P 500 Shariah constituent databases and cross-verifies financial metrics: Interest-Bearing Debt / Total Assets (<33%), Cash & Interest Securities / Assets (<33%), and 100% Core Business Activity Screening."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there any leverage, short-selling, or interest (Riba) involved?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Strictly zero. ShariahTrading operates exclusively on a 100% Long-Only Spot Equity basis. Options, futures, margin trading, short positions, and interest-bearing fixed-income instruments are hard-blocked at the algorithmic execution layer."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What occurs if an active portfolio stock becomes non-compliant?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "If a company's debt or cash ratios exceed the 33% threshold due to quarterly earnings updates or market cap swings, the compliance engine flags an immediate 'Compliance Exit Liquidation' order, selling 100% of the position on the next market open."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the Multi-Factor Quantitative Strategy outperform passive Shariah ETFs?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Rather than market-cap weighting where mega-caps dominate portfolio concentration, our quantitative model ranks compliant stocks across 4 proven factor metrics: Momentum, Quality (ROE), Low Volatility, and Value. The system rebalances monthly into the top 20 ranked equities."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is dividend purification calculated for non-permissible income?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For companies with minor incidental interest income (<5%), the system automatically calculates the exact purification percentage per dividend payout and logs the required charitable donation amount directly inside your Activity Log."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Google Analytics 4 (production only, so local dev doesn't pollute real data) -->
+    <script>
+      // TODO: replace with the real GA4 Measurement ID once the property is created.
+      var GA_MEASUREMENT_ID = "G-XXXXXXXXXX";
+      if (window.location.hostname === "shariahtrading.my") {
+        var gaScript = document.createElement("script");
+        gaScript.async = true;
+        gaScript.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_MEASUREMENT_ID;
+        document.head.appendChild(gaScript);
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { window.dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag("js", new Date());
+        gtag("config", GA_MEASUREMENT_ID);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

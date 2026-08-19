@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -127,6 +127,9 @@ export function Landing() {
         setWaitlistStatus("success");
         setWaitlistMessage("Thanks for joining! We'll be in touch soon.");
         setWaitlistEmail("");
+        if (typeof window.gtag === "function") {
+          window.gtag("event", "waitlist_signup");
+        }
         setTimeout(() => {
           setWaitlistStatus("idle");
           setWaitlistMessage("");
@@ -801,7 +804,7 @@ export function Landing() {
               <ul className="space-y-4 text-white">
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#">Terms of Service</a></li>
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#">Privacy</a></li>
-                <li><a className="hover:text-[#a39d96] transition-colors" href="#">Risk Disclosure</a></li>
+                <li><Link className="hover:text-[#a39d96] transition-colors" to="/risk-disclosure">Risk Disclosure</Link></li>
               </ul>
             </div>
           </div>
