@@ -3,7 +3,15 @@ services:
     name: shariah-algo-trader-dashboard
     runtime: python
     pythonVersion: "3.11"
-    buildCommand: pip install uv && uv sync --no-dev
+    # Build the backend AND the frontend. dashboard/web/vite.config.ts already
+    # points build.outDir at ../../api/static and copies web/public/* into it,
+    # so the deployed static files are always regenerated from source and can no
+    # longer drift from the committed build (the class of bug that once served
+    # asset hashes that were in no git commit). "emptyOutDir: true" wipes
+    # dashboard/api/static before copying, which is fine: public/* (favicon,
+    # icons, robots.txt) is re-copied by Vite. Requires Node/npm on the Python
+    # build image (Render's python runtime ships Node).
+    buildCommand: pip install uv && uv sync --no-dev && cd dashboard/web && npm ci && npm run build
     startCommand: uv run uvicorn dashboard.api.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: ALPACA_API_KEY

@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from dashboard.api.cache import get_universe_cache
 from dashboard.api.deps import get_alpaca, get_config, verify_auth
 from dashboard.api.hardening import (
+    ForwardedProtoHTTPSRedirectMiddleware,
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
     build_auth_limiter,
@@ -82,6 +83,13 @@ async def lifespan(app: FastAPI):
 
 
 
+# True when running on a real host (Render sets RENDER; ENVIRONMENT=production
+# is the explicit override) — used to gate things that must not run in dev/tests.
+_IS_PRODUCTION = (
+    os.environ.get("ENVIRONMENT", "").lower() == "production"
+    or bool(os.environ.get("RENDER"))
+)
+
 app = FastAPI(
     title="Shariah Algo Trader Dashboard",
     version="0.1.0",
@@ -117,6 +125,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Defense-in-depth that refuses to serve plaintext. gated on production so
+# local dev on http://localhost keeps working. Behind Cloudflare in "Flexible"
+# mode the origin sees http for *all* traffic, so this keys off the
+# X-Forwarded-Proto header the proxy sends, not the raw scheme — otherwise it
+# would 307-loop everything. Deploy this only together with switching
+# Cloudflare to Full (strict) + Always Use HTTPS (see the middleware docstring).
+if _IS_PRODUCTION:
+    app.add_middleware(ForwardedProtoHTTPSRedirectMiddleware)
 
 # Open auth & public router endpoints (login, logout, status, public universe, health)
 app.include_router(auth.router)

@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse, RedirectResponse, Response
 
 
 # ── SSRF guard for user-supplied Alpaca base URLs ────────────────────────────
@@ -60,6 +60,36 @@ def validate_alpaca_base_url(url: str | None) -> str | None:
             return None
     path = parsed.path.rstrip("/")
     return f"https://{host}{path}"
+
+
+class ForwardedProtoHTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    """Defense-in-depth: force the **client-visible** protocol up to https.
+
+    Starlette's built-in ``HTTPSRedirectMiddleware`` only inspects
+    ``scope["scheme"]``. Behind a reverse proxy (e.g. Cloudflare in "Flexible"
+    mode) the origin sees ``http`` for *all* traffic — even a browser's HTTPS
+    request, because the edge proxies over plaintext to the origin. So that
+    middleware would 307-loop everything until the proxy is switched to
+    "Full (strict)".
+
+    Instead we read the proxy-reported ``X-Forwarded-Proto`` header (the same
+    pattern ``_client_ip`` uses for ``x-forwarded-for``) and redirect 307 to
+    https whenever the *client* connected over plaintext. Only add this in
+    production; the client still connects over plaintext because Cloudflare
+    is in Flexible mode, so this intentionally requires the operator to flip
+    Cloudflare to Full (strict) at the same time, or the site will redirect-loop.
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").strip().lower()
+        client_scheme = forwarded_proto or (request.url.scheme or "http")
+        if client_scheme == "http":
+            url = request.url.replace(scheme="https")
+            if url.port in (80, 443):
+                # Drop the default port so the Location header is clean.
+                url = url.replace(netloc=url.hostname or url.netloc)
+            return RedirectResponse(str(url), status_code=307)
+        return await call_next(request)
 
 
 class _FixedWindowLimiter:

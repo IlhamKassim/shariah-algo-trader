@@ -19,3 +19,15 @@ results_*.json
 # Local database and state
 data/
 *.db
+
+# SSH keys / secrets
+*.key
+*.pem
+
+# Frontend build output is regenerated from source on every Render deploy
+# (dashboard/web/vite.config.ts sets build.outDir to dashboard/api/static).
+# The committed files under dashboard/api/static/assets/ + index.html were the
+# source of the drift bug once — they're kept for now so the current build is
+# valid until the next deploy rebuilds them, then they become stale-untrusted.
+dashboard/api/static/assets/
+dashboard/api/static/index.html
