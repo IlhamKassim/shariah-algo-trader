@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, ShieldAlert, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ShieldAlert, ArrowLeft, ShieldCheck, CheckCircle2 } from "lucide-react";
+
 
 import { api } from "../lib/api";
 import { SignIn, useAuth } from "@clerk/react";
@@ -16,22 +17,37 @@ export function Login() {
     noindex: true,
   });
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+
+  const searchParams = new URLSearchParams(location.search);
+  const initialMode = searchParams.get("mode");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(() => initialMode === "signup");
   const [supabaseSuccessMsg, setSupabaseSuccessMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionMode, setConnectionMode] = useState("SECURE PORT 8000");
+  const [connectionMode, setConnectionMode] = useState("SECURE CONSOLE");
   const [pendingTarget, setPendingTarget] = useState<"demo" | "auth" | null>(null);
-  const [isNavigatingToLanding, setIsNavigatingToLanding] = useState(false);
 
+  // Pilot invite link support: /login?invite=CODE or stored in sessionStorage
+  const [inviteCode] = useState<string | null>(() => {
+    const urlCode = searchParams.get("invite");
+    const stored = sessionStorage.getItem("shariah_pending_invite");
+    const code = (urlCode || stored || "").trim();
+    if (code) {
+      sessionStorage.setItem("shariah_pending_invite", code);
+    }
+    return code || null;
+  });
+  const inviteClaimedRef = useRef(false);
+  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const queryClient = useQueryClient();
 
   const { data: auth, isLoading } = useQuery({
     queryKey: ["authStatus"],
@@ -41,15 +57,48 @@ export function Login() {
 
   const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
 
-  // Redirect to home if already authenticated
+  // Claim the invite once the user is actually signed in with an active user account
   useEffect(() => {
+    if (!inviteCode || inviteClaimedRef.current) return;
+    // Only attempt claiming if a real authenticated user session exists (Clerk or user_id)
+    const hasActiveSession = auth?.clerk_enabled
+      ? clerkLoaded && isSignedIn
+      : Boolean(auth?.user_id && auth?.authenticated);
+
+    if (!hasActiveSession) return;
+    inviteClaimedRef.current = true;
+    api
+      .claimInvite(inviteCode)
+      .then((res) => {
+        if (res.state === "pending") {
+          setInviteMsg(
+            "Invite accepted — your pilot access is pending admin approval.",
+          );
+        } else {
+          setInviteMsg(`Invite accepted — pilot status: ${res.state}.`);
+        }
+      })
+      .catch((err) => {
+        console.warn("Pilot invite claim deferred or error:", err);
+      });
+  }, [inviteCode, auth, clerkLoaded, isSignedIn]);
+
+
+  // Redirect to app dashboard if already authenticated
+  useEffect(() => {
+    const isRecovery =
+      sessionStorage.getItem("shariah_recovery_mode") === "true" ||
+      window.location.hash.includes("type=recovery") ||
+      window.location.search.includes("type=recovery");
+    if (isRecovery) return;
+
     if (auth) {
       if (auth.clerk_enabled) {
         if (clerkLoaded && isSignedIn) {
-          navigate("/", { replace: true });
+          navigate("/app", { replace: true });
         }
       } else if (auth.auth_enabled && auth.authenticated) {
-        navigate("/", { replace: true });
+        navigate("/app", { replace: true });
       }
     }
   }, [auth, navigate, clerkLoaded, isSignedIn]);
@@ -85,6 +134,29 @@ export function Login() {
       </div>
     );
   }
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError("Enter your email address first to reset your password.");
+      return;
+    }
+    setError(null);
+    try {
+      if (!supabase) throw new Error("Supabase client is not configured.");
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: `${window.location.origin}/reset-password` },
+      );
+      if (resetError) throw resetError;
+      setSupabaseSuccessMsg(
+        `Password reset link sent to ${email.trim()} — check your inbox.`,
+      );
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to send password reset link.",
+      );
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,10 +342,7 @@ export function Login() {
 
   const handleNavigateToLanding = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    setIsNavigatingToLanding(true);
-    setTimeout(() => {
-      navigate("/landing");
-    }, 220);
+    navigate("/");
   };
 
   const handleCompleteConnection = async () => {
@@ -300,17 +369,17 @@ export function Login() {
     }
     await queryClient.invalidateQueries();
     window.scrollTo(0, 0);
-    navigate("/app");
+    const hasCompletedOnboarding = localStorage.getItem("shariah_onboarding_completed") === "true";
+    if (isSignUpMode || !hasCompletedOnboarding) {
+      navigate("/onboarding");
+    } else {
+      navigate("/app");
+    }
   };
+
 
   return (
     <div className="min-h-screen bg-[#070709] text-white flex flex-col lg:flex-row font-sans select-none relative overflow-hidden animate-fadeIn">
-      {/* Top Page Transition Loader Bar */}
-      {isNavigatingToLanding && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-neutral-900 overflow-hidden">
-          <div className="h-full bg-emerald-500 w-full transition-all duration-200 ease-out animate-pulse" />
-        </div>
-      )}
 
       {isConnecting && (
         <ConnectionOverlay
@@ -415,6 +484,33 @@ export function Login() {
         </div>
 
         <div className="w-full max-w-md mx-auto my-auto space-y-7">
+          {/* Pilot Invite Banner */}
+          {inviteCode && (
+            <div className="p-3.5 rounded-xl bg-[#0B2B26] border border-[#8EB69B]/40 flex items-center justify-between text-xs text-[#DAF1DE] shadow-lg animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <span className="p-1 rounded bg-[#235347] text-[#DAF1DE]">
+                  <ShieldCheck size={16} />
+                </span>
+                <div>
+                  <div className="font-bold text-[#DAF1DE] flex items-center gap-1.5">
+                    <span>Pilot Invite Attached:</span>
+                    <span className="font-mono text-brand-gold font-bold">{inviteCode}</span>
+                  </div>
+                  <span className="text-[10px] text-[#8EB69B]">
+                    {isSignUpMode ? "Create an account to claim your pilot access" : "Sign in to attach invite to your account"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {inviteMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center gap-2 text-xs text-emerald-300 shadow-lg">
+              <CheckCircle2 size={16} className="shrink-0" />
+              <span>{inviteMsg}</span>
+            </div>
+          )}
+
           {/* Header Title */}
           <div>
             <h2 className="text-3xl sm:text-4xl font-serif font-normal text-[#DAF1DE]">
@@ -426,6 +522,7 @@ export function Login() {
                 : "Enter your credentials to access your trading console."}
             </p>
           </div>
+
 
           {/* OAuth Buttons (Google & GitHub) */}
           <div className="grid grid-cols-2 gap-3">
@@ -488,6 +585,12 @@ export function Login() {
           {supabaseSuccessMsg && (
             <div className="bg-[#0B2B26] border border-[#235347] p-3.5 rounded-xl text-xs text-[#DAF1DE] font-medium">
               {supabaseSuccessMsg}
+            </div>
+          )}
+
+          {inviteMsg && (
+            <div className="bg-[#0B2B26] border border-[#8EB69B]/40 p-3.5 rounded-xl text-xs text-[#DAF1DE] font-medium">
+              {inviteMsg}
             </div>
           )}
 
@@ -566,9 +669,19 @@ export function Login() {
                   </button>
                 </div>
                 {isSignUpMode && (
-                  <p className="text-xs text-[#8EB69B]/70 mt-1">
-                    Must be at least 8 characters.
+                  <p className="text-[11px] text-[#8EB69B]/80 mt-1 font-mono">
+                    Minimum 12 characters (must include uppercase, lowercase, number & symbol).
                   </p>
+                )}
+
+                {!isSignUpMode && (
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-xs text-[#8EB69B] hover:text-[#DAF1DE] transition-colors mt-1.5 cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
                 )}
               </div>
 

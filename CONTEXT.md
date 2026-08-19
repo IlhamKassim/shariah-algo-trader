@@ -77,16 +77,6 @@ _Avoid_: holdings list, ETF data, universe refresh, constituent list
 The bot's own filter — excluding any stock with Total Debt / Total Assets > 33% from the Quality Factor. Applied on top of the Eligible Universe, which is already pre-screened by the source ETF (e.g. SPUS) using that ETF's own methodology. This project does not perform or claim independent, board-certified Shariah compliance verification (e.g. against the full AAOIFI standard) — the Shariah Screen is a single supplementary debt-ratio filter, nothing more.
 _Avoid_: Shariah-compliant, compliant, certified, AAOIFI-compliant, halal (as a bare claim)
 
-### UI & Platform Experience
-
-**Quantix Glass UI (V2)**:
-The high-contrast dark glassmorphism dashboard layout featuring a top benchmark ticker bar, 3-card hero telemetry (Portfolio Value & Sparkline, Shariah Compliance Health, and Factor Score Leader), grouped sidebar navigation, and dual-tabbed holdings/universe tables.
-_Avoid_: new layout, dark mode, skin
-
-**UI Version Toggle**:
-The client-side switch (`Try New Quantix Glass UI (Beta)`) persisting user UI preference (`shariah_ui_v2_enabled`) in `localStorage` to allow instant switching between Classic Shariah UI (V1) and Quantix Glass UI (V2).
-_Avoid_: beta toggle, view switcher
-
 
 ## Example Dialogue
 

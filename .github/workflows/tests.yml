@@ -1,0 +1,44 @@
+name: tests
+
+# CI gate for shariah-algo-trader.
+# Runs on every push to main (and every PR targeting main). The deploy watcher
+# (shariah-auto-deploy.sh) refuses to deploy any commit whose checks are not green.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Run pytest
+        run: uv run pytest -v
+
+
+  frontend-types:
+    name: Frontend typecheck (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            dashboard/web/package-lock.json
+            admin-app/web/package-lock.json
+      - name: Dashboard typecheck
+        working-directory: dashboard/web
+        run: npm ci && npx tsc -b --noEmit
+      - name: Admin typecheck
+        working-directory: admin-app/web
+        run: npm ci && npx tsc -b --noEmit

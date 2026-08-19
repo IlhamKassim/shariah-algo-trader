@@ -1,0 +1,15 @@
+[Unit]
+Description=Shariah Admin App (beta-tester pilot, standalone :8002)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shariah-algo-trader
+EnvironmentFile=/home/ubuntu/shariah-algo-trader/.env
+ExecStart=/home/ubuntu/shariah-algo-trader/.venv/bin/uvicorn admin_app.api.main:app --app-dir /home/ubuntu/shariah-algo-trader/admin-app --host 127.0.0.1 --port 8002
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

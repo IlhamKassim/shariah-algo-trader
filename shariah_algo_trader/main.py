@@ -1,5 +1,7 @@
+import json
 import logging
 import sys
+from datetime import datetime, timezone
 from typing import Any
 
 from shariah_algo_trader.config import Config
@@ -22,10 +24,35 @@ from shariah_algo_trader.jobs.compliance_check import run_compliance_check
 from shariah_algo_trader.jobs.rebalance import run_rebalance
 from shariah_algo_trader.scheduling.scheduler import start_scheduler
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
-)
+class JsonFormatter(logging.Formatter):
+    """Emit one JSON object per log record.
+
+    Fields: timestamp (ISO8601, UTC), level, logger name, message.
+    Exception tracebacks are included as an "exception" field when present.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, Any] = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False)
+
+
+def _setup_json_logging() -> None:
+    """Point the root logger at a single JSON-formatted stderr handler."""
+    handler = logging.StreamHandler()
+    handler.setFormatter(JsonFormatter())
+    root = logging.getLogger()
+    root.handlers[:] = [handler]
+    root.setLevel(logging.INFO)
+
+
+_setup_json_logging()
 
 logger = logging.getLogger(__name__)
 

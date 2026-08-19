@@ -1,8 +1,22 @@
 """Tests for the public /health endpoint (uptime monitoring)."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from dashboard.api.main import app
+
+
+@pytest.fixture(autouse=True)
+def _ensure_store_db():
+    """The /health db check reports 503 when data/user_settings.db is absent.
+
+    A fresh worktree has no data/ dir until a user-store test creates it, so
+    make the store DB exist before the health assertions run — otherwise these
+    tests depend on pytest's file ordering.
+    """
+    from dashboard.api.user_store import init_user_store
+
+    init_user_store()
 
 
 def _client():

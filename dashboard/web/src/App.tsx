@@ -13,13 +13,14 @@ import {
   SlidersHorizontal,
   Flame,
   Shield,
+  User,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountModeModal } from "./components/AccountModeModal";
 import { UserAvatar } from "./components/UserAvatar";
 import { Overview } from "./pages/Overview";
-import { OverviewV2 } from "./pages/OverviewV2";
 import { Portfolio } from "./pages/Portfolio";
+
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
 import { Compare } from "./pages/Compare";
@@ -29,9 +30,14 @@ import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
 import { Landing } from "./pages/Landing";
 import { RiskDisclosure } from "./pages/RiskDisclosure";
+import { Invite } from "./pages/Invite";
+import { ResetPassword } from "./pages/ResetPassword";
 import { Learn } from "./pages/Learn";
 import { Settings } from "./pages/Settings";
+import { Profile } from "./pages/Profile";
+import { PlatformGuideModal } from "./components/PlatformGuideModal";
 import { api, setTokenProvider } from "./lib/api";
+
 import { useAuth } from "@clerk/react";
 import { supabase } from "./lib/supabaseClient";
 
@@ -43,8 +49,10 @@ const NAV = [
   { to: "/app/compare", label: "Compare", end: false, icon: GitCompareArrows },
   { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
   { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
+  { to: "/app/profile", label: "Profile", end: false, icon: User },
   { to: "/app/settings", label: "Settings", end: false, icon: SlidersHorizontal },
 ];
+
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/app": {
@@ -75,18 +83,24 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
     title: "Learn",
     sub: "Understanding factor investing, strategy logic, and Shariah compliance",
   },
+  "/app/profile": {
+    title: "Quant Profile",
+    sub: "Quant trader identity, Shariah mandate pass and sandbox allocation",
+  },
   "/app/settings": {
     title: "Settings Profile",
     sub: "Manage Alpaca API credentials, ETF targets, factor weights, and user authentication",
   },
 };
 
+
 interface TopbarProps {
-  isV2UI?: boolean;
-  onToggleV2UI?: () => void;
+  onOpenGuide?: () => void;
 }
 
-function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
+function Topbar({ onOpenGuide }: TopbarProps) {
+
+
   const location = useLocation();
   const navigate = useNavigate();
   const isDayTraderPage = location.pathname === "/app/day-trader";
@@ -177,26 +191,26 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
       }
       queryClient.clear();
       await queryClient.invalidateQueries();
-      navigate("/landing", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       console.error("Logout failed:", err);
-      navigate("/landing", { replace: true });
+      navigate("/", { replace: true });
     }
   };
 
   const navCounts: Record<string, number | undefined> = {
-    "/portfolio": positions?.length,
-    "/universe": universe?.stocks.length,
+    "/app/portfolio": positions?.length,
+    "/app/universe": universe?.stocks.length,
   };  
   const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/app/settings") : NAV;
 
   return (
-    <header className={`border-b border-divider shrink-0 px-6 ${isV2UI ? "bg-[#0B0D14] border-white/10" : "bg-sidebar"}`}>
+    <header className="border-b border-divider shrink-0 px-6 bg-sidebar">
       {/* Brand row */}
       <div className="min-h-14 py-3 md:py-0 md:h-14 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center justify-between w-full md:w-auto gap-4">
           <div className="flex items-center gap-3 min-w-0 select-none">
-            <div className={`w-8 h-8 flex items-center justify-center shrink-0 ${isV2UI ? "bg-indigo-600 rounded-lg text-white" : "bg-brand-gold text-page"}`}>
+            <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-brand-gold text-page">
               <TrendingUp size={15} strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
@@ -214,15 +228,6 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
           </div>
           {/* Mobile-only session actions */}
           <div className="flex items-center gap-2 md:hidden">
-            {onToggleV2UI && (
-              <button
-                type="button"
-                onClick={onToggleV2UI}
-                className="px-2 py-1 text-[10px] font-mono font-bold rounded bg-indigo-600/20 border border-indigo-500/40 text-indigo-300"
-              >
-                {isV2UI ? "Classic UI" : "Try New Quantix Glass UI (Beta)"}
-              </button>
-            )}
             <NotificationBell />
             {showLogout && (
               <button
@@ -235,7 +240,7 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
             )}
             {!isDemo && (
               <NavLink
-                to="/app/settings"
+                to="/app/profile"
                 className="w-7 h-7 rounded-full flex items-center justify-center select-none shrink-0"
                 title="User Profile & Settings"
               >
@@ -247,23 +252,8 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
 
         {/* Status block */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 w-full md:w-auto text-muted">
-          {/* Toggle Button for V2 Glass UI */}
-          {onToggleV2UI && (
-            <button
-              type="button"
-              onClick={onToggleV2UI}
-              className={`px-3 py-1 text-[11px] font-mono font-bold rounded-xl transition-all cursor-pointer border ${
-                isV2UI
-                  ? "bg-indigo-600/30 border-indigo-500/50 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.3)]"
-                  : "bg-slate-800/80 border-white/10 text-slate-300 hover:bg-slate-700/80"
-              }`}
-              title="Switch UI design between Classic Shariah and Quantix Glass"
-            >
-              {isV2UI ? "Return to Classic UI" : "Try New Quantix Glass UI (Beta)"}
-            </button>
-          )}
-
           <div className="flex items-center gap-1.5">
+
             <span className={`w-1.5 h-1.5 rounded-full ${isMarketOpen ? "bg-brand-green" : "bg-brand-red"}`} />
             <span className="text-xs text-muted whitespace-nowrap">{isMarketOpen ? "NYSE Open" : "Market Closed"}</span>
             <span className="font-mono text-xs text-muted tabular-nums ml-1">{etTime} ET</span>
@@ -300,6 +290,17 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
                 <span>PAPER ACCOUNT</span>
               </button>
             )}
+            {onOpenGuide && (
+              <button
+                type="button"
+                onClick={onOpenGuide}
+                className="hidden sm:flex items-center gap-1.5 border border-divider hover:border-brand-gold/40 text-muted hover:text-brand-gold text-[10px] font-semibold px-2.5 py-1 rounded-none tracking-wider whitespace-nowrap cursor-pointer transition-all"
+                title="Platform Architecture & Strategy Guide"
+              >
+                <BookOpen size={11} className="text-brand-gold" />
+                <span>HOW IT WORKS</span>
+              </button>
+            )}
             <div className="hidden md:flex">
               <NotificationBell />
             </div>
@@ -315,13 +316,14 @@ function Topbar({ isV2UI = false, onToggleV2UI }: TopbarProps) {
             )}
             {!isDemo && (
               <NavLink
-                to="/app/settings"
+                to="/app/profile"
                 className="hidden md:flex w-7 h-7 rounded-full items-center justify-center select-none shrink-0"
-                title="User Profile & Settings"
+                title="Quant Operator Profile"
               >
                 <UserAvatar />
               </NavLink>
             )}
+
           </div>
         </div>
 
@@ -387,15 +389,11 @@ function ScrollToTop() {
 
 import { ServerStatusBanner } from "./components/ServerStatusBanner";
 
+import { Onboarding } from "./pages/Onboarding";
+
 export default function App() {
   const { getToken, isLoaded } = useAuth();
-  const [isV2UI, setIsV2UI] = useState(() => localStorage.getItem("shariah_ui_v2_enabled") === "true");
-
-  const toggleV2UI = () => {
-    const next = !isV2UI;
-    setIsV2UI(next);
-    localStorage.setItem("shariah_ui_v2_enabled", String(next));
-  };
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
     if (isLoaded) {
@@ -414,27 +412,33 @@ export default function App() {
   return (
     <>
       <ServerStatusBanner />
+      <PlatformGuideModal isOpen={showGuideModal} onClose={() => setShowGuideModal(false)} />
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Landing onOpenGuide={() => setShowGuideModal(true)} />} />
+        <Route path="/invite/:code" element={<Invite />} />
+        <Route path="/invite" element={<Invite />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/risk-disclosure" element={<RiskDisclosure />} />
         <Route
           path="/app/*"
           element={
             <ProtectedRoute>
-              <div className={`min-h-screen ${isV2UI ? "bg-[#08090E] text-slate-100" : "bg-page"} flex flex-col`}>
-                <Topbar isV2UI={isV2UI} onToggleV2UI={toggleV2UI} />
-                <main className={`flex-1 overflow-y-auto ${isV2UI ? "px-2 sm:px-6 py-4 max-w-[1500px]" : "px-6 py-6 max-w-[1400px]"} w-full mx-auto`}>
-                  {!isV2UI && <PageHeading />}
+              <div className="min-h-screen bg-page flex flex-col">
+                <Topbar onOpenGuide={() => setShowGuideModal(true)} />
+                <main className="flex-1 overflow-y-auto px-6 py-6 max-w-[1400px] w-full mx-auto">
+                  <PageHeading />
                   <Routes>
-                    <Route path="/" element={isV2UI ? <OverviewV2 /> : <Overview />} />
+                    <Route path="/" element={<Overview />} />
                     <Route path="/portfolio" element={<Portfolio />} />
                     <Route path="/universe" element={<Universe />} />
                     <Route path="/activity" element={<Activity />} />
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/day-trader" element={<DayTrader />} />
                     <Route path="/learn" element={<Learn />} />
+                    <Route path="/profile" element={isDemo ? <Navigate to="/app" replace /> : <Profile />} />
                     <Route path="/settings" element={isDemo ? <Navigate to="/app" replace /> : <Settings />} />
                   </Routes>
                 </main>
@@ -442,7 +446,10 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
 }
+
+

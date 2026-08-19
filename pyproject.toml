@@ -17,11 +17,12 @@ dependencies = [
     "cryptography>=42.0.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "httpx2>=0.1",
     "pytest>=8.0",
     "pytest-env>=1.1",
+    "pytest-xdist>=3.6",
 ]
 
 [project.scripts]

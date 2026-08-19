@@ -18,9 +18,14 @@ import {
   Info,
 } from "lucide-react";
 
-export function Landing() {
+interface LandingProps {
+  onOpenGuide?: () => void;
+}
+
+export function Landing({ onOpenGuide }: LandingProps = {}) {
+
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isNavigatingToLogin, setIsNavigatingToLogin] = useState(false);
+
   const [connectionMode, setConnectionMode] = useState("ALPACA PAPER");
   const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [showDevModal, setShowDevModal] = useState(
@@ -86,6 +91,15 @@ export function Landing() {
     }
   };
 
+  const { data: auth } = useQuery({
+    queryKey: ["authStatus"],
+    queryFn: api.authStatus,
+    refetchOnWindowFocus: false,
+  });
+
+  const isDemo = typeof window !== "undefined" && localStorage.getItem("shariah_demo_mode") === "true";
+  const isAuthed = Boolean(auth?.authenticated || isDemo);
+
   const handleStartConnection = (mode: string) => {
     setConnectionMode(mode);
     setShowBrokerModal(false);
@@ -96,15 +110,18 @@ export function Landing() {
     localStorage.setItem("shariah_demo_mode", "true");
     await queryClient.invalidateQueries();
     window.scrollTo(0, 0);
-    navigate("/");
+    navigate("/app");
   };
 
   const handleNavigateToLogin = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    setIsNavigatingToLogin(true);
-    setTimeout(() => {
+    localStorage.setItem("shariah_dev_risk_acknowledged", "true");
+    setShowDevModal(false);
+    if (isAuthed) {
+      navigate("/app");
+    } else {
       navigate("/login");
-    }, 220);
+    }
   };
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
@@ -199,17 +216,17 @@ export function Landing() {
     <div className="min-h-screen bg-transparent text-white font-sans overflow-x-hidden antialiased selection:bg-[#ffdca1] selection:text-black relative z-10">
       {/* Animated WebGL Mesh Drift Shader Background */}
       <MeshDriftShaderBackground />
-      {/* Top Transition Loader */}
-      {isNavigatingToLogin && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[#1a1a1a] overflow-hidden">
-          <div className="h-full bg-[#ffdca1] w-full transition-all duration-200 ease-out animate-pulse" />
-        </div>
-      )}
 
       {/* Development Mode Notice Popup Modal */}
       <DevWarningModal
         isOpen={showDevModal}
-        onClose={() => setShowDevModal(false)}
+        onClose={() => {
+          // X button = dismiss permanently too, so the modal (which covers
+          // the whole page at z-[9999]) stops blocking first-time visitors'
+          // clicks on Login/nav on every return visit.
+          localStorage.setItem("shariah_dev_risk_acknowledged", "true");
+          setShowDevModal(false);
+        }}
       />
 
       {/* Connection Overlay Simulator */}
@@ -286,6 +303,17 @@ export function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
+            {onOpenGuide && (
+              <button
+                type="button"
+                onClick={onOpenGuide}
+                className="hidden sm:flex items-center gap-1.5 border border-[#235347] bg-[#0B2B26] text-[#8EB69B] hover:text-[#DAF1DE] hover:border-[#8EB69B]/40 px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-widest cursor-pointer transition-colors"
+                title="How the Trading Strategy Works"
+              >
+                <Info size={12} />
+                <span>How It Works</span>
+              </button>
+            )}
             <button
               onClick={() => setShowDevModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 rounded font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.15)]"
@@ -298,7 +326,7 @@ export function Landing() {
               onClick={handleNavigateToLogin}
               className="border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] px-6 py-2 hover:bg-[#DAF1DE] hover:text-[#051F20] transition-all duration-300 font-mono text-[11px] uppercase tracking-widest cursor-pointer shadow-md"
             >
-              Login
+              {isAuthed ? "Dashboard" : "Login"}
             </button>
           </div>
         </div>
@@ -371,8 +399,18 @@ export function Landing() {
                 >
                   Join Waitlist
                 </button>
+                {onOpenGuide && (
+                  <button
+                    type="button"
+                    onClick={onOpenGuide}
+                    className="border border-[#235347] bg-[#0B2B26] text-[#DAF1DE] hover:bg-[#163832] hover:border-[#8EB69B]/60 font-semibold px-8 py-3.5 font-mono text-[11px] uppercase tracking-widest transition-all cursor-pointer text-center flex items-center justify-center gap-2"
+                  >
+                    <Info size={14} /> How Strategy Works
+                  </button>
+                )}
               </div>
             </div>
+
 
             {/* Right Side Widgets */}
             <div className="lg:col-span-4 flex flex-col gap-4">
@@ -437,6 +475,8 @@ export function Landing() {
                 </div>
               </div>
             </div>
+
+
           </div>
         </section>
 

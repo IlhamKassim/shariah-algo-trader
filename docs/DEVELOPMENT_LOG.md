@@ -61,6 +61,16 @@ This document provides a comprehensive overview of the major features, architect
 
 ---
 
+## 🔑 7. Password Reset & Recovery Route Interceptor Fix
+
+### Key Achievements:
+- **Global Recovery Interceptor**: Added `App.tsx` global route listener intercepting `type=recovery` URL fragments/query params and `PASSWORD_RECOVERY` events to automatically route users to `/reset-password`.
+- **Route Guard Protection**: Updated `Login.tsx` and `ProtectedRoute.tsx` to respect `shariah_recovery_mode` in `sessionStorage`, preventing authenticated recovery sessions from bypassing the reset form and jumping straight to `/` (home dashboard).
+- **PKCE & Implicit Flow Support**: Updated `ResetPassword.tsx` to handle both hash `#access_token=...` and search `?code=...` recovery formats cleanly.
+- **Session Cleanup**: Automatically removes `shariah_recovery_mode` from `sessionStorage` upon successful password update before redirecting to `/login`.
+
+---
+
 ## 📁 Key Documentation References
 
 - **ADR 0006**: [docs/adr/0006-multi-tenant-platform-transition-proposal.md](file:///home/ubuntu/shariah-algo-trader/docs/adr/0006-multi-tenant-platform-transition-proposal.md)

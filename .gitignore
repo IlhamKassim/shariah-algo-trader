@@ -12,6 +12,13 @@ day_trader/.runtime/
 .geminirules
 .agents
 
+# Agent tool local state (never commit)
+.claude/
+.codex/
+.worktrees/
+agent/
+
+
 # Backtesting
 shariah_algo_trader/backtesting/.cache/
 results_*.json

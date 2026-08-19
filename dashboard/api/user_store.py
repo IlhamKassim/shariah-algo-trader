@@ -4,6 +4,7 @@ Ensures zero-bloat database storage (< 0.5 KB per user record) and automatic key
 """
 
 import datetime
+import secrets
 import sqlite3
 import threading
 from pathlib import Path
@@ -31,6 +32,13 @@ def init_user_store() -> None:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS user_settings (
                     user_id                          TEXT PRIMARY KEY,
+                    first_name                       TEXT,
+                    last_name                        TEXT,
+                    quant_handle                     TEXT,
+                    country                          TEXT,
+                    investor_type                    TEXT,
+                    paper_capital                    REAL DEFAULT 100000.0,
+                    onboarding_completed_at          TEXT,
                     alpaca_api_key_encrypted          TEXT,
                     alpaca_api_secret_encrypted       TEXT,
                     alpaca_live_api_key_encrypted     TEXT,
@@ -48,12 +56,54 @@ def init_user_store() -> None:
                     updated_at                        TEXT NOT NULL
                 )
             """)
+            # Beta pilot (SPEC-BETA-PILOT.md section 6): LOCAL-ONLY pilot
+            # registry tables — the pilot lifecycle (invites, pending/active/
+            # revoked states) is server-side; deliberately NOT mirrored to
+            # Supabase (avoids new RLS surface).
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS pilot_users (
+                    user_id        TEXT PRIMARY KEY,          -- Supabase auth UID (UUID string)
+                    email          TEXT NOT NULL,
+                    role           TEXT NOT NULL DEFAULT 'tester',   -- 'tester' | 'admin'
+                    state          TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'active' | 'revoked'
+                    invite_code    TEXT,                      -- code they signed up with
+                    linkedin_url   TEXT,                      -- collected at onboarding
+                    notes          TEXT,                      -- admin free text
+                    approved_by    TEXT,                      -- admin user_id
+                    created_at     TEXT NOT NULL,
+                    updated_at     TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS pilot_invites (
+                    code           TEXT PRIMARY KEY,          -- e.g. 8-char URL-safe token
+                    created_by     TEXT NOT NULL,             -- admin user_id
+                    max_uses       INTEGER NOT NULL DEFAULT 1,
+                    uses           INTEGER NOT NULL DEFAULT 0,
+                    expires_at     TEXT NOT NULL,
+                    created_at     TEXT NOT NULL
+                )
+            """)
             conn.commit()
 
             cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(user_settings)")
             existing_cols = {row[1] for row in cursor.fetchall()}
 
+            if "first_name" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN first_name TEXT")
+            if "last_name" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN last_name TEXT")
+            if "quant_handle" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN quant_handle TEXT")
+            if "country" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN country TEXT")
+            if "investor_type" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN investor_type TEXT")
+            if "paper_capital" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN paper_capital REAL DEFAULT 100000.0")
+            if "onboarding_completed_at" not in existing_cols:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN onboarding_completed_at TEXT")
             if "trading_mode" not in existing_cols:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN trading_mode TEXT DEFAULT 'paper'")
             if "alpaca_live_api_key_encrypted" not in existing_cols:
@@ -70,6 +120,7 @@ def init_user_store() -> None:
             _initialized = True
         finally:
             conn.close()
+
 
 
 def _ensure_initialized() -> None:
@@ -102,6 +153,96 @@ def _sync_to_supabase(user_id: str, record: dict) -> None:
             logger.warning("Supabase user_settings sync status: %s %s", res.status_code, res.text)
     except Exception as exc:
         logger.warning("Supabase user_settings sync exception: %s", exc)
+
+
+def _sync_pilot_user_to_supabase(record: dict) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_users"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        }
+        res = requests.post(url, json=record, headers=headers, timeout=5)
+        if res.status_code not in (200, 201):
+            logger.warning("Supabase pilot_users sync status: %s %s", res.status_code, res.text)
+    except Exception as exc:
+        logger.warning("Supabase pilot_users sync exception: %s", exc)
+
+
+def _sync_invite_to_supabase(record: dict) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_invites"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        }
+        res = requests.post(url, json=record, headers=headers, timeout=5)
+        if res.status_code not in (200, 201):
+            logger.warning("Supabase pilot_invites sync status: %s %s", res.status_code, res.text)
+    except Exception as exc:
+        logger.warning("Supabase pilot_invites sync exception: %s", exc)
+
+
+def _delete_invite_from_supabase(code: str) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_invites?code=eq.{code}"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+        }
+        res = requests.delete(url, headers=headers, timeout=5)
+        if res.status_code not in (200, 204):
+            logger.warning("Supabase pilot_invites delete status: %s %s", res.status_code, res.text)
+    except Exception as exc:
+        logger.warning("Supabase pilot_invites delete exception: %s", exc)
+
+
+def _delete_user_from_supabase(user_id: str) -> None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not supabase_key:
+        return
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}",
+    }
+    # 1. Delete from user_settings
+    try:
+        url = f"{supabase_url}/rest/v1/user_settings?user_id=eq.{user_id}"
+        requests.delete(url, headers=headers, timeout=5)
+    except Exception as exc:
+        logger.warning("Supabase user_settings delete exception: %s", exc)
+
+    # 2. Delete from pilot_users
+    try:
+        url = f"{supabase_url}/rest/v1/pilot_users?user_id=eq.{user_id}"
+        requests.delete(url, headers=headers, timeout=5)
+    except Exception as exc:
+        logger.warning("Supabase pilot_users delete exception: %s", exc)
+
+    # 3. Delete from Supabase Auth admin if user exists
+    try:
+        admin_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
+        requests.delete(admin_url, headers=headers, timeout=5)
+    except Exception as exc:
+        logger.warning("Supabase auth user delete exception: %s", exc)
+
 
 
 def _fetch_from_supabase(user_id: str) -> dict | None:
@@ -212,6 +353,11 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 
     existing = get_user_settings(user_id) or {}
 
+    # G3 (paper-only invariant, SPEC section 8): a pilot tester can never
+    # persist live-key columns or trading_mode='live' — checked here, before
+    # the sync record is built, as defense when routers are bypassed.
+    _enforce_paper_only(user_id, settings, existing)
+
     api_key = settings.get("alpaca_api_key")
     api_secret = settings.get("alpaca_api_secret")
     live_api_key = settings.get("alpaca_live_api_key")
@@ -268,6 +414,14 @@ def save_user_settings(user_id: str, settings: dict) -> None:
     sector_cap = settings.get("sector_cap") if settings.get("sector_cap") is not None else existing.get("sector_cap", 0.20)
     drift_threshold = settings.get("drift_threshold") if settings.get("drift_threshold") is not None else existing.get("drift_threshold", 0.03)
 
+    first_name = settings.get("first_name") if "first_name" in settings else existing.get("first_name")
+    last_name = settings.get("last_name") if "last_name" in settings else existing.get("last_name")
+    quant_handle = settings.get("quant_handle") if "quant_handle" in settings else existing.get("quant_handle")
+    country = settings.get("country") if "country" in settings else existing.get("country")
+    investor_type = settings.get("investor_type") if "investor_type" in settings else existing.get("investor_type")
+    paper_capital = float(settings["paper_capital"]) if "paper_capital" in settings and settings["paper_capital"] is not None else float(existing.get("paper_capital", 100000.0) or 100000.0)
+    onboarding_completed_at = settings.get("onboarding_completed_at") if "onboarding_completed_at" in settings else existing.get("onboarding_completed_at")
+
     shariah_enabled = int(settings["shariah_trader_enabled"]) if "shariah_trader_enabled" in settings and settings["shariah_trader_enabled"] is not None else int(existing.get("shariah_trader_enabled", 1))
     day_enabled = int(settings["day_trader_enabled"]) if "day_trader_enabled" in settings and settings["day_trader_enabled"] is not None else int(existing.get("day_trader_enabled", 0))
 
@@ -275,6 +429,13 @@ def save_user_settings(user_id: str, settings: dict) -> None:
 
     record = {
         "user_id": user_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "quant_handle": quant_handle,
+        "country": country,
+        "investor_type": investor_type,
+        "paper_capital": paper_capital,
+        "onboarding_completed_at": onboarding_completed_at,
         "alpaca_api_key_encrypted": enc_key,
         "alpaca_api_secret_encrypted": enc_secret,
         "alpaca_live_api_key_encrypted": enc_live_key,
@@ -299,6 +460,13 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                 """
                 INSERT INTO user_settings (
                     user_id,
+                    first_name,
+                    last_name,
+                    quant_handle,
+                    country,
+                    investor_type,
+                    paper_capital,
+                    onboarding_completed_at,
                     alpaca_api_key_encrypted,
                     alpaca_api_secret_encrypted,
                     alpaca_live_api_key_encrypted,
@@ -314,8 +482,15 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                     risk_acknowledged_at,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
+                    first_name = excluded.first_name,
+                    last_name = excluded.last_name,
+                    quant_handle = excluded.quant_handle,
+                    country = excluded.country,
+                    investor_type = excluded.investor_type,
+                    paper_capital = excluded.paper_capital,
+                    onboarding_completed_at = excluded.onboarding_completed_at,
                     alpaca_api_key_encrypted = excluded.alpaca_api_key_encrypted,
                     alpaca_api_secret_encrypted = excluded.alpaca_api_secret_encrypted,
                     alpaca_live_api_key_encrypted = excluded.alpaca_live_api_key_encrypted,
@@ -333,6 +508,13 @@ def save_user_settings(user_id: str, settings: dict) -> None:
                 """,
                 (
                     user_id,
+                    first_name,
+                    last_name,
+                    quant_handle,
+                    country,
+                    investor_type,
+                    paper_capital,
+                    onboarding_completed_at,
                     enc_key,
                     enc_secret,
                     enc_live_key,
@@ -354,5 +536,440 @@ def save_user_settings(user_id: str, settings: dict) -> None:
         finally:
             conn.close()
 
+
     # Sync to Supabase PostgreSQL database
     _sync_to_supabase(user_id, record)
+
+
+# ── Pilot store helpers (SPEC-BETA-PILOT.md section 6) ───────────────────────
+
+_INVITE_TTL_DAYS = 30
+
+
+class PaperOnlyGuardError(Exception):
+    """Raised when a pilot tester attempts to persist live trading state (G3)."""
+
+
+def pilot_guard_enabled() -> bool:
+    """Rollback switch for all paper-only guardrail checks (spec section 10).
+
+    Set ``PILOT_GUARD_DISABLE=1`` to turn the guardrails off; default unset
+    means the guards are active.
+    """
+    import os
+
+    return os.environ.get("PILOT_GUARD_DISABLE") != "1"
+
+
+def _enforce_paper_only(user_id: str, settings: dict, existing: dict) -> None:
+    """G3: refuse to persist live-key columns or ``trading_mode='live'`` for a tester.
+
+    Defense-in-depth when routers are bypassed — the check runs in the store
+    itself, before the sync record is built.
+    """
+    if not pilot_guard_enabled():
+        return
+    if get_pilot_role(user_id) != "tester":
+        return
+    requested_mode = settings.get("trading_mode") or existing.get("trading_mode") or "paper"
+    live_key = settings.get("alpaca_live_api_key")
+    live_secret = settings.get("alpaca_live_api_secret")
+    live_key_present = bool(live_key and "•" not in live_key)
+    live_secret_present = bool(live_secret and "•" not in live_secret)
+    if requested_mode == "live" or live_key_present or live_secret_present:
+        raise PaperOnlyGuardError(
+            "Paper-only pilot account: tester role cannot save live trading credentials or enable live trading mode."
+        )
+
+
+def _utcnow_iso() -> str:
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+
+
+def create_pilot_invite(
+    created_by: str,
+    max_uses: int = 1,
+    expires_at: str | datetime.datetime | None = None,
+    code: str | None = None,
+) -> str:
+    """Create a single-use pilot invite and return its code.
+
+    ``expires_at`` defaults to 30 days from now; ``code`` defaults to an
+    8-character URL-safe token. Collisions are retried.
+    """
+    _ensure_initialized()
+    if expires_at is None:
+        expires_at = (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=_INVITE_TTL_DAYS)).isoformat()
+    elif isinstance(expires_at, datetime.datetime):
+        expires_at = expires_at.isoformat()
+
+    for _ in range(5):
+        token = code or secrets.token_urlsafe(6)[:8]
+        now = _utcnow_iso()
+        with _lock:
+            conn = _connect()
+            try:
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO pilot_invites (code, created_by, max_uses, uses, expires_at, created_at) "
+                    "VALUES (?, ?, ?, 0, ?, ?)",
+                    (token, created_by, max_uses, expires_at, now),
+                )
+                conn.commit()
+                inserted = cur.rowcount == 1
+            finally:
+                conn.close()
+        if inserted or code is not None:
+            _sync_invite_to_supabase({
+                "code": token,
+                "created_by": created_by,
+                "max_uses": max_uses,
+                "uses": 0,
+                "expires_at": expires_at,
+                "created_at": now,
+            })
+            return token
+    raise RuntimeError("Unable to allocate a unique pilot invite code")
+
+
+def delete_pilot_invite(code: str) -> bool:
+    """Delete an invite code locally and remove it from Supabase."""
+    _ensure_initialized()
+    deleted = False
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute(
+                "DELETE FROM pilot_invites WHERE code = ? COLLATE NOCASE",
+                (code,),
+            )
+            conn.commit()
+            deleted = cur.rowcount > 0
+        finally:
+            conn.close()
+
+    _delete_invite_from_supabase(code)
+    return deleted
+
+
+
+def get_pilot_invite(code: str) -> dict | None:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT code, created_by, max_uses, uses, expires_at, created_at FROM pilot_invites WHERE code = ? COLLATE NOCASE",
+                (code,),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+
+def list_pilot_invites() -> list[dict]:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return [dict(r) for r in conn.execute(
+                "SELECT code, created_by, max_uses, uses, expires_at, created_at FROM pilot_invites ORDER BY created_at DESC"
+            ).fetchall()]
+        finally:
+            conn.close()
+
+
+def validate_invite_code(code: str) -> dict:
+    """Validate an invite code (exists, unexpired, not used up).
+
+    Returns ``{"valid": bool, "reason": str | None, "invite": dict | None}``.
+    """
+    if not code:
+        return {"valid": False, "reason": "Invite code is required.", "invite": None}
+    invite = get_pilot_invite(code)
+    if invite is None:
+        return {"valid": False, "reason": "Invalid invite code.", "invite": None}
+    if invite["expires_at"] < _utcnow_iso():
+        return {"valid": False, "reason": "Invite code has expired.", "invite": invite}
+    if invite["uses"] >= invite["max_uses"]:
+        return {"valid": False, "reason": "Invite code has already been used.", "invite": invite}
+    return {"valid": True, "reason": None, "invite": invite}
+
+
+def get_pilot_user(user_id: str) -> dict | None:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute("SELECT * FROM pilot_users WHERE user_id = ?", (user_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_pilot_users() -> list[dict]:
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return [dict(r) for r in conn.execute(
+                "SELECT * FROM pilot_users ORDER BY created_at DESC"
+            ).fetchall()]
+        finally:
+            conn.close()
+
+
+def set_pilot_user_state(user_id: str, state: str, approved_by: str | None = None) -> None:
+    """Advance a pilot user's lifecycle state ('pending' | 'active' | 'revoked')."""
+    _ensure_initialized()
+    now = _utcnow_iso()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute(
+                "UPDATE pilot_users SET state = ?, approved_by = COALESCE(?, approved_by), updated_at = ? WHERE user_id = ?",
+                (state, approved_by, now, user_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    # Sync state update to Supabase
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if supabase_url and supabase_key:
+        try:
+            url = f"{supabase_url}/rest/v1/pilot_users?user_id=eq.{user_id}"
+            headers = {
+                "apikey": supabase_key,
+                "Authorization": f"Bearer {supabase_key}",
+                "Content-Type": "application/json",
+            }
+            body: dict = {"state": state, "updated_at": now}
+            if approved_by:
+                body["approved_by"] = approved_by
+            requests.patch(url, json=body, headers=headers, timeout=5)
+        except Exception as exc:
+            logger.warning("Supabase pilot_users patch exception: %s", exc)
+
+
+def delete_pilot_user(user_id: str) -> bool:
+    """Completely remove a customer/tester: deletes pilot_user and user_settings locally & in Supabase."""
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute("DELETE FROM pilot_users WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    _delete_user_from_supabase(user_id)
+    return True
+
+
+
+def get_pilot_role(user_id: str) -> str | None:
+    """Return the pilot role ('tester' | 'admin') or None when not a pilot user."""
+    user = get_pilot_user(user_id)
+    return user["role"] if user else None
+
+
+def get_user_settings_meta(user_id: str) -> dict | None:
+    """Lightweight ``user_settings`` read WITHOUT decrypting credentials (admin A1).
+
+    Returns ``{"trading_mode", "shariah_trader_enabled", "has_paper_keys",
+    "has_live_keys"}`` or None when no row exists. Key *presence* is what the
+    tester list needs — never the key material itself.
+    """
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT trading_mode, shariah_trader_enabled, "
+                "first_name, last_name, quant_handle, country, investor_type, paper_capital, onboarding_completed_at, "
+                "alpaca_api_key_encrypted, alpaca_api_secret_encrypted, "
+                "alpaca_live_api_key_encrypted, alpaca_live_api_secret_encrypted "
+                "FROM user_settings WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        return None
+    return {
+        "trading_mode": row["trading_mode"] or "paper",
+        "shariah_trader_enabled": int(row["shariah_trader_enabled"] or 0),
+        "first_name": row["first_name"],
+        "last_name": row["last_name"],
+        "quant_handle": row["quant_handle"],
+        "country": row["country"],
+        "investor_type": row["investor_type"],
+        "paper_capital": float(row["paper_capital"] or 100000.0),
+        "onboarding_completed_at": row["onboarding_completed_at"],
+        "has_paper_keys": bool(row["alpaca_api_key_encrypted"] and row["alpaca_api_secret_encrypted"]),
+        "has_live_keys": bool(row["alpaca_live_api_key_encrypted"] and row["alpaca_live_api_secret_encrypted"]),
+    }
+
+
+
+def get_paper_credentials(user_id: str) -> dict | None:
+    """Return ONLY the decrypted PAPER Alpaca credentials for a user (guardrail G5).
+
+    Admin endpoints A4/A5 must never touch live columns — this helper reads and
+    decrypts exactly ``alpaca_api_key_encrypted`` / ``alpaca_api_secret_encrypted``
+    and nothing else. Returns None when the row or either credential is missing.
+    """
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT alpaca_api_key_encrypted, alpaca_api_secret_encrypted "
+                "FROM user_settings WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        return None
+    api_key = decrypt_credential(row["alpaca_api_key_encrypted"])
+    api_secret = decrypt_credential(row["alpaca_api_secret_encrypted"])
+    if not api_key or not api_secret:
+        return None
+    return {"alpaca_api_key": api_key, "alpaca_api_secret": api_secret}
+
+
+def get_trading_prefs(user_id: str) -> dict:
+    """Return the trading preferences for a user, or default values if none exist."""
+    _ensure_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT etf_symbol, top_n, sector_cap, drift_threshold "
+                "FROM user_settings WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        return {
+            "etf_symbol": "SPUS",
+            "top_n": 20,
+            "sector_cap": 0.20,
+            "drift_threshold": 0.03,
+        }
+    return {
+        "etf_symbol": row["etf_symbol"] or "SPUS",
+        "top_n": int(row["top_n"]) if row["top_n"] is not None else 20,
+        "sector_cap": float(row["sector_cap"]) if row["sector_cap"] is not None else 0.20,
+        "drift_threshold": float(row["drift_threshold"]) if row["drift_threshold"] is not None else 0.03,
+    }
+
+
+def ensure_user_settings_row(user_id: str, *, enabled: bool = True) -> None:
+    """Ensure a local ``user_settings`` row exists with engine visibility set.
+
+    Used by admin A2 (approve: creates/enables the row so the engine picks the
+    tester up next cycle) and A3 (revoke: disables it, keeping all other data).
+    ``INSERT OR IGNORE`` never clobbers existing settings; only
+    ``shariah_trader_enabled`` and ``updated_at`` are written.
+    """
+    _ensure_initialized()
+    now = _utcnow_iso()
+    flag = 1 if enabled else 0
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO user_settings (
+                    user_id, trading_mode, alpaca_base_url, etf_symbol, top_n,
+                    sector_cap, drift_threshold, shariah_trader_enabled,
+                    day_trader_enabled, created_at, updated_at
+                ) VALUES (?, 'paper', 'https://paper-api.alpaca.markets', 'SPUS', 20, 0.20, 0.03, ?, 0, ?, ?)""",
+                (user_id, flag, now, now),
+            )
+            conn.execute(
+                "UPDATE user_settings SET shariah_trader_enabled = ?, updated_at = ? WHERE user_id = ?",
+                (flag, now, user_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def is_tester(user_id: str) -> bool:
+    return get_pilot_role(user_id) == "tester"
+
+
+def claim_pilot_invite(
+    user_id: str,
+    email: str,
+    code: str,
+    linkedin_url: str | None = None,
+    notes: str | None = None,
+) -> dict:
+    """Validate a single-use invite and provision the caller as a pending tester.
+
+    Idempotent: a user who already has a pilot_users row is returned as
+    already-provisioned without consuming the code again. Rejected claims are
+    logged to ``audit_logs`` (AC-4). Returns ``{"ok": bool, ...}``.
+    """
+    _ensure_initialized()
+    from dashboard.api.db import log_audit_event
+
+    existing = get_pilot_user(user_id)
+    if existing is not None:
+        return {"ok": True, "state": existing["state"], "already_provisioned": True}
+
+    validation = validate_invite_code(code)
+    if not validation["valid"]:
+        log_audit_event(
+            "INVITE_REJECTED",
+            user_id,
+            "user",
+            f"Pilot invite claim rejected: {validation['reason']} (code={code!r})",
+        )
+        return {"ok": False, "reason": validation["reason"]}
+
+    canonical_code = validation["invite"]["code"] if validation.get("invite") else code
+    now = _utcnow_iso()
+    with _lock:
+        conn = _connect()
+        try:
+            conn.execute("UPDATE pilot_invites SET uses = uses + 1 WHERE code = ? COLLATE NOCASE", (canonical_code,))
+            conn.execute(
+                """
+                INSERT INTO pilot_users (
+                    user_id, email, role, state, invite_code, linkedin_url, notes, created_at, updated_at
+                ) VALUES (?, ?, 'tester', 'pending', ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    email = excluded.email,
+                    state = 'pending',
+                    updated_at = excluded.updated_at
+                """,
+                (user_id, email, canonical_code, linkedin_url, notes, now, now),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    log_audit_event("INVITE_CLAIMED", user_id, "user", f"Pilot invite {canonical_code} claimed; state=pending")
+
+    _sync_pilot_user_to_supabase({
+        "user_id": user_id,
+        "email": email,
+        "role": "tester",
+        "state": "pending",
+        "invite_code": canonical_code,
+        "linkedin_url": linkedin_url,
+        "notes": notes,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    return {"ok": True, "state": "pending"}
+

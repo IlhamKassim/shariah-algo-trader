@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from dashboard.api.db import log_audit_event
 from dashboard.api.deps import get_config, get_alpaca
-from dashboard.api.models import SettingsResponse, SettingsUpdateRequest
+from dashboard.api.models import SettingsResponse, SettingsUpdateRequest, ClaimInviteRequest
 from shariah_algo_trader.config import Config
 
 router = APIRouter()
@@ -77,8 +77,13 @@ def _sanitize_val(val: str | None) -> str:
     return val.replace("\r", "").replace("\n", "").strip()
 
 
-from dashboard.api.user_store import get_user_settings, save_user_settings
-from dashboard.api.deps import is_admin
+from dashboard.api.user_store import (
+    get_user_settings,
+    save_user_settings,
+    claim_pilot_invite,
+    PaperOnlyGuardError,
+)
+from dashboard.api.deps import is_admin, is_tester_request
 from dashboard.api.hardening import validate_alpaca_base_url
 
 # Fields in SettingsUpdateRequest that are global/administrator configuration
@@ -98,42 +103,64 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
     admin = is_admin(request, cfg)
     user_data = get_user_settings(user_id) if user_id else None
 
-    trading_mode = "paper"
-    raw_live_key = ""
-    raw_live_secret = ""
-    shariah_trader_enabled = True
-    day_trader_enabled = False
+    first_name = None
+    last_name = None
+    quant_handle = None
+    country = None
+    investor_type = None
+    paper_capital = 100000.0
+    onboarding_completed_at = None
 
     if user_id:
-        if user_data:
-            trading_mode = user_data.get("trading_mode") or "paper"
-            raw_key = user_data.get("alpaca_api_key") or ""
-            raw_secret = user_data.get("alpaca_api_secret") or ""
-            raw_live_key = user_data.get("alpaca_live_api_key") or ""
-            raw_live_secret = user_data.get("alpaca_live_api_secret") or ""
-            base_url = user_data.get("alpaca_base_url") or ("https://api.alpaca.markets" if trading_mode == "live" else cfg.alpaca_base_url)
-            etf_symbol = user_data.get("etf_symbol") or cfg.etf_symbol
-            top_n = user_data.get("top_n") or cfg.top_n
-            sector_cap = user_data.get("sector_cap") if user_data.get("sector_cap") is not None else cfg.sector_cap
-            drift_threshold = user_data.get("drift_threshold") if user_data.get("drift_threshold") is not None else cfg.drift_threshold
-            shariah_trader_enabled = bool(user_data.get("shariah_trader_enabled") if user_data.get("shariah_trader_enabled") is not None else True)
-            day_trader_enabled = bool(user_data.get("day_trader_enabled") if user_data.get("day_trader_enabled") is not None else False)
+        user_row = get_user_settings(user_id)
+        if user_row:
+            raw_key = user_row.get("alpaca_api_key_encrypted") or user_row.get("alpaca_api_key") or ""
+            raw_secret = user_row.get("alpaca_api_secret_encrypted") or user_row.get("alpaca_api_secret") or ""
+            raw_live_key = user_row.get("alpaca_live_api_key_encrypted") or user_row.get("alpaca_live_api_key") or ""
+            raw_live_secret = user_row.get("alpaca_live_api_secret_encrypted") or user_row.get("alpaca_live_api_secret") or ""
+            trading_mode = user_row.get("trading_mode", "paper")
+            base_url = user_row.get("alpaca_base_url", "https://paper-api.alpaca.markets")
+            etf_symbol = user_row.get("etf_symbol", getattr(cfg, "etf_symbol", "SPUS"))
+            top_n = user_row.get("top_n", getattr(cfg, "top_n", 20))
+            sector_cap = user_row.get("sector_cap", getattr(cfg, "sector_cap", 0.20))
+            drift_threshold = user_row.get("drift_threshold", getattr(cfg, "drift_threshold", 0.03))
+            shariah_trader_enabled = bool(user_row.get("shariah_trader_enabled", 1))
+            day_trader_enabled = bool(user_row.get("day_trader_enabled", 0))
+            first_name = user_row.get("first_name")
+            last_name = user_row.get("last_name")
+            quant_handle = user_row.get("quant_handle")
+            country = user_row.get("country")
+            investor_type = user_row.get("investor_type")
+            paper_capital = user_row.get("paper_capital") or 100000.0
+            onboarding_completed_at = user_row.get("onboarding_completed_at")
         else:
             raw_key = ""
             raw_secret = ""
-            base_url = cfg.alpaca_base_url
-            etf_symbol = cfg.etf_symbol
-            top_n = cfg.top_n
-            sector_cap = cfg.sector_cap
-            drift_threshold = cfg.drift_threshold
+            raw_live_key = ""
+            raw_live_secret = ""
+            trading_mode = "paper"
+            base_url = getattr(cfg, "alpaca_base_url", "https://paper-api.alpaca.markets")
+            etf_symbol = getattr(cfg, "etf_symbol", "SPUS")
+            top_n = getattr(cfg, "top_n", 20)
+            sector_cap = getattr(cfg, "sector_cap", 0.20)
+            drift_threshold = getattr(cfg, "drift_threshold", 0.03)
+            shariah_trader_enabled = True
+            day_trader_enabled = False
     else:
-        raw_key = cfg.alpaca_api_key
-        raw_secret = os.environ.get("ALPACA_API_SECRET", "")
-        base_url = cfg.alpaca_base_url
-        etf_symbol = cfg.etf_symbol
-        top_n = cfg.top_n
-        sector_cap = cfg.sector_cap
-        drift_threshold = cfg.drift_threshold
+        raw_key = getattr(cfg, "alpaca_api_key", "")
+        raw_secret = getattr(cfg, "alpaca_api_secret", "")
+        raw_live_key = getattr(cfg, "alpaca_live_api_key", "")
+        raw_live_secret = getattr(cfg, "alpaca_live_api_secret", "")
+        trading_mode = getattr(cfg, "trading_mode", "paper")
+        base_url = getattr(cfg, "alpaca_base_url", "https://paper-api.alpaca.markets")
+        etf_symbol = getattr(cfg, "etf_symbol", "SPUS")
+        top_n = getattr(cfg, "top_n", 20)
+        sector_cap = getattr(cfg, "sector_cap", 0.20)
+        drift_threshold = getattr(cfg, "drift_threshold", 0.03)
+        shariah_trader_enabled = True
+        day_trader_enabled = False
+
+
 
     raw_pass = os.environ.get("DASHBOARD_PASSWORD", "")
     raw_google_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
@@ -152,6 +179,13 @@ def get_settings(request: Request, cfg: Config = Depends(get_config)) -> Setting
         drift_threshold=drift_threshold,
         shariah_trader_enabled=shariah_trader_enabled,
         day_trader_enabled=day_trader_enabled,
+        first_name=first_name,
+        last_name=last_name,
+        quant_handle=quant_handle,
+        country=country,
+        investor_type=investor_type,
+        paper_capital=paper_capital,
+        onboarding_completed_at=onboarding_completed_at,
         # Admin-only block: omitted entirely (exclude_none) for non-admins.
         dashboard_password_masked=mask_value(raw_pass) if admin else None,
         google_client_id_masked=mask_value(cfg.google_client_id) if admin else None,
@@ -171,6 +205,25 @@ def update_settings(
 
     # Save to user_store if request is bound to a Supabase/auth user_id
     if user_id:
+        # G1 (paper-only invariant): pilot testers may never supply live
+        # credentials, regardless of payload validity — 403 before any write.
+        if is_tester_request(request):
+            live_key = payload.alpaca_live_api_key
+            live_secret = payload.alpaca_live_api_secret
+            if (live_key is not None and not is_masked(live_key)) or (
+                live_secret is not None and not is_masked(live_secret)
+            ):
+                log_audit_event(
+                    "PAPER_ONLY_GUARD",
+                    user_id,
+                    _client_ip(request),
+                    "Rejected live credentials save for tester role (G1)",
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail="Paper-only pilot account: tester role cannot save live trading credentials.",
+                )
+
         # Regular users must not be able to write global/admin configuration —
         # reject outright instead of silently ignoring (which previously
         # returned 200 "success" for ignored writes).
@@ -222,8 +275,32 @@ def update_settings(
             user_updates["shariah_trader_enabled"] = payload.shariah_trader_enabled
         if payload.day_trader_enabled is not None:
             user_updates["day_trader_enabled"] = payload.day_trader_enabled
+        if payload.first_name is not None:
+            user_updates["first_name"] = _sanitize_val(payload.first_name)
+        if payload.last_name is not None:
+            user_updates["last_name"] = _sanitize_val(payload.last_name)
+        if payload.quant_handle is not None:
+            user_updates["quant_handle"] = _sanitize_val(payload.quant_handle)
+        if payload.country is not None:
+            user_updates["country"] = _sanitize_val(payload.country)
+        if payload.investor_type is not None:
+            user_updates["investor_type"] = _sanitize_val(payload.investor_type)
+        if payload.paper_capital is not None:
+            user_updates["paper_capital"] = payload.paper_capital
+        if payload.onboarding_completed_at is not None:
+            user_updates["onboarding_completed_at"] = payload.onboarding_completed_at
 
-        save_user_settings(user_id, user_updates)
+
+        try:
+            save_user_settings(user_id, user_updates)
+        except PaperOnlyGuardError as exc:
+            log_audit_event(
+                "PAPER_ONLY_GUARD",
+                user_id,
+                _client_ip(request),
+                f"Rejected live persistence for tester role (G3): {exc}",
+            )
+            raise HTTPException(status_code=403, detail=str(exc))
         log_audit_event("USER_SETTINGS_UPDATE", user_id, _client_ip(request), f"Updated user settings: {list(user_updates.keys())}")
         return {"status": "success"}
 
@@ -304,6 +381,21 @@ def set_trading_mode(
     if mode not in ("paper", "live"):
         raise HTTPException(status_code=400, detail="mode must be 'paper' or 'live'")
 
+    # G2 (paper-only invariant): pilot testers may never switch to live mode —
+    # checked before the risk-ack branch, so even a valid risk acknowledgment
+    # cannot bypass the role gate.
+    if mode == "live" and is_tester_request(request):
+        log_audit_event(
+            "PAPER_ONLY_GUARD",
+            user_id or "anonymous",
+            _client_ip(request),
+            "Rejected live trading mode for tester role (G2)",
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Paper-only pilot account: tester role cannot enable live trading mode.",
+        )
+
     base_url = "https://api.alpaca.markets" if mode == "live" else "https://paper-api.alpaca.markets"
     risk_ack = bool(payload.get("riskAcknowledged") or payload.get("risk_acknowledged"))
 
@@ -322,6 +414,16 @@ def set_trading_mode(
                 user_updates["risk_acknowledged_at"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         try:
             save_user_settings(user_id, user_updates)
+        except PaperOnlyGuardError as exc:
+            # G3 defense at the store layer (e.g. JWT predates approval and
+            # the tester role only exists in pilot_users).
+            log_audit_event(
+                "PAPER_ONLY_GUARD",
+                user_id,
+                _client_ip(request),
+                f"Rejected live persistence for tester role (G3): {exc}",
+            )
+            raise HTTPException(status_code=403, detail=str(exc))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         log_audit_event("TRADING_MODE_SWITCH", user_id, _client_ip(request), f"Switched trading mode to {mode}")
@@ -336,3 +438,29 @@ def set_trading_mode(
         log_audit_event("TRADING_MODE_SWITCH", "admin", _client_ip(request), f"Switched global trading mode to {mode}")
 
     return {"status": "success", "trading_mode": mode, "alpaca_base_url": base_url}
+
+
+@router.post("/api/settings/claim-invite")
+def claim_invite(request: Request, payload: ClaimInviteRequest):
+    """Beta pilot: validate a single-use invite at first authenticated call (Q2=A).
+
+    On success the caller is provisioned as a ``pilot_users`` row with
+    ``state='pending'`` (AC-3). Invalid/expired/used codes are rejected with
+    403 and logged to ``audit_logs`` (AC-4). This router is auth-gated in
+    ``main.py``, so anonymous callers get 401 first.
+    """
+    user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required to claim an invite.")
+    user_email = getattr(request.state, "user_email", None) or ""
+
+    result = claim_pilot_invite(
+        user_id,
+        user_email,
+        _sanitize_val(payload.code),
+        linkedin_url=_sanitize_val(payload.linkedin_url) if payload.linkedin_url else None,
+        notes=_sanitize_val(payload.notes) if payload.notes else None,
+    )
+    if not result["ok"]:
+        raise HTTPException(status_code=403, detail=result["reason"])
+    return {"status": "success", "state": result["state"]}

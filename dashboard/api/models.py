@@ -160,6 +160,13 @@ class SettingsResponse(BaseModel):
     drift_threshold: float
     shariah_trader_enabled: bool = True
     day_trader_enabled: bool = False
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    quant_handle: Optional[str] = None
+    country: Optional[str] = None
+    investor_type: Optional[str] = None
+    paper_capital: Optional[float] = 100000.0
+    onboarding_completed_at: Optional[str] = None
     dashboard_password_masked: Optional[str] = None
     google_client_id_masked: Optional[str] = None
     google_client_secret_masked: Optional[str] = None
@@ -182,11 +189,27 @@ class SettingsUpdateRequest(BaseModel):
     drift_threshold: Optional[float] = None
     shariah_trader_enabled: Optional[bool] = None
     day_trader_enabled: Optional[bool] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    quant_handle: Optional[str] = None
+    country: Optional[str] = None
+    investor_type: Optional[str] = None
+    paper_capital: Optional[float] = None
+    onboarding_completed_at: Optional[str] = None
     dashboard_password: Optional[str] = None
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
     google_redirect_uri: Optional[str] = None
     allowed_google_emails: Optional[list[str]] = None
+
+
+
+class ClaimInviteRequest(BaseModel):
+    """Beta pilot invite claim (Q2=A: single-use codes validated at first login)."""
+
+    code: str
+    linkedin_url: Optional[str] = None
+    notes: Optional[str] = None
 
 
 

@@ -63,6 +63,14 @@ def get_active_tenant_accounts(
             conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT * FROM user_settings").fetchall()
+            # Pilot roles (G4): read once on the same connection. Tester rows
+            # are paper-only even if their stored trading_mode says otherwise.
+            pilot_roles: dict[str, str] = {}
+            try:
+                for pr in conn.execute("SELECT user_id, role FROM pilot_users").fetchall():
+                    pilot_roles[pr["user_id"]] = pr["role"]
+            except sqlite3.Error:
+                pass  # pre-pilot DB without the pilot_users table
             conn.close()
             db_read_ok = True
 
@@ -88,6 +96,31 @@ def get_active_tenant_accounts(
                     has_paper = bool(paper_key and paper_secret)
                     # Check Live Account
                     has_live = bool(live_key and live_secret)
+
+                    # G4/G6 (paper-only invariant): a tester-role row is
+                    # paper-only — never enter the live/both branches regardless
+                    # of the stored trading_mode; live keys present in the DB
+                    # are a guardrail violation that is logged and suppressed.
+                    if pilot_roles.get(user_id or "") == "tester":
+                        if has_live:
+                            logger.warning(
+                                "PAPER_ONLY_GUARD: tester user %s has live credentials in user_settings — live tenant entry suppressed.",
+                                user_id,
+                            )
+                        if has_paper:
+                            tenants.append({
+                                "user_id": f"{user_id} (Paper)",
+                                "raw_user_id": user_id,
+                                "trading_mode": "paper",
+                                "alpaca_api_key": paper_key,
+                                "alpaca_api_secret": paper_secret,
+                                "alpaca_base_url": paper_base_url,
+                                "etf_symbol": data.get("etf_symbol") or "SPUS",
+                                "top_n": int(data.get("top_n") or cfg.top_n),
+                                "sector_cap": float(data.get("sector_cap") or cfg.sector_cap),
+                                "drift_threshold": float(data.get("drift_threshold") or cfg.drift_threshold),
+                            })
+                        continue
 
                     # Determine tenant account targets
                     if active_mode == "live":

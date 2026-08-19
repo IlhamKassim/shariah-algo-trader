@@ -118,13 +118,13 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 function getNavInfo(item: NotificationItem): { path: string; label: string } {
-  if (item.source === "day_trader") return { path: "/day-trader", label: "Day Trader" };
+  if (item.source === "day_trader") return { path: "/app/day-trader", label: "Day Trader" };
   if (item.source === "shariah_trader") {
-    if (item.category === "compliance") return { path: "/portfolio",  label: "Portfolio"    };
-    if (item.category === "trade")      return { path: "/activity",   label: "Activity Log" };
-    if (item.category === "platform")   return { path: "/universe",   label: "Universe"     };
+    if (item.category === "compliance") return { path: "/app/portfolio",  label: "Portfolio"    };
+    if (item.category === "trade")      return { path: "/app/activity",   label: "Activity Log" };
+    if (item.category === "platform")   return { path: "/app/universe",   label: "Universe"     };
   }
-  return { path: "/", label: "Overview" };
+  return { path: "/app", label: "Overview" };
 }
 
 // ── Detail modal ──────────────────────────────────────────────────────────────

@@ -189,6 +189,103 @@ def list_waitlist_signups(limit: int = 100) -> list[sqlite3.Row]:
             conn.close()
 
 
+def fetch_audit_logs_for_actor(actor: str, limit: int = 50) -> list[sqlite3.Row]:
+    """Return the most recent *limit* audit entries for one actor, newest first.
+
+    Backs the admin app's per-tester activity feed (A6: ``audit_logs WHERE
+    actor = user_id``).
+    """
+    _ensure_db_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, event_type, actor, ip_address, details, created_at
+                FROM audit_logs
+                WHERE actor = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (actor, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
+
+def fetch_audit_logs_filtered(
+    event_type: str | None = None,
+    q: str | None = None,
+    since: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[sqlite3.Row]:
+    """Return audit log entries matching filters with pagination."""
+    _ensure_db_initialized()
+    limit = min(max(1, limit), 200)
+    offset = max(0, offset)
+    with _lock:
+        conn = _connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, event_type, actor, ip_address, details, created_at
+                FROM audit_logs
+                WHERE (? IS NULL OR event_type = ?)
+                  AND (? IS NULL OR actor LIKE '%' || ? || '%' OR details LIKE '%' || ? || '%')
+                  AND (? IS NULL OR created_at >= ?)
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (event_type, event_type, q, q, q, since, since, limit, offset),
+            ).fetchall()
+        finally:
+            conn.close()
+
+
+def count_audit_logs_filtered(
+    event_type: str | None = None,
+    q: str | None = None,
+    since: str | None = None,
+) -> int:
+    """Return the count of audit logs matching the given filters."""
+    _ensure_db_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) as count
+                FROM audit_logs
+                WHERE (? IS NULL OR event_type = ?)
+                  AND (? IS NULL OR actor LIKE '%' || ? || '%' OR details LIKE '%' || ? || '%')
+                  AND (? IS NULL OR created_at >= ?)
+                """,
+                (event_type, event_type, q, q, q, since, since),
+            ).fetchone()
+            return int(row["count"]) if row else 0
+        finally:
+            conn.close()
+
+
+def list_audit_event_types() -> list[str]:
+    """Return distinct audit event types in alphabetical order."""
+    _ensure_db_initialized()
+    with _lock:
+        conn = _connect()
+        try:
+            rows = conn.execute(
+                """
+                SELECT DISTINCT event_type
+                FROM audit_logs
+                ORDER BY event_type ASC
+                """
+            ).fetchall()
+            return [row["event_type"] for row in rows if row["event_type"]]
+        finally:
+            conn.close()
+
+
 # ── Write helpers ─────────────────────────────────────────────────────────────
 
 def purge_old(days: int = 30) -> None:

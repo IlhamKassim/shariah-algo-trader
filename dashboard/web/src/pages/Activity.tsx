@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, X } from "lucide-react";
+import { Search, X, Bell } from "lucide-react";
 import { api } from "../lib/api";
+
 import { ActivityFeed } from "../components/ActivityFeed";
+import { ActivityDropdown } from "../components/ui/activity-dropdown";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import { Skeleton } from "../components/ui/Skeleton";
 
@@ -22,9 +24,28 @@ export function Activity() {
     return e.tickers.some((t) => t.includes(q)) || e.message.toUpperCase().includes(q);
   }) ?? [];
 
+  const activityDropdownItems = filtered.slice(0, 5).map((e, idx) => ({
+    id: idx + 1,
+    icon: <Bell className="h-4 w-4 text-[#D1A92E]" />,
+    iconBg: "bg-neutral-800",
+    title: `${e.type.toUpperCase()}: ${e.tickers.join(", ") || "Engine"}`,
+    description: e.message,
+    time: e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "Recent",
+  }));
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Quick Activity Dropdown widget */}
+      <div className="flex justify-start">
+        <ActivityDropdown
+          activities={activityDropdownItems.length > 0 ? activityDropdownItems : undefined}
+          title={activityDropdownItems.length > 0 ? `${activityDropdownItems.length} Live System Updates` : undefined}
+          subtitle="Real-time execution & compliance alerts"
+        />
+      </div>
+
       {/* Filter bar */}
+
       <div className="flex flex-wrap items-center gap-3">
         {/* Symbol search */}
         <label className="relative flex items-center">

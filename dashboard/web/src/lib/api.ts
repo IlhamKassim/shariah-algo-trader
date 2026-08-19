@@ -146,7 +146,10 @@ export interface AuthStatus {
   mfa_required?: boolean;
   mfa_verified?: boolean;
   authenticated: boolean;
+  user_id?: string;
+  user_email?: string;
 }
+
 
 
 export interface SettingsResponse {
@@ -163,6 +166,13 @@ export interface SettingsResponse {
   drift_threshold: number;
   shariah_trader_enabled?: boolean;
   day_trader_enabled?: boolean;
+  first_name?: string;
+  last_name?: string;
+  quant_handle?: string;
+  country?: string;
+  investor_type?: string;
+  paper_capital?: number;
+  onboarding_completed_at?: string;
   dashboard_password_masked: string;
   google_client_id_masked: string | null;
   google_client_secret_masked: string | null;
@@ -186,12 +196,20 @@ export interface SettingsUpdateRequest {
   drift_threshold?: number;
   shariah_trader_enabled?: boolean;
   day_trader_enabled?: boolean;
+  first_name?: string;
+  last_name?: string;
+  quant_handle?: string;
+  country?: string;
+  investor_type?: string;
+  paper_capital?: number;
+  onboarding_completed_at?: string;
   dashboard_password?: string;
   google_client_id?: string | null;
   google_client_secret?: string | null;
   google_redirect_uri?: string | null;
   allowed_google_emails?: string[];
 }
+
 
 
 
@@ -370,7 +388,18 @@ async function apiFetch<T>(path: string, init?: RequestInit, isRetry = false): P
     }
   }
 
-  if (!res.ok) throw new Error(`API ${path} returned ${res.status}`);
+  if (!res.ok) {
+    let detail = `API ${path} returned ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body.detail === "string") {
+        detail = body.detail;
+      }
+    } catch {
+      // non-JSON error body — keep the generic message
+    }
+    throw new Error(detail);
+  }
   return res.json();
 }
 
@@ -633,6 +662,31 @@ export const api = {
       body: JSON.stringify(settings),
     });
   },
+  claimInvite: (code: string, linkedinUrl?: string, notes?: string) => {
+    if (isDemo()) {
+      return Promise.resolve<{ status: string; state: string }>({ status: "success", state: "pending" });
+    }
+    return apiFetch<{ status: string; state: string }>("/api/settings/claim-invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, linkedin_url: linkedinUrl, notes }),
+    });
+  },
+  validateInvite: (code: string) => {
+    if (isDemo()) {
+      return Promise.resolve<{ valid: boolean; code: string; expires_at?: string; max_uses?: number; uses?: number; reason?: string }>({
+        valid: true,
+        code,
+        expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+        max_uses: 1,
+        uses: 0,
+      });
+    }
+    return apiFetch<{ valid: boolean; code: string; expires_at?: string; max_uses?: number; uses?: number; reason?: string }>(
+      `/api/auth/validate-invite?code=${encodeURIComponent(code)}`
+    );
+  },
+
   verifyPassword: (password: string) => {
     if (isDemo()) {
       return Promise.resolve({ status: "ok" });

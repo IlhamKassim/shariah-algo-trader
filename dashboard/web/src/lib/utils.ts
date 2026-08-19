@@ -1,4 +1,9 @@
+export function cn(...classes: (string | boolean | undefined | null)[]): string {
+  return classes.filter(Boolean).join(" ");
+}
+
 export function formatCurrency(value: number): string {
+
   const normalized = Math.abs(value) < 0.005 ? 0 : value;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
