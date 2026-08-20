@@ -83,8 +83,11 @@ async def lifespan(app: FastAPI):
 
 
 
-# True when running on a real host (Render sets RENDER; ENVIRONMENT=production
-# is the explicit override) — used to gate things that must not run in dev/tests.
+# True when running on a real host — used to gate things that must not run in
+# dev/tests. ENVIRONMENT=production is the primary signal on the current
+# self-hosted deployment (see ADR-0009); the RENDER env var check is a
+# leftover fallback from when this ran on Render and is a no-op now that
+# nothing sets it, kept only in case a future host reintroduces it.
 _IS_PRODUCTION = (
     os.environ.get("ENVIRONMENT", "").lower() == "production"
     or bool(os.environ.get("RENDER"))

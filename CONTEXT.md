@@ -42,7 +42,7 @@ _Avoid_: refresh, update, reconcile, sync
 ### Scheduling
 
 **Scheduler**:
-An APScheduler BlockingScheduler deployed as a Render background worker. Triggers two recurring jobs: the daily Compliance Check (every NYSE trading day at market open) and the monthly Rebalance (first NYSE trading day of each calendar month). Both jobs are stateless — they read current positions from Alpaca and current universe from ETF holdings at runtime.
+An APScheduler BlockingScheduler deployed as a systemd service (`shariah-trader.service`) on the self-hosted production server — see ADR-0009. Triggers two recurring jobs: the daily Compliance Check (every NYSE trading day at market open) and the monthly Rebalance (first NYSE trading day of each calendar month). Both jobs are stateless — they read current positions from Alpaca and current universe from ETF holdings at runtime.
 _Avoid_: runner, task queue, job runner, daemon
 
 ### State
