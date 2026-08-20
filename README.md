@@ -41,7 +41,7 @@ Real-time view of active long-only spot equity positions, composite factor z-sco
 
 ## 🎯 Features
 
-- **Dynamic Eligible Universe**: Automatically synchronizes with Shariah-compliant ETF constituents holdings snapshots (e.g. SPUS, HLAL) to define the pool of tradable assets.
+- **Dynamic Eligible Universe**: Automatically synchronizes with Shariah-compliant ETF constituent holdings snapshots (e.g. SPUS, HLAL, SPTE, SPRE, SPWO, UMMA) to define the pool of tradable assets. Only US-listed securities are eligible — non-US-listed constituents from global-holdings ETFs (e.g. SPWO, UMMA) are automatically excluded, since Alpaca can only execute trades on US-listed securities.
 - **Factor-Based Allocation**: Scores assets using a 4-Factor system:
   - **Momentum Factor**: Peering 12-month return performance minus short-term 1-month reversal.
   - **Quality Factor**: Metrics of ROE, profit stability, and debt-ratio screenings.
@@ -93,6 +93,12 @@ FMP_API_KEY=your_fmp_api_key
 # ETF Universe (e.g. SPUS) and Portfolio size
 ETF_SYMBOL=SPUS
 TOP_N=20
+
+# Optional: comma-separated list of Shariah ETFs to combine into the Eligible
+# Universe. If unset, defaults to {ETF_SYMBOL, HLAL}. Non-US-listed holdings
+# (e.g. from SPWO, UMMA) are automatically excluded — Alpaca can only trade
+# US-listed securities.
+# ETF_SYMBOLS=SPUS,HLAL,SPTE,SPRE,SPWO,UMMA
 
 # Optional: Enable dashboard password console protection
 DASHBOARD_PASSWORD=your_secure_password_here

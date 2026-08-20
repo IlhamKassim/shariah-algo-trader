@@ -66,8 +66,12 @@ _Avoid_: data source, data feed, price API
 ### Universe & Compliance
 
 **Eligible Universe**:
-The set of individual equity instruments currently eligible for trading. Membership is determined solely by presence in the latest Holdings Snapshot of one or more designated Shariah-compliant ETFs (e.g., SPUS). A stock not in the Eligible Universe must never be traded, regardless of signal strength.
+The set of individual equity instruments currently eligible for trading. Membership requires presence in the latest Holdings Snapshot of one or more designated Shariah-compliant ETFs (e.g., SPUS, HLAL, SPTE, SPRE, SPWO, UMMA), and is further restricted to US-listed securities only — see **US-Listed Filter**. A stock not in the Eligible Universe must never be traded, regardless of signal strength.
 _Avoid_: whitelist, stock list, universe, approved list
+
+**US-Listed Filter**:
+A membership rule applied when building the Eligible Universe from a Holdings Snapshot: any ticker containing whitespace (indicating a non-US exchange suffix, e.g. "ASML NA", "005930 KS") is excluded, because Alpaca — this bot's only Broker — can only execute trades on US-listed securities. Distinct from the Shariah Screen, which is a compliance filter; this is a broker-capability filter. Some source ETFs (e.g. SPWO, UMMA) hold mostly non-US-listed constituents, which this filter silently excludes from the Eligible Universe.
+_Avoid_: tradability check, exchange filter, listing check
 
 **Holdings Snapshot**:
 A point-in-time record of an ETF's constituent stocks and their weights, fetched from a data provider API on a recurring schedule. The bot's Eligible Universe is derived from the most recent Holdings Snapshot. When a stock drops out of a new snapshot, it exits the Eligible Universe.

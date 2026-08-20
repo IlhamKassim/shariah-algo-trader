@@ -32,7 +32,7 @@ flowchart TB
         StatusRouter["Status Router (/api/status)"]
         AccountRouter["Account Router (/api/account)"]
         PortfolioRouter["Portfolio Router (/api/portfolio)"]
-        UniverseRouter["Universe Engine (/api/universe)<br/>• SPUS 4-Factor Z-Score Scorer"]
+        UniverseRouter["Universe Engine (/api/universe)<br/>• Multi-ETF 4-Factor Z-Score Scorer"]
         ComplianceRouter["Compliance Audit (/api/compliance)<br/>• AAOIFI Standard No. 21 Filter"]
     end
 

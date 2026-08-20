@@ -13,7 +13,21 @@ _ETF_CONFIG: dict[str, dict] = {
         "url": "https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPUS.csv",
     },
     "HLAL": {
-        "url": "https://www.wisdomtree.com/investments/etfs/sharia/hlal/download/Holdings",
+        # Legacy WisdomTree URL returns HTTP 403 (verified). This Google Sheets
+        # CSV export is the current working source — same StockTicker schema.
+        "url": "https://docs.google.com/spreadsheets/d/1UC1Bk67bGuYsos_i8y_HQpNoHpVHAvqf71MbgrafJOQ/export?format=csv",
+    },
+    "SPTE": {
+        "url": "https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPTE.csv",
+    },
+    "SPRE": {
+        "url": "https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPRE.csv",
+    },
+    "SPWO": {
+        "url": "https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPWO.csv",
+    },
+    "UMMA": {
+        "url": "https://docs.google.com/spreadsheets/d/1kACYezLTfiN5dWMrM02GL2uQWsYTj2nqVTejp6hJp2k/export?format=csv",
     },
 }
 
@@ -30,6 +44,22 @@ class UniverseError(Exception):
     pass
 
 
+def _is_us_listed(ticker: str) -> bool:
+    """Return True if a raw ticker string looks like a US-exchange listing.
+
+    Source ETFs hold a global mix of equities, but Alpaca — this bot's only
+    broker — can only execute trades on US-listed securities. Every foreign
+    listing observed in these holdings CSVs is rendered as "<CODE> <SUFFIX>"
+    (e.g. "ASML NA", "005930 KS", "1211 HK") — i.e. it contains whitespace.
+    Confirmed US-listed tickers, including US-listed ADRs of foreign
+    companies (e.g. "BABA", "TSM"), never do. DISCLAIMER: this bot does not
+    yet support trading non-US-listed equities, even when they appear in a
+    source ETF's Shariah-compliant holdings — those names are silently
+    excluded here.
+    """
+    return " " not in ticker.strip()
+
+
 def _extract_tickers(reader: csv.DictReader, etf_symbol: str) -> set[str]:
     fieldnames = list(reader.fieldnames or [])
     ticker_col = next((c for c in _POSSIBLE_TICKER_COLS if c in fieldnames), None)
@@ -38,11 +68,23 @@ def _extract_tickers(reader: csv.DictReader, etf_symbol: str) -> set[str]:
         return set()
 
     tickers: set[str] = set()
+    skipped_foreign = 0
     for row in reader:
         val = row.get(ticker_col, "").strip()
         upper = val.upper()
-        if val and not upper.startswith("CASH") and not upper.startswith("USD"):
-            tickers.add(val)
+        if not val or upper.startswith("CASH") or upper.startswith("USD"):
+            continue
+        if not _is_us_listed(val):
+            skipped_foreign += 1
+            continue
+        tickers.add(val)
+
+    if skipped_foreign:
+        logger.info(
+            "%s: excluded %d non-US-listed ticker(s) from Eligible Universe "
+            "(Alpaca cannot execute non-US listings)",
+            etf_symbol, skipped_foreign,
+        )
     return tickers
 
 
@@ -114,7 +156,13 @@ def fetch_combined_universe(etf_symbols: list[str]) -> set[str]:
 
 
 def fetch_company_names(etf_symbols: list[str]) -> dict[str, str]:
-    """Fetch ETF spreadsheets and build a mapping of symbol -> company_name."""
+    """Fetch ETF spreadsheets and build a mapping of symbol -> company_name.
+
+    Note: unlike fetch_combined_universe, this does NOT apply the US-listed
+    filter — it is a superset lookup table. Entries for non-US-listed tickers
+    are harmless dead keys since callers only look up tickers that are
+    already in the (filtered) Eligible Universe.
+    """
     names: dict[str, str] = {}
     for symbol in etf_symbols:
         try:
