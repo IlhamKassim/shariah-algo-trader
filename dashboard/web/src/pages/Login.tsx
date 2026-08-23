@@ -606,7 +606,7 @@ export function Login() {
                     <input
                       type="text"
                       placeholder="eg. John"
-                      className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                      className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -616,7 +616,7 @@ export function Login() {
                     <input
                       type="text"
                       placeholder="eg. Francisco"
-                      className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                      className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -635,7 +635,7 @@ export function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="eg. johnfrans@gmail.com"
-                  className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                  className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none transition-all"
                   disabled={isSubmitting}
                   autoFocus
                   required
@@ -656,7 +656,7 @@ export function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 pr-10 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                    className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 pr-10 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none transition-all"
                     disabled={isSubmitting}
                     required
                   />
@@ -759,7 +759,7 @@ export function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your console key"
-                    className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 pr-10 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none transition-all"
+                    className="w-full bg-[#0B2B26] border border-[#235347] focus:border-[#8EB69B] text-sm px-4 py-3 pr-10 rounded-xl text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none transition-all"
                     disabled={isSubmitting}
                     autoFocus
                     required
@@ -815,7 +815,7 @@ export function Login() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-xs text-[#8EB69B]/60 font-normal">
+        <div className="mt-8 text-center text-xs text-[#8EB69B]/75 font-normal">
           <span>Long-only · No leverage · Shariah Screener Console</span>
         </div>
       </div>

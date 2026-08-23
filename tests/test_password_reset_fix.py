@@ -73,12 +73,17 @@ def test_reset_password_page_signs_out_and_redirects_on_success():
 # ---------------------------------------------------------------- Route registration
 
 def test_app_registers_public_reset_password_route():
-    src = _read("App.tsx")
+    # The route lives in AuthenticatedApp.tsx, not App.tsx: Clerk (and every
+    # auth-dependent route) is code-split out of the initial bundle so the
+    # public Landing page doesn't pay for loading the auth SDK. The route
+    # itself is still public — it's a sibling of `/app/*`, not nested inside
+    # the `ProtectedRoute`-wrapped branch.
+    src = _read("AuthenticatedApp.tsx")
     assert 'path="/reset-password"' in src
     assert "ResetPassword" in src
-    # Must be outside the protected `*` route: it must appear before it in
-    # the file so the reset page is reachable while logged out.
-    assert src.index("/reset-password") < src.index('path="*"')
+    # Must be outside the protected `/app/*` route: it must appear before it
+    # in the file so the reset page is reachable while logged out.
+    assert src.index("/reset-password") < src.index('path="/app/*"')
 
 
 # ---------------------------------------------------------------- Settings redirect

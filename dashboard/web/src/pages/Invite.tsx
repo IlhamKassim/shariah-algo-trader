@@ -299,7 +299,7 @@ export function Invite() {
                     placeholder="e.g. PILOT-XXXX"
                     value={inputCode}
                     onChange={(e) => setInputCode(e.target.value.trim())}
-                    className="bg-[#051F20] border border-[#235347] focus:border-[#8EB69B] px-4 py-3 text-sm font-mono text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none flex-1 tracking-widest"
+                    className="bg-[#051F20] border border-[#235347] focus:border-[#8EB69B] px-4 py-3 text-sm font-mono text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none flex-1 tracking-widest"
                     autoFocus
                   />
                   <button
@@ -343,7 +343,7 @@ export function Invite() {
                     placeholder="e.g. O67iC0yD or PILOT-XXXX"
                     value={inputCode}
                     onChange={(e) => setInputCode(e.target.value.trim())}
-                    className="w-full bg-[#051F20] border border-[#235347] focus:border-[#8EB69B] px-4 py-3.5 text-base font-mono text-[#DAF1DE] placeholder-[#8EB69B]/40 focus:outline-none tracking-widest text-center"
+                    className="w-full bg-[#051F20] border border-[#235347] focus:border-[#8EB69B] px-4 py-3.5 text-base font-mono text-[#DAF1DE] placeholder-[#8EB69B]/70 focus:outline-none tracking-widest text-center"
                     autoFocus
                   />
                 </div>
@@ -375,7 +375,7 @@ export function Invite() {
       </main>
 
       {/* Minimal Footer */}
-      <footer className="relative z-10 py-4 px-6 text-center font-mono text-[10px] text-[#8EB69B]/70 border-t border-[#235347]/40">
+      <footer className="relative z-10 py-4 px-6 text-center font-mono text-[10px] text-[#8EB69B]/85 border-t border-[#235347]/40">
         <span>© 2026 Shariah Algo Trader · Institutional Quantitative Infrastructure</span>
       </footer>
 

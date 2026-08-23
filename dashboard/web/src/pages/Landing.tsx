@@ -541,10 +541,10 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               {/* Feature 1 */}
               <div className="bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between shadow-2xl">
                 <div>
-                  <div className="font-serif text-[40px] text-[#8EB69B]/40 mb-6 border-b border-[#235347]/60 pb-2 inline-block font-normal">
+                  <div className="font-serif text-[40px] text-[#8EB69B]/60 mb-6 border-b border-[#235347]/60 pb-2 inline-block font-normal">
                     01
                   </div>
-                  <h4 className="font-serif text-[24px] text-[#DAF1DE] mb-3 font-normal">Automated Screening</h4>
+                  <h3 className="font-serif text-[24px] text-[#DAF1DE] mb-3 font-normal">Automated Screening</h3>
                   <p className="text-[#8EB69B] font-sans text-sm leading-relaxed">
                     Daily balance sheet scans to ensure debt-to-equity ratios remain strictly below the 33% threshold, executing seamlessly in the background.
                   </p>
@@ -565,10 +565,10 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               {/* Feature 2 */}
               <div className="bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between shadow-2xl">
                 <div>
-                  <div className="font-serif text-[40px] text-[#8EB69B]/40 mb-6 border-b border-[#235347]/60 pb-2 inline-block font-normal">
+                  <div className="font-serif text-[40px] text-[#8EB69B]/60 mb-6 border-b border-[#235347]/60 pb-2 inline-block font-normal">
                     02
                   </div>
-                  <h4 className="font-serif text-[24px] text-[#DAF1DE] mb-3 font-normal">Dividend Purification</h4>
+                  <h3 className="font-serif text-[24px] text-[#DAF1DE] mb-3 font-normal">Dividend Purification</h3>
                   <p className="text-[#8EB69B] font-sans text-sm leading-relaxed">
                     Automatic calculation and precise redirection of non-compliant income to verified charitable organizations, maintaining portfolio purity.
                   </p>
@@ -616,7 +616,7 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter Ticker..."
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-lg w-full lg:w-64 p-0 text-[#DAF1DE] placeholder:text-[#8EB69B]/40 font-mono"
+                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-lg w-full lg:w-64 p-0 text-[#DAF1DE] placeholder:text-[#8EB69B]/70 font-mono"
                 />
               </div>
             </div>
@@ -774,7 +774,7 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
                 placeholder="Enter your email"
                 value={waitlistEmail}
                 onChange={(e) => setWaitlistEmail(e.target.value)}
-                className="bg-[#0B2B26] border border-[#235347] text-[#DAF1DE] px-6 py-4 font-mono text-[11px] uppercase tracking-widest placeholder-[#8EB69B]/50 focus:outline-none focus:border-[#8EB69B] transition-colors"
+                className="bg-[#0B2B26] border border-[#235347] text-[#DAF1DE] px-6 py-4 font-mono text-[11px] uppercase tracking-widest placeholder-[#8EB69B]/70 focus:outline-none focus:border-[#8EB69B] transition-colors"
                 disabled={waitlistStatus === "loading"}
               />
               <button
@@ -831,7 +831,7 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-16 gap-y-8 font-mono text-[11px] uppercase tracking-widest">
             <div>
-              <h5 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Platform</h5>
+              <h3 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Platform</h3>
               <ul className="space-y-4 text-white">
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#overview">Overview</a></li>
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#compliance">Compliance Policy</a></li>
@@ -840,7 +840,7 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               </ul>
             </div>
             <div>
-              <h5 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Legal</h5>
+              <h3 className="text-[#a39d96] mb-6 border-b border-[#333333] pb-2">Legal</h3>
               <ul className="space-y-4 text-white">
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#">Terms of Service</a></li>
                 <li><a className="hover:text-[#a39d96] transition-colors" href="#">Privacy</a></li>

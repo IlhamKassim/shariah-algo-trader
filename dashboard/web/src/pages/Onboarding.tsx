@@ -498,9 +498,9 @@ export function Onboarding() {
                   {(formData.lastName?.[0] || "P").toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-sans font-bold text-lg text-primary tracking-tight">
+                  <h2 className="font-sans font-bold text-lg text-primary tracking-tight">
                     {displayName}
-                  </h3>
+                  </h2>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="font-mono text-xs text-brand-gold font-semibold">
                       {formData.quantHandle || `@${(formData.firstName || "pilot").toLowerCase()}`}
