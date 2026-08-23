@@ -186,7 +186,14 @@ def refresh_universe(
     # back-to-back after one completes.
     user_key = getattr(request.state, "user_id", None) or "legacy"
     now = time.monotonic()
-    if now - _last_refresh_at.get(user_key, 0.0) < _REFRESH_COOLDOWN_SECONDS:
+    # time.monotonic() is time since an arbitrary reference point (commonly
+    # system boot on Linux) — not since the epoch. A 0.0 sentinel default for
+    # "never refreshed" is unsafe: right after a fresh process start (e.g. a
+    # freshly-booted CI runner, or just after a systemd restart), monotonic
+    # time can itself be under 60s, spuriously rate-limiting a user's very
+    # first-ever request. -inf is always "long enough ago", regardless of the
+    # clock's current absolute value.
+    if now - _last_refresh_at.get(user_key, float("-inf")) < _REFRESH_COOLDOWN_SECONDS:
         raise HTTPException(
             status_code=429,
             detail="Universe refresh cooldown active — please wait a minute.",

@@ -298,6 +298,25 @@ class TestUniverseRefreshAuthz:
             universe_router.refresh_universe(request, BackgroundTasks(), cfg, None, cache)
         assert excinfo.value.status_code == 429
 
+    def test_first_ever_refresh_not_blocked_by_low_monotonic_clock(self, supabase_env, monkeypatch):
+        """time.monotonic() is time since an arbitrary reference point (often
+        system boot on Linux), not the epoch — it can be under the 60s cooldown
+        window right after a fresh process start (a freshly-booted CI runner, or
+        just after a systemd restart). A brand-new user_key must never be
+        spuriously rate-limited just because the clock itself is young."""
+        from fastapi import BackgroundTasks
+        from dashboard.api.routers import universe as universe_router
+        universe_router._last_refresh_at.clear()
+        monkeypatch.setattr(universe_router.time, "monotonic", lambda: 5.0)
+
+        cfg = SimpleNamespace(allowed_google_emails={"aqilnazri9@gmail.com"})
+        request = SimpleNamespace(
+            state=SimpleNamespace(user_id="strix_fix_fresh_clock", user_email="aqilnazri9@gmail.com", user={})
+        )
+        cache = SimpleNamespace(computing=False, stocks=[])
+        result = universe_router.refresh_universe(request, BackgroundTasks(), cfg, None, cache)
+        assert result["status"] == "computing"
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # vuln-0005 — cross-user notifications feed
