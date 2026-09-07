@@ -48,6 +48,12 @@ class StockScore(BaseModel):
     rank: int
     in_portfolio: bool
     in_top_n: bool
+    #: GICS sector, when the ranking pass resolved one. None where unknown.
+    sector: Optional[str] = None
+    #: Set when the stock ranked high enough but was passed over by the sector cap.
+    exclusion_reason: Optional[str] = None
+    #: Percentile of this stock's Factor Score within the scored universe (0-100).
+    percentile: Optional[float] = None
 
 
 class UniverseResponse(BaseModel):

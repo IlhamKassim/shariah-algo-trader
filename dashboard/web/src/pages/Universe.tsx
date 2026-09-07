@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type StockScore } from "../lib/api";
 import { ConsoleShell } from "../components/ConsoleShell";
 
-type SortKey = "rank" | "symbol" | "momentum" | "quality" | "volatility" | "value" | "score";
-type Filter = "All" | "Top N" | "Held";
+type SortKey = "rank" | "symbol" | "sector" | "momentum" | "quality" | "volatility" | "value" | "score";
+type Filter = "All" | "Selected" | "Held" | "Capped";
 
 const FACTORS: { key: SortKey; label: string; field: keyof StockScore; hint: string }[] = [
   {
@@ -79,10 +79,18 @@ function ZCell({ value, domain }: { value: number; domain: Domain }) {
   );
 }
 
-function Chip({ tone, children }: { tone: "blue" | "green" | "mute"; children: React.ReactNode }) {
+function Chip({
+  tone,
+  children,
+}: {
+  tone: "blue" | "green" | "amber" | "red" | "mute";
+  children: React.ReactNode;
+}) {
   const tones = {
     blue: "bg-[rgba(37,99,235,0.10)] text-[var(--c-blue)]",
     green: "bg-[rgba(31,169,113,0.13)] text-[var(--c-green)]",
+    amber: "bg-[rgba(240,190,67,0.18)] text-[#9A7B12]",
+    red: "bg-[rgba(222,74,79,0.12)] text-[var(--c-red)]",
     mute: "bg-[var(--c-soft)] text-[var(--c-mute)]",
   };
   return (
@@ -135,6 +143,7 @@ export function Universe() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("All");
+  const [sectorFilter, setSectorFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("rank");
   const [desc, setDesc] = useState(false);
 
@@ -161,6 +170,8 @@ export function Universe() {
       ? `${Math.max(1, Math.floor(settings.sector_cap * topN))} per sector (${(settings.sector_cap * 100).toFixed(0)}%)`
       : "one fifth of the book per sector";
 
+  const selectedCount = stocks.filter((s) => s.in_top_n).length;
+  const cappedCount = stocks.filter((s) => s.exclusion_reason).length;
   const heldCount = stocks.filter((s) => s.in_portfolio).length;
   const topHeld = stocks.filter((s) => s.in_top_n && s.in_portfolio).length;
   // Names inside the cut line that aren't held yet — the next Rebalance's buys.
@@ -187,14 +198,19 @@ export function Universe() {
     let out = stocks.filter((s) => {
       if (q && !s.symbol.toUpperCase().includes(q) && !(s.company_name ?? "").toUpperCase().includes(q))
         return false;
-      if (filter === "Top N") return s.in_top_n;
+      if (sectorFilter && s.sector !== sectorFilter) return false;
+      if (filter === "Selected") return s.in_top_n;
       if (filter === "Held") return s.in_portfolio;
+      if (filter === "Capped") return Boolean(s.exclusion_reason);
+      if (sectorFilter) return s.sector === sectorFilter;
       return true;
     });
     const pick = (s: StockScore) => {
       switch (sort) {
         case "symbol":
           return s.symbol;
+        case "sector":
+          return s.sector ?? "zzz";
         case "score":
           return s.factor_score;
         case "rank":
@@ -212,7 +228,7 @@ export function Universe() {
       return desc ? -cmp : cmp;
     });
     return out;
-  }, [stocks, search, filter, sort, desc]);
+  }, [stocks, search, filter, sectorFilter, sort, desc]);
 
   const toggleSort = (key: SortKey) => {
     if (sort === key) {
@@ -220,7 +236,7 @@ export function Universe() {
     } else {
       setSort(key);
       // Scores read best high-to-low; rank and symbol read best ascending.
-      setDesc(key !== "rank" && key !== "symbol");
+      setDesc(key !== "rank" && key !== "symbol" && key !== "sector");
     }
   };
 
@@ -251,7 +267,14 @@ export function Universe() {
       <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3.5">
           <Tile label="Scored stocks" value={String(stocks.length)} sub="Ranked this cycle" />
-          <Tile label={`Inside top ${topN}`} value={String(Math.min(topN, stocks.length))} sub="Portfolio cut line" />
+          <Tile
+            label="Selected"
+            value={`${selectedCount} of ${topN}`}
+            sub={
+              selectedCount < topN ? `Sector cap left ${topN - selectedCount} unfilled` : "Slots filled"
+            }
+            tone={selectedCount < topN ? "var(--c-amber)" : undefined}
+          />
           <Tile
             label="Held"
             value={`${topHeld} of ${heldCount}`}
@@ -259,10 +282,10 @@ export function Universe() {
             tone="var(--c-blue)"
           />
           <Tile
-            label="Pending entry"
-            value={String(pendingEntry)}
-            sub="Ranked in, not yet bought"
-            tone={pendingEntry > 0 ? "var(--c-green)" : undefined}
+            label="Passed over"
+            value={String(cappedCount)}
+            sub={`Sector cap · ${pendingEntry} pending entry`}
+            tone={cappedCount > 0 ? "var(--c-amber)" : undefined}
           />
         </div>
 
@@ -276,7 +299,7 @@ export function Universe() {
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {(["All", "Top N", "Held"] as Filter[]).map((f) => (
+              {(["All", "Selected", "Held", "Capped"] as Filter[]).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -291,6 +314,15 @@ export function Universe() {
                   {f}
                 </button>
               ))}
+              {sectorFilter && (
+                <button
+                  type="button"
+                  onClick={() => setSectorFilter(null)}
+                  className="border-0 rounded-full cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap bg-[var(--c-ink)] text-white hover:opacity-85 transition-opacity"
+                >
+                  {sectorFilter} ×
+                </button>
+              )}
               {universe?.last_computed_at && (
                 <span className="text-[11.5px] text-[var(--c-mute)] tabular-nums whitespace-nowrap ml-1">
                   Computed {universe.last_computed_at.replace("T", " ").slice(0, 16)} UTC
@@ -313,18 +345,19 @@ export function Universe() {
             </p>
           ) : (
             <div className="overflow-x-auto -mx-1 px-1">
-              <table className="w-full min-w-[720px]" aria-label="Factor Score rankings">
+              <table className="w-full min-w-[880px]" aria-label="Factor Score rankings">
                 <thead>
                   <tr className="border-b border-[var(--c-line)]">
                     <SortHead label="Rank" sortKey="rank" align="left" sort={sort} desc={desc} onSort={toggleSort} />
                     <SortHead label="Stock" sortKey="symbol" align="left" sort={sort} desc={desc} onSort={toggleSort} />
+                    <SortHead label="Sector" sortKey="sector" align="left" sort={sort} desc={desc} onSort={toggleSort} />
                     {FACTORS.map((f) => (
                       <SortHead key={f.key} label={f.label} sortKey={f.key} hint={f.hint} sort={sort} desc={desc} onSort={toggleSort} />
                     ))}
                     <SortHead
-                      label="Factor Score"
+                      label="Score"
                       sortKey="score"
-                      hint="Equal-weighted average of all four factor z-scores"
+                      hint="Share of the scored universe this stock outranks, with its Factor Score z below"
                       sort={sort}
                       desc={desc}
                       onSort={toggleSort}
@@ -366,23 +399,59 @@ export function Universe() {
                               {s.company_name}
                             </div>
                           )}
+                          {s.exclusion_reason && (
+                            <div className="text-[11.5px] text-[var(--c-amber)] mt-1 max-w-[300px] leading-[1.45]">
+                              {s.exclusion_reason}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4 min-w-0">
+                          {s.sector ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSectorFilter((cur) => (cur === s.sector ? null : s.sector ?? null))
+                              }
+                              title={`Show only ${s.sector}`}
+                              className={`text-[12px] rounded-full px-2.5 py-1 whitespace-nowrap cursor-pointer transition-colors ${
+                                sectorFilter === s.sector
+                                  ? "bg-[var(--c-ink)] text-white"
+                                  : "bg-[var(--c-soft)] text-[var(--c-mid)] hover:text-[var(--c-ink)]"
+                              }`}
+                            >
+                              {s.sector}
+                            </button>
+                          ) : (
+                            <span className="text-[12px] text-[var(--c-mute)]">—</span>
+                          )}
                         </td>
                         {FACTORS.map((f) => (
                           <td key={f.key} className="py-3 pr-3">
                             <ZCell value={s[f.field] as number} domain={domain} />
                           </td>
                         ))}
-                        <td className="py-3 pr-3 text-right">
-                          <span className="text-[13.5px] font-semibold tabular-nums">
-                            {z(s.factor_score)}
-                          </span>
+                        <td className="py-3 pr-3 text-right whitespace-nowrap">
+                          {/* Percentile leads: a z-score is exact but means little
+                              to a reader; the percentile is computed from the same
+                              data with no distributional assumption. */}
+                          <div className="text-[13.5px] font-semibold tabular-nums">
+                            {s.percentile != null ? `${s.percentile.toFixed(0)}%` : z(s.factor_score)}
+                          </div>
+                          <div className="text-[11.5px] text-[var(--c-mute)] tabular-nums">
+                            {z(s.factor_score)} z
+                          </div>
                         </td>
                         <td className="py-3 text-right whitespace-nowrap">
                           <div className="inline-flex gap-1.5">
-                            {s.in_portfolio && <Chip tone="blue">Held</Chip>}
+                            {s.in_portfolio && s.in_top_n && <Chip tone="blue">Held</Chip>}
                             {s.in_top_n && !s.in_portfolio && <Chip tone="green">Entering</Chip>}
-                            {!s.in_top_n && s.in_portfolio && <Chip tone="mute">Exiting</Chip>}
-                            {!s.in_top_n && !s.in_portfolio && <Chip tone="mute">Ranked</Chip>}
+                            {!s.in_top_n && s.in_portfolio && <Chip tone="red">Exiting</Chip>}
+                            {!s.in_top_n && !s.in_portfolio && s.exclusion_reason && (
+                              <Chip tone="amber">Sector capped</Chip>
+                            )}
+                            {!s.in_top_n && !s.in_portfolio && !s.exclusion_reason && (
+                              <Chip tone="mute">Ranked</Chip>
+                            )}
                           </div>
                         </td>
                       </tr>

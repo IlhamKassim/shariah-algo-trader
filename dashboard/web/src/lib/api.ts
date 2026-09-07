@@ -34,6 +34,12 @@ export interface PositionResponse {
 export interface StockScore {
   symbol: string;
   company_name?: string;
+  /** GICS sector, when the ranking pass resolved one. */
+  sector?: string | null;
+  /** Set when the stock ranked high enough but the sector cap passed it over. */
+  exclusion_reason?: string | null;
+  /** Percentile of this stock's Factor Score within the scored universe (0-100). */
+  percentile?: number | null;
   momentum_score: number;
   quality_score: number;
   volatility_score: number;
@@ -296,26 +302,26 @@ let demoNotifications: NotificationItem[] = [
 ];
 
 const MOCK_STOCKS: StockScore[] = [
-  { symbol: "NVDA", company_name: "NVIDIA Corporation", momentum_score: 88, quality_score: 91, volatility_score: 74, value_score: 58, factor_score: 83.2, rank: 1, in_portfolio: true, in_top_n: true },
-  { symbol: "MSFT", company_name: "Microsoft Corporation", momentum_score: 79, quality_score: 88, volatility_score: 82, value_score: 62, factor_score: 80.5, rank: 2, in_portfolio: true, in_top_n: true },
-  { symbol: "AAPL", company_name: "Apple Inc.", momentum_score: 77, quality_score: 89, volatility_score: 84, value_score: 60, factor_score: 79.8, rank: 3, in_portfolio: true, in_top_n: true },
-  { symbol: "AMZN", company_name: "Amazon.com, Inc.", momentum_score: 82, quality_score: 80, volatility_score: 78, value_score: 65, factor_score: 78.4, rank: 4, in_portfolio: true, in_top_n: true },
-  { symbol: "GOOGL", company_name: "Alphabet Inc.", momentum_score: 78, quality_score: 83, volatility_score: 81, value_score: 68, factor_score: 77.9, rank: 5, in_portfolio: true, in_top_n: true },
-  { symbol: "META", company_name: "Meta Platforms, Inc.", momentum_score: 83, quality_score: 82, volatility_score: 73, value_score: 61, factor_score: 76.8, rank: 6, in_portfolio: true, in_top_n: true },
-  { symbol: "AVGO", company_name: "Broadcom Inc.", momentum_score: 85, quality_score: 84, volatility_score: 68, value_score: 52, factor_score: 75.1, rank: 7, in_portfolio: false, in_top_n: true },
-  { symbol: "LLY", company_name: "Eli Lilly and Company", momentum_score: 89, quality_score: 86, volatility_score: 65, value_score: 45, factor_score: 74.8, rank: 8, in_portfolio: false, in_top_n: true },
-  { symbol: "TSLA", company_name: "Tesla, Inc.", momentum_score: 72, quality_score: 74, volatility_score: 70, value_score: 55, factor_score: 73.2, rank: 9, in_portfolio: true, in_top_n: true },
-  { symbol: "COST", company_name: "Costco Wholesale Corporation", momentum_score: 76, quality_score: 85, volatility_score: 86, value_score: 48, factor_score: 72.5, rank: 10, in_portfolio: false, in_top_n: true },
-  { symbol: "NFLX", company_name: "Netflix, Inc.", momentum_score: 80, quality_score: 79, volatility_score: 72, value_score: 53, factor_score: 71.9, rank: 11, in_portfolio: false, in_top_n: true },
-  { symbol: "ADBE", company_name: "Adobe Inc.", momentum_score: 68, quality_score: 82, volatility_score: 80, value_score: 58, factor_score: 70.4, rank: 12, in_portfolio: false, in_top_n: true },
-  { symbol: "CRM", company_name: "Salesforce, Inc.", momentum_score: 70, quality_score: 81, volatility_score: 79, value_score: 60, factor_score: 69.8, rank: 13, in_portfolio: false, in_top_n: true },
-  { symbol: "AMD", company_name: "Advanced Micro Devices, Inc.", momentum_score: 75, quality_score: 72, volatility_score: 66, value_score: 50, factor_score: 68.5, rank: 14, in_portfolio: false, in_top_n: true },
-  { symbol: "INTC", company_name: "Intel Corporation", momentum_score: 55, quality_score: 65, volatility_score: 75, value_score: 69, factor_score: 67.2, rank: 15, in_portfolio: false, in_top_n: true },
-  { symbol: "QCOM", company_name: "QUALCOMM Incorporated", momentum_score: 73, quality_score: 78, volatility_score: 74, value_score: 63, factor_score: 66.1, rank: 16, in_portfolio: false, in_top_n: false },
-  { symbol: "TXN", company_name: "Texas Instruments Incorporated", momentum_score: 65, quality_score: 80, volatility_score: 83, value_score: 57, factor_score: 65.4, rank: 17, in_portfolio: false, in_top_n: false },
-  { symbol: "AMAT", company_name: "Applied Materials, Inc.", momentum_score: 71, quality_score: 76, volatility_score: 71, value_score: 59, factor_score: 64.9, rank: 18, in_portfolio: false, in_top_n: false },
-  { symbol: "MU", company_name: "Micron Technology, Inc.", momentum_score: 76, quality_score: 64, volatility_score: 60, value_score: 52, factor_score: 63.8, rank: 19, in_portfolio: false, in_top_n: false },
-  { symbol: "LRCX", company_name: "Lam Research Corporation", momentum_score: 69, quality_score: 77, volatility_score: 72, value_score: 56, factor_score: 62.5, rank: 20, in_portfolio: false, in_top_n: false }
+  { symbol: "NVDA", company_name: "NVIDIA Corporation", sector: "Technology", momentum_score: 1.5, quality_score: 1.75, volatility_score: 0.33, value_score: -1.0, factor_score: 0.65, percentile: 95.0, rank: 1, in_portfolio: true, in_top_n: true },
+  { symbol: "MSFT", company_name: "Microsoft Corporation", sector: "Technology", momentum_score: 0.75, quality_score: 1.5, volatility_score: 1.0, value_score: -0.67, factor_score: 0.65, percentile: 90.0, rank: 2, in_portfolio: true, in_top_n: true },
+  { symbol: "AAPL", company_name: "Apple Inc.", sector: "Technology", momentum_score: 0.58, quality_score: 1.58, volatility_score: 1.17, value_score: -0.83, factor_score: 0.62, percentile: 85.0, rank: 3, in_portfolio: true, in_top_n: true },
+  { symbol: "AMZN", company_name: "Amazon.com, Inc.", sector: "Consumer Cyclical", momentum_score: 1.0, quality_score: 0.83, volatility_score: 0.67, value_score: -0.42, factor_score: 0.52, percentile: 80.0, rank: 4, in_portfolio: true, in_top_n: true },
+  { symbol: "GOOGL", company_name: "Alphabet Inc.", sector: "Communication Services", momentum_score: 0.67, quality_score: 1.08, volatility_score: 0.92, value_score: -0.17, factor_score: 0.62, percentile: 75.0, rank: 5, in_portfolio: true, in_top_n: true },
+  { symbol: "META", company_name: "Meta Platforms, Inc.", sector: "Communication Services", momentum_score: 1.08, quality_score: 1.0, volatility_score: 0.25, value_score: -0.75, factor_score: 0.4, percentile: 70.0, rank: 6, in_portfolio: true, in_top_n: true },
+  { symbol: "AVGO", company_name: "Broadcom Inc.", sector: "Technology", momentum_score: 1.25, quality_score: 1.17, volatility_score: -0.17, value_score: -1.5, factor_score: 0.19, percentile: 65.0, rank: 7, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "LLY", company_name: "Eli Lilly and Company", sector: "Healthcare", momentum_score: 1.58, quality_score: 1.33, volatility_score: -0.42, value_score: -2.08, factor_score: 0.1, percentile: 60.0, rank: 8, in_portfolio: false, in_top_n: true },
+  { symbol: "TSLA", company_name: "Tesla, Inc.", sector: "Consumer Cyclical", momentum_score: 0.17, quality_score: 0.33, volatility_score: 0.0, value_score: -1.25, factor_score: -0.19, percentile: 55.0, rank: 9, in_portfolio: true, in_top_n: true },
+  { symbol: "COST", company_name: "Costco Wholesale Corporation", sector: "Consumer Defensive", momentum_score: 0.5, quality_score: 1.25, volatility_score: 1.33, value_score: -1.83, factor_score: 0.31, percentile: 50.0, rank: 10, in_portfolio: false, in_top_n: true },
+  { symbol: "NFLX", company_name: "Netflix, Inc.", sector: "Communication Services", momentum_score: 0.83, quality_score: 0.75, volatility_score: 0.17, value_score: -1.42, factor_score: 0.08, percentile: 45.0, rank: 11, in_portfolio: false, in_top_n: true },
+  { symbol: "ADBE", company_name: "Adobe Inc.", sector: "Technology", momentum_score: -0.17, quality_score: 1.0, volatility_score: 0.83, value_score: -1.0, factor_score: 0.16, percentile: 40.0, rank: 12, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "CRM", company_name: "Salesforce, Inc.", sector: "Technology", momentum_score: 0.0, quality_score: 0.92, volatility_score: 0.75, value_score: -0.83, factor_score: 0.21, percentile: 35.0, rank: 13, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "AMD", company_name: "Advanced Micro Devices, Inc.", sector: "Technology", momentum_score: 0.42, quality_score: 0.17, volatility_score: -0.33, value_score: -1.67, factor_score: -0.35, percentile: 30.0, rank: 14, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "INTC", company_name: "Intel Corporation", sector: "Technology", momentum_score: -1.25, quality_score: -0.42, volatility_score: 0.42, value_score: -0.08, factor_score: -0.33, percentile: 25.0, rank: 15, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "QCOM", company_name: "QUALCOMM Incorporated", sector: "Technology", momentum_score: 0.25, quality_score: 0.67, volatility_score: 0.33, value_score: -0.58, factor_score: 0.17, percentile: 20.0, rank: 16, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "TXN", company_name: "Texas Instruments Incorporated", sector: "Technology", momentum_score: -0.42, quality_score: 0.83, volatility_score: 1.08, value_score: -1.08, factor_score: 0.1, percentile: 15.0, rank: 17, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "AMAT", company_name: "Applied Materials, Inc.", sector: "Technology", momentum_score: 0.08, quality_score: 0.5, volatility_score: 0.08, value_score: -0.92, factor_score: -0.07, percentile: 10.0, rank: 18, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "MU", company_name: "Micron Technology, Inc.", sector: "Technology", momentum_score: 0.5, quality_score: -0.5, volatility_score: -0.83, value_score: -1.5, factor_score: -0.58, percentile: 5.0, rank: 19, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
+  { symbol: "LRCX", company_name: "Lam Research Corporation", sector: "Technology", momentum_score: -0.08, quality_score: 0.58, volatility_score: 0.17, value_score: -1.17, factor_score: -0.12, percentile: 0.0, rank: 20, in_portfolio: false, in_top_n: false, exclusion_reason: "Technology already at its cap of 3 — a lower-ranked stock from another sector took the slot" },
 ];
 
 // Helper to construct performance dates (last 30 days)

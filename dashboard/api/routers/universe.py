@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 import time
 from datetime import datetime, timezone
@@ -13,9 +14,11 @@ from shariah_algo_trader.data.universe import fetch_combined_universe, fetch_com
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 from shariah_algo_trader.factors.momentum import compute_momentum_factor
 from shariah_algo_trader.factors.quality import compute_quality_factor
-from shariah_algo_trader.factors.scorer import rank_by_factor_score
+from shariah_algo_trader.factors.scorer import fetch_sectors, rank_with_diagnostics
 from shariah_algo_trader.factors.value import compute_value_factor
 from shariah_algo_trader.factors.volatility import compute_raw_volatility, compute_volatility_factor
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 public_router = APIRouter()
@@ -86,12 +89,12 @@ def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None
         vol_scores = compute_volatility_factor(raw_vols)
         value = compute_value_factor(universe)
 
-        ranked = rank_by_factor_score(
+        diagnostics = rank_with_diagnostics(
             momentum, quality, vol_scores, value,
             top_n=cfg.top_n,
             sector_cap=cfg.sector_cap,
         )
-        top_n_set = set(ranked)
+        top_n_set = set(diagnostics.selected)
 
         # Build composite scores for all tickers (fallback to momentum if quality is missing)
         common = momentum.keys() if momentum else (quality.keys() | vol_scores.keys() | value.keys() | universe)
@@ -106,6 +109,19 @@ def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None
         }
         all_ranked = sorted(all_scores, key=lambda t: all_scores[t], reverse=True)
 
+        # The ranking pass only resolves sectors for the candidates it walked
+        # before filling top-N. Top up the rest so the dashboard can show a
+        # sector for every row, not just the ones near the cut.
+        sectors = dict(diagnostics.sectors)
+        missing = [t for t in all_ranked if t not in sectors]
+        if missing:
+            try:
+                sectors.update(fetch_sectors(missing))
+            except Exception:
+                logger.warning("Sector top-up failed; some rows will omit sector", exc_info=True)
+
+        total = len(all_ranked)
+
         stocks = [
             {
                 "symbol": ticker,
@@ -118,6 +134,11 @@ def _run_refresh(cache: UniverseCache, cfg: Config, portfolio: set[str]) -> None
                 "rank": idx + 1,
                 "in_portfolio": ticker in portfolio,
                 "in_top_n": ticker in top_n_set,
+                "sector": sectors.get(ticker) or None,
+                "exclusion_reason": diagnostics.skipped.get(ticker),
+                # Share of the scored universe this stock outranks. Rank 1 of 150
+                # beats 149 others -> 99.3, not 100 (which would include itself).
+                "percentile": round((total - idx - 1) / total * 100, 1) if total else None,
             }
             for idx, ticker in enumerate(all_ranked)
         ]

@@ -1,5 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 
 import yfinance as yf
 
@@ -15,6 +16,30 @@ def _fetch_sector(ticker: str) -> tuple[str, str]:
         return ticker, info.get("sector", "Unknown") or "Unknown"
     except Exception:
         return ticker, "Unknown"
+
+
+@dataclass
+class SelectionDiagnostics:
+    """Why the engine chose what it chose.
+
+    `rank_by_factor_score` returns only the selected tickers, which loses the
+    reasoning — in particular that a higher-scoring stock can be passed over
+    because its sector is already at cap. The dashboard needs that to explain
+    the decision to a user, so the selection loop records it here.
+    """
+
+    selected: list[str] = field(default_factory=list)
+    #: Sector per ticker, for every ticker the selection loop examined.
+    sectors: dict[str, str] = field(default_factory=dict)
+    #: Ticker -> human-readable reason it was passed over despite ranking high enough.
+    skipped: dict[str, str] = field(default_factory=dict)
+    #: Ceiling applied per sector, i.e. max(1, int(sector_cap * top_n)).
+    max_per_sector: int = 0
+
+
+def fetch_sectors(tickers: list[str]) -> dict[str, str]:
+    """Public wrapper so callers can top up sector data the ranking didn't reach."""
+    return _fetch_sectors(tickers)
 
 
 def _fetch_sectors(tickers: list[str]) -> dict[str, str]:
@@ -36,6 +61,25 @@ def rank_by_factor_score(
     sector_cap: float = 0.20,
 ) -> list[str]:
     """Rank the Eligible Universe by composite Factor Score and return the top-N.
+
+    Thin wrapper over :func:`rank_with_diagnostics` for callers that only need
+    the target list.
+    """
+    return rank_with_diagnostics(
+        momentum_scores, quality_scores, volatility_scores, value_scores,
+        top_n=top_n, sector_cap=sector_cap,
+    ).selected
+
+
+def rank_with_diagnostics(
+    momentum_scores: dict[str, float],
+    quality_scores: dict[str, float],
+    volatility_scores: dict[str, float],
+    value_scores: dict[str, float],
+    top_n: int,
+    sector_cap: float = 0.20,
+) -> SelectionDiagnostics:
+    """Rank the Eligible Universe and return the selection plus its reasoning.
 
     Factor Score = 0.25 × Momentum + 0.25 × Quality + 0.25 × Low-Vol + 0.25 × Value
 
@@ -67,6 +111,7 @@ def rank_by_factor_score(
     max_per_sector = max(1, int(sector_cap * top_n))
     sector_counts: dict[str, int] = {}
     selected: list[str] = []
+    skipped: dict[str, str] = {}
 
     for ticker in ranked:
         if len(selected) >= top_n:
@@ -81,6 +126,10 @@ def rank_by_factor_score(
                 "%s skipped — sector %r at cap (%d/%d)",
                 ticker, sector, sector_counts[sector], max_per_sector,
             )
+            skipped[ticker] = (
+                f"{sector} already at its cap of {max_per_sector} — "
+                "a lower-ranked stock from another sector took the slot"
+            )
             continue
         selected.append(ticker)
         sector_counts[sector] = sector_counts.get(sector, 0) + 1
@@ -94,4 +143,9 @@ def rank_by_factor_score(
         "Sector distribution: %s",
         {k: v for k, v in sorted(sector_counts.items(), key=lambda x: -x[1])},
     )
-    return selected
+    return SelectionDiagnostics(
+        selected=selected,
+        sectors=sectors,
+        skipped=skipped,
+        max_per_sector=max_per_sector,
+    )
