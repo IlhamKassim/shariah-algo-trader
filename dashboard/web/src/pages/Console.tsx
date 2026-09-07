@@ -12,9 +12,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, type ActivityEntry, type StockScore } from "../lib/api";
+import { api, type ActivityEntry, type PositionResponse, type StockScore } from "../lib/api";
 import { NotificationBell } from "../components/NotificationBell";
 import { UserAvatar } from "../components/UserAvatar";
+import { RebalanceModal } from "../components/RebalanceModal";
+import { OnboardingTutorial } from "../components/OnboardingTutorial";
 
 /* -------------------------------------------------------------------------- */
 /* view modes                                                                  */
@@ -23,10 +25,13 @@ import { UserAvatar } from "../components/UserAvatar";
 const VIEWS = ["Dashboard", "Analytic", "Trading"] as const;
 type View = (typeof VIEWS)[number];
 
-const VISIBLE: Record<View, { perf: boolean; signals: boolean; orders: boolean }> = {
-  Dashboard: { perf: true, signals: true, orders: true },
-  Analytic: { perf: true, signals: false, orders: false },
-  Trading: { perf: false, signals: true, orders: true },
+const VISIBLE: Record<
+  View,
+  { perf: boolean; signals: boolean; holdings: boolean; orders: boolean }
+> = {
+  Dashboard: { perf: true, signals: true, holdings: true, orders: true },
+  Analytic: { perf: true, signals: false, holdings: true, orders: false },
+  Trading: { perf: false, signals: true, holdings: false, orders: true },
 };
 
 const PERIODS = ["1W", "1M", "3M", "6M"] as const;
@@ -141,6 +146,91 @@ function Metric({ label, value, color }: { label: string; value: string; color?:
         style={{ color: color ?? "var(--c-ink)" }}
       >
         {value}
+      </div>
+    </div>
+  );
+}
+
+/** Top-level status tile: the four numbers Overview surfaced above the fold. */
+function StatTile({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  tone?: string;
+}) {
+  return (
+    <div className="min-w-0 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+      <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
+        {label}
+      </div>
+      <div
+        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
+        style={tone ? { color: tone } : undefined}
+      >
+        {value}
+      </div>
+      {sub != null && (
+        <div className="text-[12px] text-[var(--c-mid)] mt-1 leading-[1.45]">{sub}</div>
+      )}
+    </div>
+  );
+}
+
+/** Holdings row with a weight bar scaled against a rounded book-weight ceiling. */
+function HoldingRow({
+  pos,
+  total,
+  ceiling,
+}: {
+  pos: PositionResponse;
+  total: number;
+  ceiling: number;
+}) {
+  const weight = total > 0 ? (pos.market_value / total) * 100 : 0;
+  // Scaled against a rounded ceiling, not the largest holding: an equal-weighted
+  // book makes every max-scaled bar pin at 100% and read as broken.
+  const barPct = ceiling > 0 ? Math.min(100, (weight / ceiling) * 100) : 0;
+  const up = pos.unrealized_pl >= 0;
+  // Derived, not stored: the API exposes avg_entry_price but no cost basis.
+  const basis = pos.avg_entry_price * pos.qty;
+
+  return (
+    <div className="flex items-center gap-4 py-3 border-b border-[var(--c-line)] last:border-b-0">
+      <div className="w-[76px] shrink-0 min-w-0">
+        <div className="text-[13.5px] font-semibold truncate">{pos.symbol}</div>
+        <div className="text-[11.5px] text-[var(--c-mute)] tabular-nums">
+          {pos.qty.toLocaleString("en-US")} sh
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0 hidden sm:flex items-center gap-3">
+        <div className="w-[150px] shrink-0 h-1.5 rounded-full bg-[var(--c-soft)] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[var(--c-blue)]"
+            style={{ width: `${barPct}%` }}
+          />
+        </div>
+        <div className="text-[11.5px] text-[var(--c-mute)] tabular-nums truncate">
+          {weight.toFixed(1)}% of book · basis {money(basis, 0)}
+        </div>
+      </div>
+
+      <div className="text-right whitespace-nowrap shrink-0">
+        <div className="text-[13.5px] font-semibold tabular-nums">
+          {money(pos.market_value, 0)}
+        </div>
+        <div
+          className="text-[12px] font-semibold tabular-nums mt-0.5"
+          style={{ color: up ? "var(--c-green)" : "var(--c-red)" }}
+        >
+          {up ? "+" : ""}
+          {money(pos.unrealized_pl, 0).replace("-", "")} ({signed(pos.unrealized_pl_pct * 100)})
+        </div>
       </div>
     </div>
   );
@@ -262,7 +352,9 @@ export function Console() {
   const [period, setPeriod] = useState<Period>("1M");
   const [signalTab, setSignalTab] = useState<SignalTab>("All");
   const [expandOrders, setExpandOrders] = useState(false);
+  const [expandHoldings, setExpandHoldings] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [rebalanceOpen, setRebalanceOpen] = useState(false);
 
   const { data: status } = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 30_000 });
   const { data: account } = useQuery({ queryKey: ["account"], queryFn: api.account, refetchInterval: 30_000 });
@@ -281,10 +373,38 @@ export function Console() {
   const cash = account?.cash ?? 0;
   const totalValue = account?.portfolio_value ?? invested + cash;
 
-  const ticker = useMemo(
-    () => (positions ?? []).slice().sort((a, b) => b.market_value - a.market_value).slice(0, 4),
+  const byValue = useMemo(
+    () => (positions ?? []).slice().sort((a, b) => b.market_value - a.market_value),
     [positions],
   );
+  const ticker = byValue.slice(0, 4);
+  // Weight-bar axis: the largest holding rounded up to the next 5%, so bars
+  // sit against a stable reference rather than each other.
+  const weightCeiling = useMemo(() => {
+    if (invested <= 0 || byValue.length === 0) return 0;
+    const max = Math.max(...byValue.map((p) => (p.market_value / invested) * 100));
+    return Math.max(5, Math.ceil(max / 5) * 5);
+  }, [byValue, invested]);
+
+  const dayPl = account?.dayl_pl ?? 0;
+  const dayPlPct = account?.dayl_pl_pct ?? 0;
+  const dayTone = dayPl >= 0 ? "var(--c-green)" : "var(--c-red)";
+
+  // Cash sitting idle with no positions — the account can't do anything until
+  // a first rebalance allocates it.
+  const needsFirstAllocation =
+    positions != null && positions.length === 0 && (account?.portfolio_value ?? 0) > 0;
+  const needsAlpaca = account?.fee_status_label === "Connect Alpaca API in Settings";
+
+  const nextRun = status?.next_fire_at
+    ? new Date(status.next_fire_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    : null;
 
   const signals = useMemo(() => {
     if (!universe?.stocks.length || !positions) return [];
@@ -520,6 +640,13 @@ export function Console() {
               <span className="console-display text-[42px] tracking-[-0.03em] tabular-nums">
                 {money(totalValue)}
               </span>
+              <span
+                className="text-[14px] font-semibold tabular-nums -mt-1"
+                style={{ color: dayTone }}
+              >
+                {dayPl >= 0 ? "+" : "−"}
+                {money(Math.abs(dayPl), 2)} ({signed(dayPlPct * 100)}) today
+              </span>
               <button
                 type="button"
                 onClick={() => setView("Analytic")}
@@ -530,6 +657,88 @@ export function Console() {
             </div>
           </div>
         </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* status strip — the four numbers Overview kept above the fold      */}
+        {/* ---------------------------------------------------------------- */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(230px,100%),1fr))] gap-3.5">
+          <StatTile
+            label="Daily P&L"
+            value={`${dayPl >= 0 ? "+" : "−"}${money(Math.abs(dayPl), 2)}`}
+            tone={dayTone}
+            sub={<span style={{ color: dayTone }}>{signed(dayPlPct * 100)} vs prior close</span>}
+          />
+          <StatTile
+            label="Shariah screen"
+            value={
+              compliance == null
+                ? "—"
+                : compliance.compliant
+                  ? "Screened"
+                  : `${compliance.violations.length} violation${compliance.violations.length === 1 ? "" : "s"}`
+            }
+            tone={
+              compliance == null
+                ? undefined
+                : compliance.compliant
+                  ? "var(--c-green)"
+                  : "var(--c-red)"
+            }
+            sub={
+              compliance ? (
+                <>
+                  {compliance.held_count} held · {compliance.universe_size} in universe
+                  {!compliance.compliant && compliance.violations.length > 0 && (
+                    <span className="block text-[var(--c-red)]">
+                      {compliance.violations.join(", ")}
+                    </span>
+                  )}
+                </>
+              ) : undefined
+            }
+          />
+          <StatTile
+            label="Fee drag"
+            value={account ? money(account.estimated_fees ?? 0, 2) : "—"}
+            sub={account?.fee_status_label ?? "Estimated cost to date"}
+          />
+          <StatTile
+            label="Next rebalance"
+            value={nextRun ?? "—"}
+            sub={
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="w-1.5 h-1.5 rounded-full inline-block"
+                  style={{
+                    background: status?.scheduler_running ? "var(--c-green)" : "var(--c-red)",
+                  }}
+                />
+                Scheduler {status?.scheduler_running ? "active" : "offline"} · top {topN}
+              </span>
+            }
+          />
+        </div>
+
+        {needsAlpaca && <OnboardingTutorial />}
+
+        {needsFirstAllocation && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold">Account funded — no positions yet</div>
+              <div className="text-[12.5px] text-[var(--c-mid)] mt-1 leading-[1.5]">
+                {money(account?.portfolio_value ?? 0, 2)} in cash and 0 holdings. Run a rebalance to
+                rank the Eligible Universe and allocate into the top {topN}.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRebalanceOpen(true)}
+              className="shrink-0 border-0 rounded-full bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              Allocate portfolio
+            </button>
+          </div>
+        )}
 
         {/* ---------------------------------------------------------------- */}
         {/* sheet                                                            */}
@@ -547,7 +756,7 @@ export function Console() {
                 }
                 aside={
                   <span className="text-[13px] text-[var(--c-mute)] whitespace-nowrap">
-                    Strategy vs {benchKey}
+                    Cumulative return vs {benchKey} · last {PERIOD_DAYS[period]}d
                   </span>
                 }
               >
@@ -718,6 +927,51 @@ export function Console() {
             )}
           </div>
 
+          {vis.holdings && (
+            <Card
+              title="Holdings"
+              icon={
+                <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-blue)] block" />
+              }
+              aside={
+                <div className="flex items-center gap-2">
+                  <span className="text-[12.5px] text-[var(--c-mute)] tabular-nums whitespace-nowrap">
+                    {byValue.length} position{byValue.length === 1 ? "" : "s"} · {money(invested, 0)}
+                  </span>
+                  {byValue.length > 6 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandHoldings((v) => !v)}
+                      className="rounded-full border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
+                    >
+                      {expandHoldings ? "Show less" : "See all"}
+                    </button>
+                  )}
+                </div>
+              }
+            >
+              {byValue.length === 0 ? (
+                <p className="text-[12.5px] text-[var(--c-mid)] py-3">
+                  No open positions. The next Rebalance will allocate into the top {topN}.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-col">
+                    {(expandHoldings ? byValue : byValue.slice(0, 6)).map((p) => (
+                      <HoldingRow key={p.symbol} pos={p} total={invested} ceiling={weightCeiling} />
+                    ))}
+                  </div>
+                  {/* Realized P&L and true target weight are not exposed by the
+                      API (see issue #19); stated rather than approximated. */}
+                  <p className="text-[11.5px] text-[var(--c-mute)] leading-[1.5] pt-1">
+                    Cost basis derived from average entry price. Realized P&amp;L and target weight
+                    are not tracked yet.
+                  </p>
+                </>
+              )}
+            </Card>
+          )}
+
           {vis.orders && (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(400px,100%),1fr))] gap-[22px] items-start pb-[26px]">
               <Card
@@ -782,6 +1036,27 @@ export function Console() {
           )}
         </div>
       </div>
+
+      {/* Still on the obsidian system — see DESIGN.md §B. Migrating the modals
+          is tracked separately so this page isn't blocked on them. */}
+      <RebalanceModal
+        isOpen={rebalanceOpen}
+        onClose={() => setRebalanceOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+          queryClient.invalidateQueries({ queryKey: ["account"] });
+          queryClient.invalidateQueries({ queryKey: ["activity"] });
+        }}
+        accountData={
+          account
+            ? {
+                portfolio_value: account.portfolio_value,
+                cash: account.cash,
+                trading_mode: status?.is_live ? "live" : "paper",
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

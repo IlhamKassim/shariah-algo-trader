@@ -8,7 +8,6 @@ import {
   Globe,
   ScrollText,
   GitCompareArrows,
-  Gauge,
   Zap,
   BookOpen,
   SlidersHorizontal,
@@ -20,7 +19,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, useAuth } from "@clerk/react";
 import { AccountModeModal } from "./components/AccountModeModal";
 import { UserAvatar } from "./components/UserAvatar";
-import { Overview } from "./pages/Overview";
 import { Console } from "./pages/Console";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
@@ -41,8 +39,7 @@ import { api, setTokenProvider } from "./lib/api";
 import { supabase } from "./lib/supabaseClient";
 
 const NAV = [
-  { to: "/app", label: "Overview", end: true, icon: LayoutDashboard },
-  { to: "/console", label: "Console", end: false, icon: Gauge },
+  { to: "/console", label: "Console", end: false, icon: LayoutDashboard },
   { to: "/app/portfolio", label: "Portfolio", end: false, icon: Briefcase },
   { to: "/app/universe", label: "Universe", end: false, icon: Globe },
   { to: "/app/activity", label: "Activity", end: false, icon: ScrollText },
@@ -54,11 +51,12 @@ const NAV = [
 ];
 
 
+const PAGE_META_FALLBACK = {
+  title: "Console",
+  sub: "Portfolio health, performance and compliance at a glance",
+};
+
 const PAGE_META: Record<string, { title: string; sub: string }> = {
-  "/app": {
-    title: "Overview",
-    sub: "Portfolio health, performance and compliance at a glance",
-  },
   "/app/portfolio": {
     title: "Portfolio",
     sub: "Open positions held in the Shariah-compliant strategy",
@@ -364,7 +362,7 @@ function Topbar({ onOpenGuide }: TopbarProps) {
 
 function PageHeading() {
   const location = useLocation();
-  const meta = PAGE_META[location.pathname] ?? PAGE_META["/app"];
+  const meta = PAGE_META[location.pathname] ?? PAGE_META_FALLBACK;
   return (
     <div className="mb-6">
       <h1 className="text-[15px] font-semibold text-primary leading-tight">{meta.title}</h1>
@@ -424,7 +422,8 @@ function AuthenticatedRoutes() {
                 <main className="flex-1 overflow-y-auto px-6 py-6 max-w-[1400px] w-full mx-auto">
                   <PageHeading />
                   <Routes>
-                    <Route path="/" element={<Overview />} />
+                    {/* Overview was merged into Console; /app is now an alias. */}
+                    <Route path="/" element={<Navigate to="/console" replace />} />
                     <Route path="/portfolio" element={<Portfolio />} />
                     <Route path="/universe" element={<Universe />} />
                     <Route path="/activity" element={<Activity />} />
