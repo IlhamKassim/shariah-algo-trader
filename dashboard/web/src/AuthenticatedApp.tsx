@@ -7,7 +7,6 @@ import {
   Briefcase,
   Globe,
   ScrollText,
-  GitCompareArrows,
   Zap,
   BookOpen,
   SlidersHorizontal,
@@ -20,10 +19,10 @@ import { ClerkProvider, useAuth } from "@clerk/react";
 import { AccountModeModal } from "./components/AccountModeModal";
 import { UserAvatar } from "./components/UserAvatar";
 import { Console } from "./pages/Console";
+import { Performance } from "./pages/Performance";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
-import { Compare } from "./pages/Compare";
 import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
@@ -40,10 +39,10 @@ import { supabase } from "./lib/supabaseClient";
 
 const NAV = [
   { to: "/console", label: "Console", end: false, icon: LayoutDashboard },
+  { to: "/performance", label: "Performance", end: false, icon: TrendingUp },
   { to: "/app/portfolio", label: "Portfolio", end: false, icon: Briefcase },
   { to: "/app/universe", label: "Universe", end: false, icon: Globe },
   { to: "/app/activity", label: "Activity", end: false, icon: ScrollText },
-  { to: "/app/compare", label: "Compare", end: false, icon: GitCompareArrows },
   { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
   { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
   { to: "/app/profile", label: "Profile", end: false, icon: User },
@@ -68,10 +67,6 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/app/activity": {
     title: "Activity Log",
     sub: "Audit trail of compliance checks, rebalances and orders",
-  },
-  "/app/compare": {
-    title: "Strategy Comparison",
-    sub: "Shariah Algo vs Day Trader — risk-adjusted performance side by side",
   },
   "/app/day-trader": {
     title: "Day Trader",
@@ -414,6 +409,14 @@ function AuthenticatedRoutes() {
           }
         />
         <Route
+          path="/performance"
+          element={
+            <ProtectedRoute>
+              <Performance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/*"
           element={
             <ProtectedRoute>
@@ -427,7 +430,8 @@ function AuthenticatedRoutes() {
                     <Route path="/portfolio" element={<Portfolio />} />
                     <Route path="/universe" element={<Universe />} />
                     <Route path="/activity" element={<Activity />} />
-                    <Route path="/compare" element={<Compare />} />
+                    {/* Compare was merged into Performance. */}
+                    <Route path="/compare" element={<Navigate to="/performance" replace />} />
                     <Route path="/day-trader" element={<DayTrader />} />
                     <Route path="/learn" element={<Learn />} />
                     <Route path="/profile" element={isDemo ? <Navigate to="/app" replace /> : <Profile />} />

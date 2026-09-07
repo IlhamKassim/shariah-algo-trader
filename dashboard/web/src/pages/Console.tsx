@@ -13,26 +13,13 @@ import {
   YAxis,
 } from "recharts";
 import { api, type ActivityEntry, type PositionResponse, type StockScore } from "../lib/api";
-import { NotificationBell } from "../components/NotificationBell";
-import { UserAvatar } from "../components/UserAvatar";
+import { ConsoleShell } from "../components/ConsoleShell";
 import { RebalanceModal } from "../components/RebalanceModal";
 import { OnboardingTutorial } from "../components/OnboardingTutorial";
 
 /* -------------------------------------------------------------------------- */
 /* view modes                                                                  */
 /* -------------------------------------------------------------------------- */
-
-const VIEWS = ["Dashboard", "Analytic", "Trading"] as const;
-type View = (typeof VIEWS)[number];
-
-const VISIBLE: Record<
-  View,
-  { perf: boolean; signals: boolean; holdings: boolean; orders: boolean }
-> = {
-  Dashboard: { perf: true, signals: true, holdings: true, orders: true },
-  Analytic: { perf: true, signals: false, holdings: true, orders: false },
-  Trading: { perf: false, signals: true, holdings: false, orders: true },
-};
 
 const PERIODS = ["1W", "1M", "3M", "6M"] as const;
 type Period = (typeof PERIODS)[number];
@@ -348,7 +335,6 @@ function orderTag(entry: ActivityEntry): { tag: string; color: string } {
 
 export function Console() {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<View>("Dashboard");
   const [period, setPeriod] = useState<Period>("1M");
   const [signalTab, setSignalTab] = useState<SignalTab>("All");
   const [expandOrders, setExpandOrders] = useState(false);
@@ -446,86 +432,12 @@ export function Console() {
     }
   };
 
-  const vis = VISIBLE[view];
-
   return (
-    <div className="console-root min-h-screen px-[22px] pt-[22px]">
-      <div className="max-w-[1420px] mx-auto flex flex-col gap-[26px]">
-        {/* ---------------------------------------------------------------- */}
-        {/* nav                                                              */}
-        {/* ---------------------------------------------------------------- */}
-        <nav className="flex items-center gap-[18px] flex-wrap">
-          <Link to="/app" className="flex items-center gap-2.5 min-w-0 !text-[var(--c-ink)]">
-            <span className="w-[26px] h-[26px] shrink-0 flex items-center justify-center">
-              <span className="w-[15px] h-[15px] bg-[var(--c-ink)] rounded-[4px] rotate-45 block" />
-            </span>
-            <span className="text-[17px] font-bold tracking-[-0.02em] whitespace-nowrap">
-              ShariahTrading
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-2 flex-1 justify-center flex-wrap">
-            <div className="flex gap-1 p-[5px] bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)]">
-              {VIEWS.map((v) => (
-                <Pill key={v} small active={view === v} onClick={() => setView(v)}>
-                  {v}
-                </Pill>
-              ))}
-            </div>
-
-            {/* Universe is configured in Settings, so this reports rather than toggles. */}
-            <Link
-              to="/app/settings"
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)] !text-[var(--c-mid)] hover:!text-[var(--c-ink)]"
-              title="Change the Eligible Universe ETF in Settings"
-            >
-              <span className="w-[15px] h-[15px] shrink-0 rounded-full border-[1.5px] border-[var(--c-mute)] block" />
-              <span className="text-[13px] whitespace-nowrap">Universe:</span>
-              <span className="text-[12.5px] font-semibold text-[var(--c-ink)] whitespace-nowrap">
-                {benchKey}
-              </span>
-              {compliance?.universe_size ? (
-                <span className="text-[12.5px] tabular-nums whitespace-nowrap">
-                  {compliance.universe_size}
-                </span>
-              ) : null}
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <NotificationBell />
-            <Link
-              to="/app/profile"
-              className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center"
-              title="Quant Operator Profile"
-            >
-              <UserAvatar />
-            </Link>
-          </div>
-        </nav>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* breadcrumb + ticker strip                                         */}
-        {/* ---------------------------------------------------------------- */}
-        <div className="flex items-center justify-between gap-[26px] flex-wrap">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <Link
-              to="/app"
-              aria-label="Back to Overview"
-              className="w-11 h-11 shrink-0 rounded-full bg-[var(--c-card)] flex items-center justify-center shadow-[0_2px_6px_rgba(20,25,35,0.07)] !text-[var(--c-ink)] text-base"
-            >
-              ←
-            </Link>
-            <span className="text-[15px] text-[var(--c-mute)]">
-              Dashboard
-              <span className="text-[var(--c-ink)] font-semibold">
-                /{view === "Dashboard" ? "My Portfolio" : view}
-              </span>
-            </span>
-          </div>
-
-          {/* Positions carry unrealized_pl_pct, not a daily move — labelled so
-              the green/red chip isn't read as today's change. */}
+    // Positions carry unrealized_pl_pct, not a daily move — the strip is
+    // labelled so the green/red chip isn't read as today's change.
+    <ConsoleShell
+      breadcrumb="My Portfolio"
+      aside={
           <div className="min-w-0 max-w-full">
             <div className="text-[11px] text-[var(--c-mute)] mb-1.5 whitespace-nowrap">
               Largest holdings · unrealized
@@ -553,8 +465,8 @@ export function Console() {
             ))}
             </div>
           </div>
-        </div>
-
+      }
+    >
         {/* ---------------------------------------------------------------- */}
         {/* hero                                                             */}
         {/* ---------------------------------------------------------------- */}
@@ -647,13 +559,12 @@ export function Console() {
                 {dayPl >= 0 ? "+" : "−"}
                 {money(Math.abs(dayPl), 2)} ({signed(dayPlPct * 100)}) today
               </span>
-              <button
-                type="button"
-                onClick={() => setView("Analytic")}
-                className="flex items-center gap-2.5 border-0 bg-[var(--c-card)] rounded-full px-5 py-2.5 font-[inherit] text-[13.5px] font-semibold text-[var(--c-ink)] cursor-pointer shadow-[0_2px_8px_rgba(20,25,35,0.1)] hover:opacity-85 transition-opacity"
+              <Link
+                to="/performance"
+                className="flex items-center gap-2.5 bg-[var(--c-card)] rounded-full px-5 py-2.5 text-[13.5px] font-semibold !text-[var(--c-ink)] shadow-[0_2px_8px_rgba(20,25,35,0.1)] hover:opacity-85 transition-opacity"
               >
-                View <span className="text-[12px]">↗</span>
-              </button>
+                View performance <span className="text-[12px]">↗</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -745,11 +656,10 @@ export function Console() {
         {/* ---------------------------------------------------------------- */}
         <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[60vh]">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(430px,100%),1fr))] gap-[22px] items-start">
-            {vis.perf && (
+            {(
               <Card
                 title="Performance"
-                className={vis.signals ? "" : "col-span-full"}
-                icon={
+                                icon={
                   <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] flex items-center justify-center">
                     <span className="w-[9px] h-[9px] border-[1.5px] border-white rounded-[2px] block" />
                   </span>
@@ -839,11 +749,10 @@ export function Console() {
               </Card>
             )}
 
-            {vis.signals && (
+            {(
               <Card
                 title="Engine Signals"
-                className={vis.perf ? "" : "col-span-full"}
-                icon={
+                                icon={
                   <span className="w-[22px] h-[22px] shrink-0 rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C5CFC] block" />
                 }
               >
@@ -927,7 +836,7 @@ export function Console() {
             )}
           </div>
 
-          {vis.holdings && (
+          {(
             <Card
               title="Holdings"
               icon={
@@ -972,7 +881,7 @@ export function Console() {
             </Card>
           )}
 
-          {vis.orders && (
+          {(
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(400px,100%),1fr))] gap-[22px] items-start pb-[26px]">
               <Card
                 title="Recent Activity"
@@ -1035,7 +944,6 @@ export function Console() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Still on the obsidian system — see DESIGN.md §B. Migrating the modals
           is tracked separately so this page isn't blocked on them. */}
@@ -1057,6 +965,6 @@ export function Console() {
             : undefined
         }
       />
-    </div>
+    </ConsoleShell>
   );
 }
