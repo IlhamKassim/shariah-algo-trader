@@ -4,7 +4,6 @@ import {
   TrendingUp,
   LogOut,
   LayoutDashboard,
-  Briefcase,
   Globe,
   ScrollText,
   Zap,
@@ -20,7 +19,6 @@ import { AccountModeModal } from "./components/AccountModeModal";
 import { UserAvatar } from "./components/UserAvatar";
 import { Console } from "./pages/Console";
 import { Performance } from "./pages/Performance";
-import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
 import { DayTrader } from "./pages/DayTrader";
@@ -40,8 +38,7 @@ import { supabase } from "./lib/supabaseClient";
 const NAV = [
   { to: "/console", label: "Console", end: false, icon: LayoutDashboard },
   { to: "/performance", label: "Performance", end: false, icon: TrendingUp },
-  { to: "/app/portfolio", label: "Portfolio", end: false, icon: Briefcase },
-  { to: "/app/universe", label: "Universe", end: false, icon: Globe },
+  { to: "/universe", label: "Universe", end: false, icon: Globe },
   { to: "/app/activity", label: "Activity", end: false, icon: ScrollText },
   { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
   { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
@@ -56,14 +53,6 @@ const PAGE_META_FALLBACK = {
 };
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
-  "/app/portfolio": {
-    title: "Portfolio",
-    sub: "Open positions held in the Shariah-compliant strategy",
-  },
-  "/app/universe": {
-    title: "Universe",
-    sub: "Eligible stocks ranked by composite Factor Score",
-  },
   "/app/activity": {
     title: "Activity Log",
     sub: "Audit trail of compliance checks, rebalances and orders",
@@ -148,12 +137,6 @@ function Topbar({ onOpenGuide }: TopbarProps) {
 
   const currentMode: "paper" | "live" = (status?.trading_mode || settings?.trading_mode || (status?.broker_url?.includes("paper") ? "paper" : "live")) as "paper" | "live";
 
-  const { data: positions } = useQuery({
-    queryKey: ["portfolio"],
-    queryFn: api.portfolio,
-    refetchInterval: 30_000,
-  });
-
   const { data: universe } = useQuery({
     queryKey: ["universe"],
     queryFn: api.universe,
@@ -192,8 +175,7 @@ function Topbar({ onOpenGuide }: TopbarProps) {
   };
 
   const navCounts: Record<string, number | undefined> = {
-    "/app/portfolio": positions?.length,
-    "/app/universe": universe?.stocks.length,
+    "/universe": universe?.stocks.length,
   };
   const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/app/settings") : NAV;
 
@@ -417,6 +399,14 @@ function AuthenticatedRoutes() {
           }
         />
         <Route
+          path="/universe"
+          element={
+            <ProtectedRoute>
+              <Universe />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/*"
           element={
             <ProtectedRoute>
@@ -427,8 +417,9 @@ function AuthenticatedRoutes() {
                   <Routes>
                     {/* Overview was merged into Console; /app is now an alias. */}
                     <Route path="/" element={<Navigate to="/console" replace />} />
-                    <Route path="/portfolio" element={<Portfolio />} />
-                    <Route path="/universe" element={<Universe />} />
+                    {/* Portfolio folded into Console's Holdings card. */}
+                    <Route path="/portfolio" element={<Navigate to="/console" replace />} />
+                    <Route path="/universe" element={<Navigate to="/universe" replace />} />
                     <Route path="/activity" element={<Activity />} />
                     {/* Compare was merged into Performance. */}
                     <Route path="/compare" element={<Navigate to="/performance" replace />} />

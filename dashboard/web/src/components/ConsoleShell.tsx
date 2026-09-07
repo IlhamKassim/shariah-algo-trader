@@ -14,11 +14,10 @@ import { UserAvatar } from "./UserAvatar";
 const MIGRATED = [
   { to: "/console", label: "Console" },
   { to: "/performance", label: "Performance" },
+  { to: "/universe", label: "Universe" },
 ];
 
 const LEGACY = [
-  { to: "/app/portfolio", label: "Portfolio" },
-  { to: "/app/universe", label: "Universe" },
   { to: "/app/activity", label: "Activity" },
   { to: "/app/day-trader", label: "Day Trader" },
   { to: "/app/settings", label: "Settings" },

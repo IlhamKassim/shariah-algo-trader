@@ -372,6 +372,15 @@ export function Console() {
     return Math.max(5, Math.ceil(max / 5) * 5);
   }, [byValue, invested]);
 
+  // Aggregate unrealized P&L, folded in from the retired Portfolio page —
+  // Console previously showed this per position but never totalled it.
+  const totalPl = useMemo(
+    () => (positions ?? []).reduce((s, p) => s + p.unrealized_pl, 0),
+    [positions],
+  );
+  const totalCost = invested - totalPl;
+  const totalPlPct = totalCost > 0 ? (totalPl / totalCost) * 100 : 0;
+
   const dayPl = account?.dayl_pl ?? 0;
   const dayPlPct = account?.dayl_pl_pct ?? 0;
   const dayTone = dayPl >= 0 ? "var(--c-green)" : "var(--c-red)";
@@ -843,10 +852,20 @@ export function Console() {
                 <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-blue)] block" />
               }
               aside={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-[12.5px] text-[var(--c-mute)] tabular-nums whitespace-nowrap">
                     {byValue.length} position{byValue.length === 1 ? "" : "s"} · {money(invested, 0)}
                   </span>
+                  {byValue.length > 0 && (
+                    <span
+                      className="text-[12.5px] font-semibold tabular-nums whitespace-nowrap"
+                      style={{ color: totalPl >= 0 ? "var(--c-green)" : "var(--c-red)" }}
+                      title="Aggregate unrealized P&L across open positions"
+                    >
+                      {totalPl >= 0 ? "+" : "−"}
+                      {money(Math.abs(totalPl), 0)} ({signed(totalPlPct)}) unrealized
+                    </span>
+                  )}
                   {byValue.length > 6 && (
                     <button
                       type="button"
