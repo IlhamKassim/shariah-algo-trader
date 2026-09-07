@@ -8,6 +8,7 @@ import {
   Globe,
   ScrollText,
   GitCompareArrows,
+  Gauge,
   Zap,
   BookOpen,
   SlidersHorizontal,
@@ -20,6 +21,7 @@ import { ClerkProvider, useAuth } from "@clerk/react";
 import { AccountModeModal } from "./components/AccountModeModal";
 import { UserAvatar } from "./components/UserAvatar";
 import { Overview } from "./pages/Overview";
+import { Console } from "./pages/Console";
 import { Portfolio } from "./pages/Portfolio";
 import { Universe } from "./pages/Universe";
 import { Activity } from "./pages/Activity";
@@ -40,6 +42,7 @@ import { supabase } from "./lib/supabaseClient";
 
 const NAV = [
   { to: "/app", label: "Overview", end: true, icon: LayoutDashboard },
+  { to: "/console", label: "Console", end: false, icon: Gauge },
   { to: "/app/portfolio", label: "Portfolio", end: false, icon: Briefcase },
   { to: "/app/universe", label: "Universe", end: false, icon: Globe },
   { to: "/app/activity", label: "Activity", end: false, icon: ScrollText },
@@ -402,6 +405,16 @@ function AuthenticatedRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Console owns its own full-viewport chrome, so it sits outside the
+            /app shell rather than nesting inside Topbar + PageHeading. */}
+        <Route
+          path="/console"
+          element={
+            <ProtectedRoute>
+              <Console />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/app/*"
           element={

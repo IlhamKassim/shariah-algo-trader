@@ -38,3 +38,4 @@ data/
 # valid until the next deploy rebuilds them, then they become stale-untrusted.
 dashboard/api/static/assets/
 dashboard/api/static/index.html
+dashboard/web/shots/
