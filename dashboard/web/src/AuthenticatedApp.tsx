@@ -11,7 +11,6 @@ import {
   SlidersHorizontal,
   Flame,
   Shield,
-  User,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, useAuth } from "@clerk/react";
@@ -28,8 +27,7 @@ import { Login } from "./pages/Login";
 import { Invite } from "./pages/Invite";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Learn } from "./pages/Learn";
-import { Settings } from "./pages/Settings";
-import { Profile } from "./pages/Profile";
+import { Account } from "./pages/Account";
 import { Onboarding } from "./pages/Onboarding";
 import { PlatformGuideModal } from "./components/PlatformGuideModal";
 import { api, setTokenProvider } from "./lib/api";
@@ -42,8 +40,7 @@ const NAV = [
   { to: "/ledger", label: "Ledger", end: false, icon: ScrollText },
   { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
   { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
-  { to: "/app/profile", label: "Profile", end: false, icon: User },
-  { to: "/app/settings", label: "Settings", end: false, icon: SlidersHorizontal },
+  { to: "/account", label: "Account", end: false, icon: SlidersHorizontal },
 ];
 
 
@@ -60,14 +57,6 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/app/learn": {
     title: "Learn",
     sub: "Understanding factor investing, strategy logic, and Shariah compliance",
-  },
-  "/app/profile": {
-    title: "Quant Profile",
-    sub: "Quant trader identity, Shariah mandate pass and sandbox allocation",
-  },
-  "/app/settings": {
-    title: "Settings Profile",
-    sub: "Manage Alpaca API credentials, ETF targets, factor weights, and user authentication",
   },
 };
 
@@ -173,7 +162,7 @@ function Topbar({ onOpenGuide }: TopbarProps) {
   const navCounts: Record<string, number | undefined> = {
     "/universe": universe?.stocks.length,
   };
-  const visibleNav = isDemo ? NAV.filter((item) => item.to !== "/app/settings") : NAV;
+  const visibleNav = NAV;
 
   return (
     <header className="border-b border-divider shrink-0 px-6 bg-sidebar">
@@ -364,7 +353,6 @@ function TokenProviderBridge() {
 
 function AuthenticatedRoutes() {
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const isDemo = localStorage.getItem("shariah_demo_mode") === "true";
 
   return (
     <>
@@ -411,6 +399,14 @@ function AuthenticatedRoutes() {
           }
         />
         <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <Account />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/*"
           element={
             <ProtectedRoute>
@@ -430,8 +426,9 @@ function AuthenticatedRoutes() {
                     <Route path="/compare" element={<Navigate to="/performance" replace />} />
                     <Route path="/day-trader" element={<DayTrader />} />
                     <Route path="/learn" element={<Learn />} />
-                    <Route path="/profile" element={isDemo ? <Navigate to="/app" replace /> : <Profile />} />
-                    <Route path="/settings" element={isDemo ? <Navigate to="/app" replace /> : <Settings />} />
+                    {/* Profile and Settings merged into Account. */}
+                    <Route path="/profile" element={<Navigate to="/account" replace />} />
+                    <Route path="/settings" element={<Navigate to="/account" replace />} />
                   </Routes>
                 </main>
               </div>

@@ -89,7 +89,8 @@ def test_app_registers_public_reset_password_route():
 # ---------------------------------------------------------------- Settings redirect
 
 def test_settings_sends_reset_link_to_reset_password_page():
-    src = _read("pages/Settings.tsx")
+    # Settings and Profile were merged into Account during the console redesign.
+    src = _read("pages/Account.tsx")
     assert "resetPasswordForEmail" in src
     assert "reset-password" in src
     assert "/login" not in src.split("resetPasswordForEmail")[1].split("}")[0]

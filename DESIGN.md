@@ -97,7 +97,29 @@ Two tiers. There is no serif tier in the Console system.
 - Benchmark series: `#8FB6EC` 2px `strokeDasharray="7 7"`, no dots.
 - Tooltip: `--c-card`, `rounded-[14px]`, `0 8px 24px rgba(20,25,35,0.16)`, no border.
 
-## A5. Banned Patterns
+## A5. Motion & Interaction
+
+Primitives live in `dashboard/web/src/components/console/controls.tsx`. Use
+them rather than re-rolling a toggle or a range input per page.
+
+| Primitive | Behaviour |
+| :--- | :--- |
+| `Segmented` | Selection indicator travels between options via a shared `layoutId`, so the pill slides rather than cross-fading. |
+| `Toggle` | `role="switch"` with a spring-driven thumb. Colour carries meaning; the label always states what is being switched. |
+| `Slider` | Range input with a live formatted value and a filled track. Never the only way to set a value that needs precision. |
+| `Ticker` | Springs a number to its new value so a changed figure is noticed instead of silently swapping. |
+| `SecretField` | Credentials reveal on **press-and-hold**, never a sticky toggle — it cannot be left switched on, and exposure takes a deliberate act. |
+| `SaveBar` | Slides up only when a draft is dirty, states the change count, and offers discard beside save. |
+
+### Rules
+
+1. **Springs, not tweens**, for anything a finger conceptually throws — selection pills, toggle thumbs, counters. `stiffness: 420, damping: 34` is the house spring.
+2. **Every animation is skipped** under `prefers-reduced-motion: reduce`. The primitives handle this; anything hand-rolled must too.
+3. **Motion must survive being ignored.** A page that only makes sense once something has animated is broken for a reader who scrolled past it.
+4. **Never animate a destructive path into being easy.** Irreversible actions — switching to live trading, replacing credentials — keep their confirmation step. Interaction polish belongs on the reversible parts.
+5. **Show the consequence, not just the control.** Where a setting drives engine behaviour, recompute and display what the engine would actually do with it as the value changes (see the strategy panel in `Account.tsx`, which mirrors `factors/scorer.py`). A number the user cannot interpret is not a setting, it is a trap.
+
+## A6. Banned Patterns
 
 1. **NO sharp corners.** Nothing in the Console system is `rounded-none`.
 2. **NO hairline borders as the primary separator.** Use shadow and surface contrast; reserve `--c-line` for row rules.
@@ -106,7 +128,7 @@ Two tiers. There is no serif tier in the Console system.
 5. **NO icon spam.** Solid geometric glyphs, one per card header.
 6. **NO fabricated data.** See §C.
 
-## A6. Verification Checklist
+## A7. Verification Checklist
 
 - [ ] Does every surface use a `--c-*` token rather than a raw hex?
 - [ ] Do all changing figures carry `tabular-nums`?
@@ -114,6 +136,9 @@ Two tiers. There is no serif tier in the Console system.
 - [ ] Do toggles carry `aria-pressed`, and icon-only controls `aria-label`?
 - [ ] Does every displayed number trace to an API response? (§C)
 - [ ] Does the page avoid `rounded-none`, `font-mono`, and gradient button fills?
+- [ ] Does every interactive control come from `console/controls.tsx` rather than a one-off?
+- [ ] Is every animation skipped under `prefers-reduced-motion`?
+- [ ] Do irreversible actions still require a confirmation step?
 
 ---
 

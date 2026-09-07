@@ -16,11 +16,11 @@ const MIGRATED = [
   { to: "/performance", label: "Performance" },
   { to: "/universe", label: "Universe" },
   { to: "/ledger", label: "Ledger" },
+  { to: "/account", label: "Account" },
 ];
 
 const LEGACY = [
   { to: "/app/day-trader", label: "Day Trader" },
-  { to: "/app/settings", label: "Settings" },
 ];
 
 export function ConsoleShell({
@@ -90,7 +90,7 @@ export function ConsoleShell({
 
             {/* Universe is configured in Settings, so this reports rather than toggles. */}
             <Link
-              to="/app/settings"
+              to="/account"
               className="flex items-center gap-2.5 px-4 py-2.5 bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)] !text-[var(--c-mid)] hover:!text-[var(--c-ink)]"
               title="Change the Eligible Universe ETF in Settings"
             >
@@ -110,7 +110,7 @@ export function ConsoleShell({
           <div className="flex items-center gap-2.5">
             <NotificationBell />
             <Link
-              to="/app/profile"
+              to="/account"
               className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center"
               title="Quant Operator Profile"
             >
