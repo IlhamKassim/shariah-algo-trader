@@ -20,7 +20,7 @@ import { UserAvatar } from "./components/UserAvatar";
 import { Console } from "./pages/Console";
 import { Performance } from "./pages/Performance";
 import { Universe } from "./pages/Universe";
-import { Activity } from "./pages/Activity";
+import { Ledger } from "./pages/Ledger";
 import { DayTrader } from "./pages/DayTrader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
@@ -39,7 +39,7 @@ const NAV = [
   { to: "/console", label: "Console", end: false, icon: LayoutDashboard },
   { to: "/performance", label: "Performance", end: false, icon: TrendingUp },
   { to: "/universe", label: "Universe", end: false, icon: Globe },
-  { to: "/app/activity", label: "Activity", end: false, icon: ScrollText },
+  { to: "/ledger", label: "Ledger", end: false, icon: ScrollText },
   { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
   { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
   { to: "/app/profile", label: "Profile", end: false, icon: User },
@@ -53,10 +53,6 @@ const PAGE_META_FALLBACK = {
 };
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
-  "/app/activity": {
-    title: "Activity Log",
-    sub: "Audit trail of compliance checks, rebalances and orders",
-  },
   "/app/day-trader": {
     title: "Day Trader",
     sub: "Gap & Go intraday positions, fills and scanner config",
@@ -407,6 +403,14 @@ function AuthenticatedRoutes() {
           }
         />
         <Route
+          path="/ledger"
+          element={
+            <ProtectedRoute>
+              <Ledger />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/*"
           element={
             <ProtectedRoute>
@@ -420,7 +424,8 @@ function AuthenticatedRoutes() {
                     {/* Portfolio folded into Console's Holdings card. */}
                     <Route path="/portfolio" element={<Navigate to="/console" replace />} />
                     <Route path="/universe" element={<Navigate to="/universe" replace />} />
-                    <Route path="/activity" element={<Activity />} />
+                    {/* Activity became the Ledger. */}
+                    <Route path="/activity" element={<Navigate to="/ledger" replace />} />
                     {/* Compare was merged into Performance. */}
                     <Route path="/compare" element={<Navigate to="/performance" replace />} />
                     <Route path="/day-trader" element={<DayTrader />} />

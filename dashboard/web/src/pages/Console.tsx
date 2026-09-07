@@ -909,7 +909,7 @@ export function Console() {
                 aside={
                   <div className="flex items-center gap-2">
                     <Link
-                      to="/app/activity"
+                      to="/ledger"
                       className="rounded-full border border-[var(--c-line)] bg-transparent !text-[var(--c-mid)] hover:!text-[var(--c-ink)] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap"
                     >
                       Full log

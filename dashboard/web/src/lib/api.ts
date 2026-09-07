@@ -62,6 +62,12 @@ export interface ActivityEntry {
   type: string;
   message: string;
   tickers: string[];
+  /** Structured fill detail — present for Alpaca FILL activities. */
+  symbol?: string | null;
+  side?: string | null;
+  qty?: number | null;
+  price?: number | null;
+  notional?: number | null;
 }
 
 export interface ActivityResponse {
@@ -491,11 +497,14 @@ export const api = {
   activity: (type?: string, date?: string) => {
     if (isDemo()) {
       const allEntries: ActivityEntry[] = [
-        { timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), level: "INFO", type: "ORDER", message: "Order BUY NVDA executed: 5 shares at $125.50", tickers: ["NVDA"] },
-        { timestamp: new Date(Date.now() - 3 * 3600 * 1000).toISOString(), level: "INFO", type: "REBALANCE", message: "Rebalance check complete. Portfolio aligned with Top 15 scoring universe.", tickers: [] },
-        { timestamp: new Date(Date.now() - 3.5 * 3600 * 1000).toISOString(), level: "INFO", type: "COMPLIANCE", message: "Compliance check passed. 7/7 held positions are Shariah-compliant according to AAOIFI guidelines.", tickers: ["MSFT", "AAPL", "NVDA", "AMZN", "GOOGL", "META", "TSLA"] },
-        { timestamp: new Date(Date.now() - 4 * 3600 * 1000).toISOString(), level: "INFO", type: "SCHEDULER", message: "Daily scheduler triggered for SPUS universe.", tickers: [] },
-        { timestamp: new Date(Date.now() - 24 * 3600 * 1000).toISOString(), level: "INFO", type: "SCHEDULER", message: "Market closed. Portfolio value: $129,262.25.", tickers: [] },
+        { timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY NVDA — 5 shares @ $125.5", tickers: ["NVDA"], symbol: "NVDA", side: "BUY", qty: 5, price: 125.5, notional: 627.5 },
+        { timestamp: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "SELL AAPL — 12 shares @ $210.3", tickers: ["AAPL"], symbol: "AAPL", side: "SELL", qty: 12, price: 210.3, notional: 2523.6 },
+        { timestamp: new Date(Date.now() - 74 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY MSFT — 8 shares @ $420.1", tickers: ["MSFT"], symbol: "MSFT", side: "BUY", qty: 8, price: 420.1, notional: 3360.8 },
+        { timestamp: new Date(Date.now() - 75 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY GOOGL — 15 shares @ $175.2", tickers: ["GOOGL"], symbol: "GOOGL", side: "BUY", qty: 15, price: 175.2, notional: 2628.0 },
+        { timestamp: new Date(Date.now() - 98 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "SELL META — 4 shares @ $490.5", tickers: ["META"], symbol: "META", side: "SELL", qty: 4, price: 490.5, notional: 1962.0 },
+        { timestamp: new Date(Date.now() - 122 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY AMZN — 22 shares @ $185.4", tickers: ["AMZN"], symbol: "AMZN", side: "BUY", qty: 22, price: 185.4, notional: 4078.8 },
+        { timestamp: new Date(Date.now() - 123 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY TSLA — 9 shares @ $215.8", tickers: ["TSLA"], symbol: "TSLA", side: "BUY", qty: 9, price: 215.8, notional: 1942.2 },
+        { timestamp: new Date(Date.now() - 170 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY NVDA — 30 shares @ $118.2", tickers: ["NVDA"], symbol: "NVDA", side: "BUY", qty: 30, price: 118.2, notional: 3546.0 },
       ];
       const filtered = allEntries.filter(e => {
         if (type && e.type !== type) return false;

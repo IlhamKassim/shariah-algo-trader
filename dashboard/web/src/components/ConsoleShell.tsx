@@ -15,10 +15,10 @@ const MIGRATED = [
   { to: "/console", label: "Console" },
   { to: "/performance", label: "Performance" },
   { to: "/universe", label: "Universe" },
+  { to: "/ledger", label: "Ledger" },
 ];
 
 const LEGACY = [
-  { to: "/app/activity", label: "Activity" },
   { to: "/app/day-trader", label: "Day Trader" },
   { to: "/app/settings", label: "Settings" },
 ];

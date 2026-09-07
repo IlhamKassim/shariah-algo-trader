@@ -68,6 +68,14 @@ class ActivityEntry(BaseModel):
     type: str
     message: str
     tickers: list[str]
+    # Structured fill detail. Present for Alpaca FILL activities, which is
+    # everything /api/activity currently returns; kept optional so non-fill
+    # entry types can be added later without breaking clients.
+    symbol: Optional[str] = None
+    side: Optional[str] = None
+    qty: Optional[float] = None
+    price: Optional[float] = None
+    notional: Optional[float] = None
 
 
 class ActivityResponse(BaseModel):

@@ -36,12 +36,29 @@ def _fetch_activities(client: AlpacaClient | None) -> list[ActivityEntry]:
             price = act.get("price", "")
             qty = act.get("qty", "")
             message = f"{side} {symbol} — {qty} shares @ ${price}"
+
+            # Keep the parsed numbers alongside the message so the ledger can
+            # total and filter without re-parsing prose.
+            try:
+                qty_f = float(qty) if qty not in (None, "") else None
+            except (TypeError, ValueError):
+                qty_f = None
+            try:
+                price_f = float(price) if price not in (None, "") else None
+            except (TypeError, ValueError):
+                price_f = None
+
             entries.append(ActivityEntry(
                 timestamp=ts,
                 level="INFO",
                 type="order",
                 message=message,
                 tickers=[symbol] if symbol else [],
+                symbol=symbol or None,
+                side=side or None,
+                qty=qty_f,
+                price=price_f,
+                notional=round(qty_f * price_f, 2) if qty_f is not None and price_f is not None else None,
             ))
     except AlpacaError as exc:
         logger.warning("Activity fetch failed: %s", exc)
