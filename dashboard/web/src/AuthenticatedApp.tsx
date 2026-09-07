@@ -21,6 +21,7 @@ import { Performance } from "./pages/Performance";
 import { Universe } from "./pages/Universe";
 import { Ledger } from "./pages/Ledger";
 import { DayTrader } from "./pages/DayTrader";
+import { Notifications } from "./pages/Notifications";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationBell } from "./components/NotificationBell";
 import { Login } from "./pages/Login";
@@ -38,8 +39,8 @@ const NAV = [
   { to: "/performance", label: "Performance", end: false, icon: TrendingUp },
   { to: "/universe", label: "Universe", end: false, icon: Globe },
   { to: "/ledger", label: "Ledger", end: false, icon: ScrollText },
-  { to: "/app/day-trader", label: "Day Trader", end: false, icon: Zap },
-  { to: "/app/learn", label: "Learn", end: false, icon: BookOpen },
+  { to: "/day-trader", label: "Day Trader", end: false, icon: Zap },
+  { to: "/learn", label: "Learn", end: false, icon: BookOpen },
   { to: "/account", label: "Account", end: false, icon: SlidersHorizontal },
 ];
 
@@ -50,14 +51,6 @@ const PAGE_META_FALLBACK = {
 };
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
-  "/app/day-trader": {
-    title: "Day Trader",
-    sub: "Gap & Go intraday positions, fills and scanner config",
-  },
-  "/app/learn": {
-    title: "Learn",
-    sub: "Understanding factor investing, strategy logic, and Shariah compliance",
-  },
 };
 
 
@@ -407,6 +400,30 @@ function AuthenticatedRoutes() {
           }
         />
         <Route
+          path="/day-trader"
+          element={
+            <ProtectedRoute>
+              <DayTrader />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learn"
+          element={
+            <ProtectedRoute>
+              <Learn />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/*"
           element={
             <ProtectedRoute>
@@ -424,8 +441,8 @@ function AuthenticatedRoutes() {
                     <Route path="/activity" element={<Navigate to="/ledger" replace />} />
                     {/* Compare was merged into Performance. */}
                     <Route path="/compare" element={<Navigate to="/performance" replace />} />
-                    <Route path="/day-trader" element={<DayTrader />} />
-                    <Route path="/learn" element={<Learn />} />
+                    <Route path="/day-trader" element={<Navigate to="/day-trader" replace />} />
+                    <Route path="/learn" element={<Navigate to="/learn" replace />} />
                     {/* Profile and Settings merged into Account. */}
                     <Route path="/profile" element={<Navigate to="/account" replace />} />
                     <Route path="/settings" element={<Navigate to="/account" replace />} />

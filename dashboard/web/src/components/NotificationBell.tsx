@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Bell,
   CheckCheck,
@@ -379,6 +379,14 @@ export function NotificationBell() {
                     Mark all read
                   </button>
                 )}
+                {/* The dropdown is a preview; the full history lives on its own page. */}
+                <NavLink
+                  to="/notifications"
+                  onClick={() => { setOpen(false); setShowFilter(false); }}
+                  className="text-[10px] font-medium text-brand-gold hover:text-brand-gold/80 transition-colors whitespace-nowrap"
+                >
+                  See all
+                </NavLink>
                 <button
                   onClick={() => { setOpen(false); setShowFilter(false); }}
                   className="text-muted hover:text-primary transition-colors cursor-pointer"

@@ -5,22 +5,19 @@ import { NotificationBell } from "./NotificationBell";
 import { UserAvatar } from "./UserAvatar";
 
 /**
- * Chrome shared by every page migrated onto the Console design system
- * (DESIGN.md §A). Pages still on the obsidian system keep the dark Topbar in
- * AuthenticatedApp; MIGRATED/LEGACY below is the migration's progress marker —
- * each entry moves up as its page is ported.
+ * Chrome shared by every authenticated page. All of them now sit on the
+ * Console design system (DESIGN.md §A); the obsidian Topbar in
+ * AuthenticatedApp survives only for the unauthenticated marketing routes.
  */
 
-const MIGRATED = [
+const NAV = [
   { to: "/console", label: "Console" },
   { to: "/performance", label: "Performance" },
   { to: "/universe", label: "Universe" },
   { to: "/ledger", label: "Ledger" },
   { to: "/account", label: "Account" },
-];
-
-const LEGACY = [
-  { to: "/app/day-trader", label: "Day Trader" },
+  { to: "/day-trader", label: "Day Trader" },
+  { to: "/learn", label: "Learn" },
 ];
 
 export function ConsoleShell({
@@ -62,7 +59,7 @@ export function ConsoleShell({
 
           <div className="flex items-center gap-2 flex-1 justify-center flex-wrap">
             <div className="flex gap-1 p-[5px] bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)] flex-wrap">
-              {MIGRATED.map((item) => (
+              {NAV.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -73,15 +70,6 @@ export function ConsoleShell({
                         : "!text-[var(--c-mid)] hover:!text-[var(--c-ink)] font-medium"
                     }`
                   }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-              {LEGACY.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className="rounded-full text-[12.5px] px-4 py-2 whitespace-nowrap !text-[var(--c-mute)] hover:!text-[var(--c-ink)] font-medium transition-colors"
                 >
                   {item.label}
                 </NavLink>

@@ -1,293 +1,330 @@
-import {
-  BookOpen,
-  ShieldCheck,
-  TrendingUp,
-  Scale,
-  Coins,
-  ArrowRight,
-  Info,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { api } from "../lib/api";
+import { ConsoleShell } from "../components/ConsoleShell";
+
+/**
+ * Explanations are bound to the reader's live configuration rather than the
+ * defaults, so the page describes the system they actually own.
+ */
+
+interface Topic {
+  id: string;
+  title: string;
+  summary: string;
+  body: (ctx: Ctx) => React.ReactNode;
+}
+
+interface Ctx {
+  topN: number;
+  sectorCap: number;
+  drift: number;
+  etf: string;
+  universeSize: number;
+  maxPerSector: number;
+}
+
+const FACTORS = [
+  {
+    name: "Momentum",
+    weight: "25%",
+    what: "Twelve-month price return, excluding the most recent month.",
+    why: "Recent winners have historically kept winning over medium horizons. The last month is dropped because very-short-term moves tend to reverse.",
+    tone: "var(--c-blue)",
+  },
+  {
+    name: "Quality",
+    weight: "25%",
+    what: "Return on equity, profit margin and low debt, combined.",
+    why: "Durable earnings survive downturns. It also aligns naturally with the Shariah screen — heavily indebted firms score poorly on both.",
+    tone: "var(--c-green)",
+  },
+  {
+    name: "Low volatility",
+    weight: "25%",
+    what: "Inverse of annualised daily return volatility.",
+    why: "Calmer stocks have historically delivered better risk-adjusted returns than their beta would predict.",
+    tone: "var(--c-violet)",
+  },
+  {
+    name: "Value",
+    weight: "25%",
+    what: "Earnings yield — earnings over price.",
+    why: "Paying less per unit of earnings has been rewarded over long horizons. It also counterbalances momentum, which tends to buy expensive things.",
+    tone: "var(--c-amber)",
+  },
+];
+
+const TOPICS: Topic[] = [
+  {
+    id: "screen",
+    title: "How a stock becomes eligible",
+    summary: "The Shariah screen is inherited from an ETF, not run in-house.",
+    body: (c) => (
+      <>
+        <p>
+          The Eligible Universe is the set of holdings inside <strong>{c.etf}</strong>. That ETF
+          already applies an AAOIFI-style screen — excluding conventional finance, alcohol,
+          gambling, adult entertainment and tobacco, and capping debt and interest income — so
+          every one of the {c.universeSize || "screened"} names in it has passed a Shariah review
+          before this engine sees it.
+        </p>
+        <p>
+          Inheriting the screen means compliance does not depend on us re-deriving it. It also
+          means the universe carries the ETF's characteristics: because this screen family measures
+          debt against <em>market capitalisation</em> rather than total assets, external research
+          (MSCI, Oct 2025) finds it tilts toward growth and momentum names. Some of the momentum
+          factor's contribution may reflect that pre-existing tilt rather than the scoring itself.
+        </p>
+        <p>
+          A daily Compliance Check re-reads the holdings. If a stock you own has left, it is sold
+          on the next open — a Compliance Exit, independent of any score.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "score",
+    title: "How stocks are scored",
+    summary: "Four factors, equally weighted, each normalised to the same scale.",
+    body: () => (
+      <>
+        <p>
+          Each factor is converted to a <strong>z-score</strong> — how many standard deviations a
+          stock sits from the universe average on that measure. Normalising matters: raw
+          return percentages and raw profit margins are not comparable, but their z-scores are.
+          That is what makes an equal-weighted average meaningful.
+        </p>
+        <p>
+          The Factor Score is simply the mean of the four. A score of 0 is exactly average; +1 is
+          one standard deviation better than the universe. On the Universe page the leading figure
+          is the share of the universe a stock outranks, because a percentile reads more plainly
+          than a z-score.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "select",
+    title: "How the portfolio is chosen",
+    summary: "Top-ranked stocks, subject to a sector ceiling.",
+    body: (c) => (
+      <>
+        <p>
+          Stocks are ranked by Factor Score and the best <strong>{c.topN}</strong> are bought — but
+          not blindly. A sector cap of <strong>{(c.sectorCap * 100).toFixed(0)}%</strong> limits any
+          one GICS sector to <strong>{c.maxPerSector}</strong> position
+          {c.maxPerSector === 1 ? "" : "s"}. When a sector fills, the next-best stock from a
+          different sector takes the slot instead.
+        </p>
+        <p>
+          This is why rank order and holdings are not the same list, and why the Universe page
+          marks what was actually selected rather than assuming it is the first {c.topN} rows. The
+          cap exists because the screen already tilts toward technology; without it a
+          momentum-weighted model would concentrate there.
+        </p>
+        <p>
+          Position sizes are inverse-volatility weighted — calmer stocks get more — capped at twice
+          equal weight so nothing dominates.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "rebalance",
+    title: "When it trades",
+    summary: "Monthly by schedule, sooner on drift or a compliance breach.",
+    body: (c) => (
+      <>
+        <p>
+          A full Rebalance runs on the first trading day of each month: scores are recomputed, a
+          new target list is produced, and the portfolio is moved to match.
+        </p>
+        <p>
+          Between rebalances two things can trigger a trade. A <strong>Compliance Exit</strong>
+          fires immediately if a holding leaves the Eligible Universe. A{" "}
+          <strong>drift rebalance</strong> fires when a position moves more than{" "}
+          <strong>{(c.drift * 100).toFixed(1)}%</strong> from its target weight — a position that
+          has run up is trimmed back rather than left to concentrate.
+        </p>
+        <p>
+          There is also a market regime filter: when the S&amp;P 500 sits below its 200-day moving
+          average, new buys are skipped.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "limits",
+    title: "What this does not do",
+    summary: "The honest list of constraints and gaps.",
+    body: () => (
+      <>
+        <p>
+          <strong>No leverage, shorting, options or margin.</strong> Long-only spot equity, by
+          mandate. That is a Shariah requirement, not a risk preference, and it is enforced at the
+          execution layer rather than by convention.
+        </p>
+        <p>
+          <strong>Returns are not yet cash-flow adjusted.</strong> Deposits and withdrawals are not
+          tracked, so the performance figures reflect equity movement rather than a true
+          time-weighted return. Realized profit and dividend income are not recorded either — the
+          Ledger shows cash moved, not profit earned.
+        </p>
+        <p>
+          <strong>Past factor premiums are not promises.</strong> Every rationale above describes
+          what has historically been rewarded. Factors underperform for years at a time, and a
+          Shariah-screened universe is narrower than the market, which concentrates that risk.
+        </p>
+      </>
+    ),
+  },
+];
+
+function Accordion({ topic, ctx, open, onToggle }: {
+  topic: Topic;
+  ctx: Ctx;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="bg-[var(--c-card)] rounded-[26px] overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-4 p-[22px] text-left cursor-pointer"
+      >
+        <span className="min-w-0">
+          <span className="block text-[16px] font-semibold tracking-[-0.01em]">{topic.title}</span>
+          <span className="block text-[12.5px] text-[var(--c-mid)] mt-1">{topic.summary}</span>
+        </span>
+        <motion.span
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+          className="w-8 h-8 shrink-0 rounded-full bg-[var(--c-soft)] flex items-center justify-center text-[18px] text-[var(--c-mid)] leading-none"
+          aria-hidden="true"
+        >
+          +
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            <div className="px-[22px] pb-[22px] flex flex-col gap-3 text-[13px] text-[var(--c-mid)] leading-[1.65] [&_strong]:text-[var(--c-ink)] [&_strong]:font-semibold">
+              {topic.body(ctx)}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export function Learn() {
+  const [open, setOpen] = useState<string | null>("screen");
+
+  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings });
+  const { data: status } = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const { data: compliance } = useQuery({ queryKey: ["compliance"], queryFn: api.compliance });
+
+  const topN = status?.top_n ?? settings?.top_n ?? 20;
+  const sectorCap = settings?.sector_cap ?? 0.2;
+  const ctx: Ctx = {
+    topN,
+    sectorCap,
+    drift: settings?.drift_threshold ?? 0.03,
+    etf: status?.etf_symbol ?? settings?.etf_symbol ?? "SPUS",
+    universeSize: compliance?.universe_size ?? 0,
+    maxPerSector: Math.max(1, Math.floor(sectorCap * topN)),
+  };
+
   return (
-    <div className="space-y-8 pb-12">
-      {/* Introduction Hero Card */}
-      <Card className="border border-brand-gold/30 bg-card-hover/20">
-        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start">
-          <div className="p-4 bg-brand-gold/10 text-brand-gold border border-brand-gold/20 shrink-0">
-            <BookOpen size={32} />
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="amber">Educational Guide</Badge>
-              <span className="text-[10px] font-mono text-faint">System Architecture</span>
-            </div>
-            <h2 className="text-lg font-bold text-primary tracking-wide">
-              Understanding Systematic Multi-Factor &amp; Compliance-Driven Investing
-            </h2>
-            <p className="text-xs text-muted leading-relaxed max-w-4xl">
-              Unlike traditional active trading where humans make emotional decisions, or complex machine learning models which act as "black boxes," this trading bot runs on a **systematic, rule-based quantitative framework**. By scoring stock traits (factors) and enforcing strict daily Shariah screens, it seeks to capture persistent market premiums transparently.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* The Core Factors Grid */}
-      <div className="space-y-4">
-        <div className="border-b border-divider pb-3">
-          <h3 className="text-xs font-semibold text-section uppercase tracking-[0.09em]">
-            The 4-Factor Scoring Model
-          </h3>
-          <p className="text-[11px] text-faint mt-0.5">
-            How the bot scores and selects the top-20 stocks from the Shariah-eligible universe.
+    <ConsoleShell breadcrumb="Learn">
+      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+        <section className="bg-[var(--c-card)] rounded-[26px] p-[26px] flex flex-col gap-4">
+          <h1 className="console-display text-[38px] font-light tracking-[-0.03em] leading-[1.1]">
+            How your engine decides
+          </h1>
+          <p className="text-[13.5px] text-[var(--c-mid)] leading-[1.6] max-w-[68ch]">
+            Every number below is read from your live configuration, not from documentation
+            defaults — so this describes the system you actually own. Change a setting in{" "}
+            <Link to="/account" className="!text-[var(--c-blue)] font-semibold">
+              Account
+            </Link>{" "}
+            and this page changes with it.
           </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(150px,100%),1fr))] gap-3.5 pt-1">
+            {[
+              { k: "Universe", v: ctx.etf, s: ctx.universeSize ? `${ctx.universeSize} screened` : "ETF holdings" },
+              { k: "Holds", v: `${ctx.topN} stocks`, s: "Top by Factor Score" },
+              { k: "Sector cap", v: `${ctx.maxPerSector} per sector`, s: `${(ctx.sectorCap * 100).toFixed(0)}% ceiling` },
+              { k: "Drift trigger", v: `${(ctx.drift * 100).toFixed(1)}%`, s: "Early rebalance" },
+            ].map((t) => (
+              <div key={t.k} className="bg-[var(--c-soft)] rounded-[16px] px-4 py-3 min-w-0">
+                <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em]">
+                  {t.k}
+                </div>
+                <div className="console-display text-[19px] mt-1 tracking-[-0.02em] truncate">
+                  {t.v}
+                </div>
+                <div className="text-[11.5px] text-[var(--c-mute)] mt-0.5">{t.s}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] block" />
+            <h2 className="text-[16px] font-semibold tracking-[-0.01em]">The four factors</h2>
+            <span className="text-[12.5px] text-[var(--c-mute)]">equally weighted</span>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4">
+            {FACTORS.map((f) => (
+              <div key={f.name} className="bg-[var(--c-soft)] rounded-[20px] p-5 min-w-0 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: f.tone }}
+                  />
+                  <span className="text-[13.5px] font-semibold">{f.name}</span>
+                  <span className="text-[12px] text-[var(--c-mute)] tabular-nums ml-auto">
+                    {f.weight}
+                  </span>
+                </div>
+                <p className="text-[12.5px] text-[var(--c-ink)] leading-[1.55]">{f.what}</p>
+                <p className="text-[12px] text-[var(--c-mid)] leading-[1.55]">{f.why}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-3.5">
+          {TOPICS.map((t) => (
+            <Accordion
+              key={t.id}
+              topic={t}
+              ctx={ctx}
+              open={open === t.id}
+              onToggle={() => setOpen((cur) => (cur === t.id ? null : t.id))}
+            />
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Momentum Factor */}
-          <Card className="border border-divider hover:border-brand-gold/20 transition-all flex flex-col">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <div className="p-2 bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
-                <TrendingUp size={18} />
-              </div>
-              <div>
-                <CardTitle className="text-xs font-bold text-primary">Momentum</CardTitle>
-                <span className="text-[9px] font-mono text-brand-blue">Weight: 25%</span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 flex-1 flex flex-col justify-between">
-              <p className="text-xs text-muted leading-relaxed mb-4">
-                Measures the persistent upward trend of a stock. The bot computes the 12-month return performance minus the short-term 1-month reversal to capture sustainable trends.
-              </p>
-              <div className="bg-card-hover p-2.5 border border-divider font-mono text-[9px] text-muted">
-                Formula: R_12m - R_1m
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quality Factor */}
-          <Card className="border border-divider hover:border-brand-gold/20 transition-all flex flex-col">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <div className="p-2 bg-brand-green/10 text-brand-green border border-brand-green/15">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <CardTitle className="text-xs font-bold text-primary">Quality</CardTitle>
-                <span className="text-[9px] font-mono text-brand-green">Weight: 25%</span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 flex-1 flex flex-col justify-between">
-              <p className="text-xs text-muted leading-relaxed mb-4">
-                Identifies robust, cash-generating businesses. The bot screens for high Return on Equity (ROE), stable profit margins, and conservative leverage ratios.
-              </p>
-              <div className="bg-card-hover p-2.5 border border-divider font-mono text-[9px] text-muted">
-                Formula: ROE + Profit Stability - Debt Ratio
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Low Volatility Factor */}
-          <Card className="border border-divider hover:border-brand-gold/20 transition-all flex flex-col">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <div className="p-2 bg-brand-gold/10 text-brand-gold border border-brand-gold/15">
-                <Scale size={18} />
-              </div>
-              <div>
-                <CardTitle className="text-xs font-bold text-primary">Low Volatility</CardTitle>
-                <span className="text-[9px] font-mono text-brand-gold">Weight: 25%</span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 flex-1 flex flex-col justify-between">
-              <p className="text-xs text-muted leading-relaxed mb-4">
-                Favors stable price trends. It calculates standard deviation profiles of daily stock returns, allocating heavier weights to stocks with lower price volatility.
-              </p>
-              <div className="bg-card-hover p-2.5 border border-divider font-mono text-[9px] text-muted">
-                Formula: Inv_Vol / Sum(Inv_Vols)
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Value Factor */}
-          <Card className="border border-divider hover:border-brand-gold/20 transition-all flex flex-col">
-            <CardHeader className="flex flex-row items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">
-                <Coins size={18} />
-              </div>
-              <div>
-                <CardTitle className="text-xs font-bold text-primary">Value</CardTitle>
-                <span className="text-[9px] font-mono text-indigo-400">Weight: 25%</span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 flex-1 flex flex-col justify-between">
-              <p className="text-xs text-muted leading-relaxed mb-4">
-                Identifies stocks trading below their fundamental worth. Compares valuation multiples like Price-to-Earnings (P/E) and Price-to-Book (P/B) against peers.
-              </p>
-              <div className="bg-card-hover p-2.5 border border-divider font-mono text-[9px] text-muted">
-                Formula: Z_Score(E/P) + Z_Score(B/P)
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <p className="text-[11.5px] text-[var(--c-mute)] leading-[1.6] pb-4">
+          Educational content describing how this system works. Not investment advice, and not a
+          projection of future returns. All accounts referenced here are paper-trading accounts
+          unless you have explicitly switched to live.
+        </p>
       </div>
-
-      {/* Strategy Workflows: Shariah Algo vs Day Trader */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Shariah Algo Lifecycle */}
-        <Card className="border border-divider">
-          <CardHeader>
-            <CardTitle>Shariah Algo Bot Lifecycle</CardTitle>
-            <p className="text-[10px] text-faint normal-case tracking-normal mt-0.5">
-              Rules-based long-term halal investing cycle
-            </p>
-          </CardHeader>
-          <CardContent className="p-5 space-y-4">
-            <div className="space-y-3">
-              {/* Step 1 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-brand-gold/15 border border-brand-gold/30 text-brand-gold flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  1
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Shariah Universe Boundary</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Loads compliant constituents from specialized ETFs (e.g. SPUS). Only stocks vetted under AAOIFI interest and business guidelines are considered.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="pl-2.5 py-1 border-l border-divider/60 ml-2.5"><ArrowRight size={10} className="text-faint rotate-90" /></div>
-
-              {/* Step 2 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-brand-gold/15 border border-brand-gold/30 text-brand-gold flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  2
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Factor Calculations</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Computes individual factor values for all compliant stocks, standardizes them into Z-scores, and sums them up into a composite factor score.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pl-2.5 py-1 border-l border-divider/60 ml-2.5"><ArrowRight size={10} className="text-faint rotate-90" /></div>
-
-              {/* Step 3 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-brand-gold/15 border border-brand-gold/30 text-brand-gold flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  3
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Monthly Rebalancing</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Executed on the first trading day of each month. Selects the top-20 ranked stocks (subject to a sector cap to avoid over-exposure) and executes portfolio allocation.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pl-2.5 py-1 border-l border-divider/60 ml-2.5"><ArrowRight size={10} className="text-faint rotate-90" /></div>
-
-              {/* Step 4 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-brand-gold/15 border border-brand-gold/30 text-brand-gold flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  4
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Daily Compliance Screen</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Fires daily at market open (9:30 AM ET). Screens positions immediately; if any held stock becomes non-compliant, it triggers an immediate compliance exit trade.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Day Trader Lifecycle */}
-        <Card className="border border-divider">
-          <CardHeader>
-            <CardTitle>Day Trader (Benchmark Strategy)</CardTitle>
-            <p className="text-[10px] text-faint normal-case tracking-normal mt-0.5">
-              Intraday momentum-driven breakout cycle
-            </p>
-          </CardHeader>
-          <CardContent className="p-5 space-y-4">
-            <div className="space-y-3">
-              {/* Step 1 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-muted/20 border border-card-border text-muted flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  1
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Opening Gap Scan</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Scans a liquid stock watchlist at 9:31 AM ET to identify stocks gapping up or down relative to their prior close, indicating strong pre-market catalyst news.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="pl-2.5 py-1 border-l border-divider/60 ml-2.5"><ArrowRight size={10} className="text-faint rotate-90" /></div>
-
-              {/* Step 2 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-muted/20 border border-card-border text-muted flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  2
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Opening Range Setup</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Monitors the high and low prices established in the first few minutes (Opening Range Bar). This boundary serves as a trigger point for breakout entry.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pl-2.5 py-1 border-l border-divider/60 ml-2.5"><ArrowRight size={10} className="text-faint rotate-90" /></div>
-
-              {/* Step 3 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-muted/20 border border-card-border text-muted flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  3
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">Intraday Breakout Execution</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Enters trades when price breaks above the opening range on high relative volume. Monitors active trailing stops and profit targets in real-time.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pl-2.5 py-1 border-l border-divider/60 ml-2.5"><ArrowRight size={10} className="text-faint rotate-90" /></div>
-
-              {/* Step 4 */}
-              <div className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-muted/20 border border-card-border text-muted flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">
-                  4
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary">End of Day Liquidation</h4>
-                  <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-                    Liquidates all remaining open positions before 4:00 PM ET. Zero positions are carried overnight, completely eliminating overnight price risk.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Info Warning Banner */}
-      <Card className="border border-brand-red/20 bg-brand-red/5">
-        <CardContent className="p-4 flex gap-3 items-center">
-          <div className="text-brand-red shrink-0">
-            <Info size={16} />
-          </div>
-          <p className="text-[10px] font-mono text-muted leading-relaxed">
-            Note: All calculations, scoring models, and compliance checks are executed programmatically based on the configured cron cycles. Rebalancing and compliance audits only occur during standard market hours (9:30 AM - 4:00 PM ET) to ensure optimal liquidity and minimize market slippage.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    </ConsoleShell>
   );
 }
