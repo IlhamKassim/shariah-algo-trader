@@ -1,7 +1,26 @@
 import os
+
 from dotenv import load_dotenv
 
+# Deployment-shape flags are captured before .env is applied and restored
+# after. load_dotenv(override=True) is deliberate for ordinary config — the
+# file is the source of truth on the deployed host — but it must not let a
+# checked-in .env decide whether the process believes it is production.
+#
+# Without this, `.env` containing ENVIRONMENT=production turned every local
+# run and the whole test suite into "production", which attaches
+# ForwardedProtoHTTPSRedirectMiddleware and 307-redirects every /api/* call to
+# a host with no TLS listener. An explicit export is a more deliberate signal
+# than a file, so it wins.
+_EXPLICIT: dict[str, str] = {
+    key: value
+    for key in ("ENVIRONMENT", "RENDER")
+    if (value := os.environ.get(key)) is not None
+}
+
 load_dotenv(override=True)
+
+os.environ.update(_EXPLICIT)
 
 _REQUIRED = [
     "ALPACA_API_KEY",

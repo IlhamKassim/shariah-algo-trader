@@ -35,3 +35,6 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Tests must not inherit the deployed host's shape from a local .env. Set
+# explicitly so shariah_algo_trader.config keeps it (see the note there).
+env = ["ENVIRONMENT=test"]
