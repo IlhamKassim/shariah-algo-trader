@@ -139,6 +139,7 @@ export function Universe() {
   const [desc, setDesc] = useState(false);
 
   const { data: status } = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings });
   const { data: universe, isLoading } = useQuery({
     queryKey: ["universe"],
     queryFn: api.universe,
@@ -153,6 +154,12 @@ export function Universe() {
   const computing = universe?.computing || isPending;
   const topN = status?.top_n ?? 20;
   const stocks = useMemo(() => universe?.stocks ?? [], [universe]);
+
+  // max_per_sector = max(1, int(sector_cap * top_n)) — see factors/scorer.py.
+  const sectorCapLabel =
+    settings?.sector_cap != null
+      ? `${Math.max(1, Math.floor(settings.sector_cap * topN))} per sector (${(settings.sector_cap * 100).toFixed(0)}%)`
+      : "one fifth of the book per sector";
 
   const heldCount = stocks.filter((s) => s.in_portfolio).length;
   const topHeld = stocks.filter((s) => s.in_top_n && s.in_portfolio).length;
@@ -331,18 +338,26 @@ export function Universe() {
                 </thead>
                 <tbody>
                   {rows.map((s, i) => {
-                    // Only meaningful while sorted by rank, where the cut line is a real boundary.
-                    const cutLineHere =
-                      sort === "rank" && !desc && filter === "All" && !search && s.rank === topN + 1;
                     return (
                       <tr
                         key={s.symbol}
                         className={`border-b border-[var(--c-line)] last:border-b-0 ${
-                          cutLineHere ? "border-t-2 border-t-[var(--c-amber)]" : ""
-                        } ${i % 2 === 1 ? "bg-[var(--c-soft)]/45" : ""}`}
+                          i % 2 === 1 ? "bg-[var(--c-soft)]/45" : ""
+                        }`}
                       >
-                        <td className="py-3 pr-3 text-[12.5px] tabular-nums text-[var(--c-mute)] w-12">
-                          {s.rank}
+                        <td className="py-3 pr-3 w-14">
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-[3px] h-6 rounded-full shrink-0"
+                              style={{
+                                background: s.in_top_n ? "var(--c-blue)" : "transparent",
+                              }}
+                              aria-hidden="true"
+                            />
+                            <span className="text-[12.5px] tabular-nums text-[var(--c-mute)]">
+                              {s.rank}
+                            </span>
+                          </span>
                         </td>
                         <td className="py-3 pr-4 min-w-0">
                           <div className="text-[13.5px] font-semibold">{s.symbol}</div>
@@ -379,9 +394,14 @@ export function Universe() {
           )}
 
           <p className="text-[11.5px] text-[var(--c-mute)] leading-[1.55]">
-            Factor Score is the equal-weighted average of the four z-scores. The Eligible Universe
-            is pre-screened by the {status?.etf_symbol ?? "SPUS"} holdings, so every stock listed
-            here already passes the Shariah screen.
+            Factor Score is the equal-weighted average of the four factor scores. The Eligible
+            Universe is pre-screened by the {status?.etf_symbol ?? "SPUS"} holdings, so every stock
+            listed here already passes the Shariah screen.
+            <br />
+            Rank is pure Factor Score order, but selection also applies a sector cap of{" "}
+            {sectorCapLabel} — so a higher-ranked stock can be passed over when its sector is full
+            and the next-best takes the slot. The blue marker shows what the engine actually
+            selected, which is why it is not always the first {topN} rows.
           </p>
         </section>
       </div>
