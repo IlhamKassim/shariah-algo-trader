@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 
@@ -6,7 +5,7 @@ import numpy as np
 from fastapi import APIRouter
 
 from dashboard.api.deps import get_alpaca
-from dashboard.api.live_equity import live_equity, patch_today
+from dashboard.api.live_equity import live_equity, patch_today, ts_to_date
 from dashboard.api.models import CompareResponse, StrategyMetrics
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
 
@@ -27,10 +26,7 @@ def _portfolio_history(client: AlpacaClient | None) -> tuple[list[str], list[flo
     except AlpacaError:
         return [], []
 
-    dates = [
-        datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc).strftime("%Y-%m-%d")
-        for ts in timestamps
-    ]
+    dates = [ts_to_date(ts) for ts in timestamps]
     # Filter out zero-equity entries (account not yet active that day)
     paired = [(d, e) for d, e in zip(dates, equities) if e and e > 0]
     if not paired:

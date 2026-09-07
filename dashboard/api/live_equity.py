@@ -32,3 +32,14 @@ def patch_today(
     if dates and dates[-1] == today:
         return dates[:-1] + [today], equities[:-1] + [equity_now]
     return dates + [today], equities + [equity_now]
+
+
+def ts_to_date(ts: float) -> str:
+    """Convert an Alpaca epoch timestamp to its UTC calendar date (ISO).
+
+    Alpaca returns epoch timestamps; interpreting them in UTC gives a stable,
+    server-timezone-independent label for each daily bar. This replaces the
+    previous mix of server-local time (performance, sanity) and UTC (compare),
+    which let bar dates drift by a day depending on the host machine's clock.
+    """
+    return datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc).date().isoformat()

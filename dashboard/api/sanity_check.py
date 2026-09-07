@@ -12,8 +12,8 @@ from typing import Any
 
 from dashboard.api.db import insert_notification, log_audit_event
 from dashboard.api.deps import get_config
-from dashboard.api.live_equity import live_equity, patch_today
-from dashboard.api.routers.performance import _fetch_benchmark, _to_cumulative
+from dashboard.api.live_equity import live_equity, patch_today, ts_to_date
+from dashboard.api.routers.performance import _anchor_cumulative, _fetch_benchmark, _to_cumulative
 from dashboard.api.user_store import get_user_settings
 from shariah_algo_trader.config import Config
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
@@ -75,7 +75,7 @@ def run_performance_sanity_check(
     client = AlpacaClient(api_key, api_secret, base_url)
 
     try:
-        history = client.get("/v2/account/portfolio/history?period=1M&timeframe=1D")
+        history = client.get("/v2/account/portfolio/history?period=all&timeframe=1D")
         timestamps = history.get("timestamp", [])
         equities = history.get("equity", [])
     except AlpacaError as exc:
@@ -119,7 +119,7 @@ def run_performance_sanity_check(
             "checked_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         }
 
-    dates = [datetime.date.fromtimestamp(ts).isoformat() for ts in timestamps]
+    dates = [ts_to_date(ts) for ts in timestamps]
     equities_f = [float(e) if e is not None else float("nan") for e in equities]
 
     try:
@@ -140,7 +140,7 @@ def run_performance_sanity_check(
         }
 
     port_returns = equity_series.pct_change().fillna(0)
-    port_cumulative = ((1 + port_returns).cumprod() - 1).round(6).tolist()
+    port_cumulative = _anchor_cumulative(equity_series)
 
     start_date = equity_series.index[0].date()
     end_date = equity_series.index[-1].date()
