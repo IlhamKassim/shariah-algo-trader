@@ -82,11 +82,11 @@ function Pill({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border-0 font-[inherit] whitespace-nowrap cursor-pointer transition-colors ${
+      className={`rounded-[var(--r-btn)] border-0 font-[inherit] whitespace-nowrap cursor-pointer transition-colors ${
         small ? "text-[12.5px] px-4 py-2" : "text-[13.5px] px-5 py-2.5"
       } ${
         active
-          ? "bg-[var(--c-card)] text-[var(--c-ink)] font-semibold shadow-[0_1px_3px_rgba(20,25,35,0.12)]"
+          ? "bg-[var(--c-card)] text-[var(--c-ink)] font-semibold shadow-[var(--sh-card)]"
           : "bg-transparent text-[var(--c-mid)] font-medium hover:text-[var(--c-ink)]"
       }`}
     >
@@ -110,7 +110,7 @@ function Card({
 }) {
   return (
     <section
-      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] rounded-[26px] p-[22px] ${className}`}
+      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] ${className}`}
     >
       <div className="flex items-center justify-between gap-3.5">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -129,7 +129,7 @@ function Metric({ label, value, color }: { label: string; value: string; color?:
     <div className="min-w-0">
       <div className="text-[12.5px] leading-[1.5] text-[var(--c-mid)]">{label}</div>
       <div
-        className="console-display text-[26px] font-medium tracking-[-0.02em] mt-2 whitespace-nowrap tabular-nums"
+        className="console-figure text-[26px] font-medium tracking-[-0.02em] mt-2 whitespace-nowrap tabular-nums"
         style={{ color: color ?? "var(--c-ink)" }}
       >
         {value}
@@ -151,12 +151,12 @@ function StatTile({
   tone?: string;
 }) {
   return (
-    <div className="min-w-0 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+    <div className="min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
       <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
         {label}
       </div>
       <div
-        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
+        className="console-figure text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
         style={tone ? { color: tone } : undefined}
       >
         {value}
@@ -234,7 +234,7 @@ function ChartTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[var(--c-card)] rounded-[14px] px-3.5 py-2.5 shadow-[0_8px_24px_rgba(20,25,35,0.16)]">
+    <div className="bg-[var(--c-card)] rounded-[var(--r-card)] px-3.5 py-2.5 shadow-[var(--sh-pop)]">
       <div className="text-[11px] text-[var(--c-mute)] whitespace-nowrap">{label}</div>
       {payload.map((p) => (
         <div
@@ -460,7 +460,7 @@ export function Console() {
                     {p.current_price.toFixed(2)}
                   </span>
                   <span
-                    className="px-2.5 py-[5px] rounded-full text-[12px] font-semibold whitespace-nowrap"
+                    className="px-2.5 py-[5px] rounded-[var(--r-chip)] text-[12px] font-semibold whitespace-nowrap"
                     style={{
                       background:
                         p.unrealized_pl_pct >= 0 ? "rgba(31,169,113,0.13)" : "rgba(222,74,79,0.12)",
@@ -481,7 +481,7 @@ export function Console() {
         {/* ---------------------------------------------------------------- */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-7 items-center pt-1.5 pb-[18px]">
           <div className="min-w-0">
-            <h1 className="console-display m-0 font-light text-[66px] leading-none tracking-[-0.035em]">
+            <h1 className="console-display m-0 text-[66px] leading-[0.95] tracking-[-0.015em]">
               My Portfolio
             </h1>
             {/* One proportion bar for the whole book. The comp used two bars
@@ -489,21 +489,18 @@ export function Console() {
                 collapsed a slice to nothing whenever cash was small, so this
                 shows the actual equity/cash split once instead. */}
             <div className="mt-[34px] max-w-[440px]">
-              <div className="flex items-center gap-1.5 p-[7px] bg-white/55 rounded-full">
+              {/* Flat solids, not the striped gradients this started with:
+                  §A6.4 bans gradient surface fills, and at this size the
+                  stripe read as texture rather than as a proportion. */}
+              <div className="flex items-center gap-1.5 p-[7px] bg-[var(--c-soft)] border border-[var(--c-line)] rounded-[var(--r-inset)]">
                 <span
-                  className="h-11 rounded-full block min-w-[18px]"
-                  style={{
-                    flex: Math.max(invested, 0),
-                    background: "repeating-linear-gradient(115deg,#4E90F0 0 6px,#2E6FE0 6px 12px)",
-                  }}
+                  className="h-9 rounded-[var(--r-chip)] block min-w-[18px] bg-[var(--c-blue)]"
+                  style={{ flex: Math.max(invested, 0) }}
                   title={`Equity holdings ${money(invested, 0)}`}
                 />
                 <span
-                  className="h-11 rounded-full block min-w-[18px]"
-                  style={{
-                    flex: Math.max(cash, 0),
-                    background: "repeating-linear-gradient(90deg,#F6CB5C 0 5px,#EFBE42 5px 10px)",
-                  }}
+                  className="h-9 rounded-[var(--r-chip)] block min-w-[18px] bg-[var(--c-amber)]"
+                  style={{ flex: Math.max(cash, 0) }}
                   title={`Cash buffer ${money(cash, 0)}`}
                 />
               </div>
@@ -558,7 +555,7 @@ export function Console() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pt-9">
               <span className="text-[15px] text-[var(--c-mid)]">Total portfolio value</span>
-              <span className="console-display text-[42px] tracking-[-0.03em] tabular-nums">
+              <span className="console-figure text-[42px] tracking-[-0.03em] tabular-nums">
                 {money(totalValue)}
               </span>
               <span
@@ -570,7 +567,7 @@ export function Console() {
               </span>
               <Link
                 to="/performance"
-                className="flex items-center gap-2.5 bg-[var(--c-card)] rounded-full px-5 py-2.5 text-[13.5px] font-semibold !text-[var(--c-ink)] shadow-[0_2px_8px_rgba(20,25,35,0.1)] hover:opacity-85 transition-opacity"
+                className="flex items-center gap-2.5 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-btn)] px-5 py-2.5 text-[13.5px] font-semibold !text-[var(--c-ink)] shadow-[var(--sh-card)] hover:opacity-85 transition-opacity"
               >
                 View performance <span className="text-[12px]">↗</span>
               </Link>
@@ -642,7 +639,7 @@ export function Console() {
         {needsAlpaca && <OnboardingTutorial />}
 
         {needsFirstAllocation && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
             <div className="min-w-0">
               <div className="text-[14px] font-semibold">Account funded — no positions yet</div>
               <div className="text-[12.5px] text-[var(--c-mid)] mt-1 leading-[1.5]">
@@ -653,7 +650,7 @@ export function Console() {
             <button
               type="button"
               onClick={() => setRebalanceOpen(true)}
-              className="shrink-0 border-0 rounded-full bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] cursor-pointer hover:opacity-90 transition-opacity"
+              className="shrink-0 border-0 rounded-[var(--r-btn)] bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] cursor-pointer hover:opacity-90 transition-opacity"
             >
               Allocate portfolio
             </button>
@@ -663,13 +660,13 @@ export function Console() {
         {/* ---------------------------------------------------------------- */}
         {/* sheet                                                            */}
         {/* ---------------------------------------------------------------- */}
-        <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[60vh]">
+        <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[60vh]">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(430px,100%),1fr))] gap-[22px] items-start">
             {(
               <Card
                 title="Performance"
                                 icon={
-                  <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] flex items-center justify-center">
+                  <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] flex items-center justify-center">
                     <span className="w-[9px] h-[9px] border-[1.5px] border-white rounded-[2px] block" />
                   </span>
                 }
@@ -725,7 +722,7 @@ export function Console() {
                           </ComposedChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="h-full flex items-center justify-center border border-dashed border-[var(--c-line)] rounded-[10px] text-[13px] text-[var(--c-mute)]">
+                        <div className="h-full flex items-center justify-center border border-dashed border-[var(--c-line)] rounded-[var(--r-inset)] text-[13px] text-[var(--c-mute)]">
                           No performance history yet
                         </div>
                       )}
@@ -739,7 +736,7 @@ export function Console() {
                     </div>
                   </div>
 
-                  <div className="min-w-0 bg-[var(--c-soft)] rounded-[20px] p-5 flex flex-col justify-between gap-[22px]">
+                  <div className="min-w-0 bg-[var(--c-soft)] rounded-[var(--r-inset)] p-5 flex flex-col justify-between gap-[22px]">
                     <Metric
                       label="Sharpe ratio"
                       value={compare ? compare.shariah.sharpe_ratio.toFixed(2) : "—"}
@@ -815,7 +812,7 @@ export function Console() {
                         type="button"
                         onClick={() => setSignalTab(t)}
                         aria-pressed={signalTab === t}
-                        className={`border-0 rounded-full cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
+                        className={`border-0 rounded-[var(--r-btn)] cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
                           signalTab === t
                             ? "bg-[var(--c-ink)] text-white"
                             : "bg-[var(--c-soft)] text-[var(--c-mid)]"
@@ -828,7 +825,7 @@ export function Console() {
                   })}
                 </div>
 
-                <div className="flex items-center gap-3 bg-[var(--c-soft)] rounded-full p-2 pl-5">
+                <div className="flex items-center gap-3 bg-[var(--c-soft)] rounded-[var(--r-inset)] p-2 pl-5">
                   <span className="flex-1 min-w-0 text-[13px] text-[var(--c-mid)]">
                     {isComputing ? "Recomputing factor ranks…" : "Re-rank the Eligible Universe"}
                   </span>
@@ -836,7 +833,7 @@ export function Console() {
                     type="button"
                     onClick={runScan}
                     disabled={!!isComputing}
-                    className="border-0 rounded-full bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] whitespace-nowrap cursor-pointer disabled:cursor-wait hover:opacity-90 transition-opacity"
+                    className="border-0 rounded-[var(--r-btn)] bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] whitespace-nowrap cursor-pointer disabled:cursor-wait hover:opacity-90 transition-opacity"
                   >
                     {isComputing ? "Working" : "Run scan"}
                   </button>
@@ -849,7 +846,7 @@ export function Console() {
             <Card
               title="Holdings"
               icon={
-                <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-blue)] block" />
+                <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-blue)] block" />
               }
               aside={
                 <div className="flex items-center gap-3 flex-wrap">
@@ -870,7 +867,7 @@ export function Console() {
                     <button
                       type="button"
                       onClick={() => setExpandHoldings((v) => !v)}
-                      className="rounded-full border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
+                      className="rounded-[var(--r-btn)] border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
                     >
                       {expandHoldings ? "Show less" : "See all"}
                     </button>
@@ -910,14 +907,14 @@ export function Console() {
                   <div className="flex items-center gap-2">
                     <Link
                       to="/ledger"
-                      className="rounded-full border border-[var(--c-line)] bg-transparent !text-[var(--c-mid)] hover:!text-[var(--c-ink)] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap"
+                      className="rounded-[var(--r-btn)] border border-[var(--c-line)] bg-transparent !text-[var(--c-mid)] hover:!text-[var(--c-ink)] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap"
                     >
                       Full log
                     </Link>
                     <button
                       type="button"
                       onClick={() => setExpandOrders((v) => !v)}
-                      className="rounded-full border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
+                      className="rounded-[var(--r-btn)] border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
                     >
                       {expandOrders ? "Show less" : "See all"}
                     </button>

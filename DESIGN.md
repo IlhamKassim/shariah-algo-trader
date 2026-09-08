@@ -22,11 +22,16 @@
 
 ## A1. Visual Atmosphere & Philosophy
 
-- **Style**: **Soft Editorial Fintech**. Light, airy, generous radii.
+- **Style**: **Precise Editorial Fintech**. Light, airy, tight radii, hairline structure.
 - **Tone**: Calm, legible, confident. Built for an operator reading positions at a glance rather than scanning a trading pit.
 - **Density**: Medium (5/10). Whitespace is load-bearing — resist packing cards.
-- **Geometry**: Generous rounding. Sheets `34px`, cards `26px`, inner panels `20px`, controls `999px` (full pill). No hairline grid.
-- **Elevation**: Soft, low-opacity shadows (`0 1px 2px` → `0 8px 24px rgba(20,25,35,0.06–0.16)`). Never a border where a shadow will do.
+- **Geometry**: Tight, flat rounding on a five-step scale. Sheets `16px`, cards `14px`, inner panels/tiles `10px`, buttons and inputs `8px`, chips and badges `6px`. `999px` is reserved for genuinely circular geometry — status dots, avatars, toggle tracks and thumbs, progress rails — and never for a padded control.
+- **Elevation**: Near-flat. The hairline in `--c-line` separates surfaces; `--sh-card` is a whisper (`0 1px 2px rgba(16,17,20,0.04)`) and `--sh-pop` (`0 8px 24px rgba(16,17,20,0.10)`) is reserved for things that genuinely float above the page — tooltips, menus, modals.
+
+> This section was rewritten in Sep 2026. The system it replaced used generous
+> radii (`20/26/34/999`), Manrope + Poppins, a blue-grey `#DCE3EC` ground, and
+> shadow-only separation. If you find code still on those values, it is
+> unmigrated, not a second valid style.
 
 ## A2. Color Palette & Functional Tokens
 
@@ -35,15 +40,15 @@ pages are unaffected. Consume them as `bg-[var(--c-card)]`, never as raw hex.
 
 | Token | Hex | Role |
 | :--- | :--- | :--- |
-| `--c-page` | `#DCE3EC` | Page ground — cool blue-gray. |
-| `--c-sheet` | `#EFF1F5` | The lifted content sheet (rounded top, holds the card grid). |
-| `--c-card` | `#FFFFFF` | Card surface. |
-| `--c-soft` | `#F4F6F8` | Inset panel inside a card (metric rails, chat bubbles, input tracks). |
-| `--c-line` | `#E3E7ED` | Row separators and dashed placeholders. Used sparingly. |
-| `--c-ink` | `#15181D` | Primary text, active pill fill, logo mark. |
-| `--c-mid` | `#5C6472` | Secondary text, labels, descriptions. |
-| `--c-mute` | `#8B93A1` | Tertiary text, axis ticks, timestamps. |
-| `--c-blue` | `#2563EB` | Primary action, strategy series, emphasis figures. |
+| `--c-page` | `#F7F7F8` | Page ground — near-neutral, barely off-white. |
+| `--c-sheet` | `#FCFCFC` | The lifted content sheet (rounded top, holds the card grid). |
+| `--c-card` | `#FFFFFF` | Card surface. Always paired with a `--c-line` border. |
+| `--c-soft` | `#F4F4F5` | Inset panel inside a card (metric rails, chat bubbles, input tracks). |
+| `--c-line` | `#E4E4E7` | **Primary separator.** Card borders, input borders, row rules. |
+| `--c-ink` | `#1A1A1A` | Primary text, active chip fill, logo mark. |
+| `--c-mid` | `#52525B` | Secondary text, labels, descriptions. |
+| `--c-mute` | `#8E8E96` | Tertiary text, axis ticks, timestamps. |
+| `--c-blue` | `#005EEE` | Primary action, strategy series, emphasis figures. |
 | `--c-sky` | `#93C0F5` | Benchmark series, secondary plot strokes. |
 | `--c-green` | `#1FA971` | Positive P&L, Buy signals, compliance passes. |
 | `--c-red` | `#DE4A4F` | Negative P&L, Exit signals, risk. |
@@ -54,36 +59,60 @@ pages are unaffected. Consume them as `bg-[var(--c-card)]`, never as raw hex.
 > card surface. The blue→violet gradient is reserved for identity marks
 > (avatar, Engine Signals glyph); it is never a background or a button fill.
 
+### Geometry and elevation tokens
+
+Consume these too — never a raw `rounded-[26px]` or a hand-rolled `rgba()` shadow.
+
+| Token | Value | Role |
+| :--- | :--- | :--- |
+| `--r-chip` | `6px` | Chips, badges, P&L pills, BUY/SELL tags. |
+| `--r-btn` | `8px` | Buttons, inputs, selects, segmented options. |
+| `--r-inset` | `10px` | Tiles, inset panels, segmented tracks, floating bars. |
+| `--r-card` | `14px` | Cards, tooltips. |
+| `--r-sheet` | `16px` | The page sheet. |
+| `--sh-card` | `0 1px 2px rgba(16,17,20,0.04)` | Resting surfaces. Optional — the border does the work. |
+| `--sh-pop` | `0 8px 24px rgba(16,17,20,0.10)` | Only what floats: tooltips, menus, modals. |
+
 ## A3. Typographic Architecture
 
-Two tiers. There is no serif tier in the Console system.
+Three tiers. **Serif sets words; Inter sets numbers.** The split is the whole
+idea: the serif gives the page its editorial voice, and holding every figure in
+tabular Inter keeps a refreshing value from reflowing its own row.
 
-### Tier 1: Display (`.console-display`)
-- **Stack**: `"Poppins", "Manrope", system-ui, sans-serif`
-- **Usage**: Page title, total portfolio value, metric figures.
-- **Style**: Light-to-regular (`300`–`500`), heavily track-tight (`-0.02em` to `-0.035em`). Large and calm — `66px/300` for the page title, `42px/400` for the headline value.
+### Tier 1a: Display words (`.console-display`)
+- **Stack**: `"Instrument Serif", "Newsreader", Georgia, serif`
+- **Usage**: Page titles and section headings. Words only — never a figure.
+- **Style**: Instrument Serif ships **one weight (400)**. Never apply `font-light`/`font-medium`/`font-semibold` to it; the browser would synthesise the weight and the result is mush. Tracking stays near zero (`0` to `-0.005em`) — the negative tracking in the old Poppins tier is wrong for a serif.
 
-### Tier 2: Interface (`Manrope`, the `.console-root` default)
-- **Stack**: `"Manrope", system-ui, sans-serif`
+### Tier 1b: Display figures (`.console-figure`)
+- **Stack**: `"Inter", system-ui, sans-serif`, `font-variant-numeric: tabular-nums`
+- **Usage**: Total portfolio value, metric figures, stat tiles, tickers — anything numeric and large.
+- **Style**: `400`–`500`, track-tight (`-0.02em` to `-0.03em`).
+
+### Tier 2: Interface (`Inter`, the `.console-root` default)
+- **Stack**: `"Inter", system-ui, -apple-system, sans-serif`
 - **Usage**: Everything else — labels, body, buttons, table rows, signals.
 - **Scale**: `11px` ticks · `12–12.5px` meta · `13–13.5px` body/controls · `16px` card titles · `19px` ticker figures.
 
 ### Numerals
 - Every figure that can change gets `tabular-nums`. No exceptions — it is what stops the ticker strip and metric rail from jittering on refresh.
-- There is **no monospace tier**. Tabular Manrope/Poppins replaces it.
+- There is **no monospace tier**. Tabular Inter replaces it.
+- **A number never gets `.console-display`.** If it is numeric, it is `.console-figure`.
 
 ## A4. Component Construction Rules
 
 ### A. Cards
-- Shell: `bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4`.
+- Shell: `bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4`.
+- The border is **not optional**. The ground is near-white, so a borderless card has nothing to separate it from the page.
 - Header: a 22px glyph + `16px/600` title, with optional right-aligned control.
 - Glyphs are solid geometry (rounded square, circle, gradient dot) — **not** icon-library pictograms.
 
 ### B. Controls
-- **Pill button**: `rounded-full`, `13.5px/500` (or `12.5px/500` small). Active state is `bg-[var(--c-card)]` + `600` weight + `0 1px 3px` shadow *inside* a `--c-card` track; inactive is transparent with `--c-mid` text.
-- **Segmented control**: pills inside a `p-[5px] bg-[var(--c-card)] rounded-full` track.
-- **Filter chip**: active `bg-[var(--c-ink)] text-white`, inactive `bg-[var(--c-soft)] text-[var(--c-mid)]`.
-- **Primary CTA**: `bg-[var(--c-blue)] text-white rounded-full px-5 py-[11px] text-[12.5px]/600`.
+- **Button**: `rounded-[var(--r-btn)]`, `13.5px/500` (or `12.5px/500` small). Active state is `bg-[var(--c-card)]` + `600` weight + `--sh-card` *inside* a `--c-inset` track; inactive is transparent with `--c-mid` text.
+- **Segmented control**: options at `--r-btn` inside a `p-[5px] rounded-[var(--r-inset)]` track. The travelling indicator matches the option radius and carries no border of its own — it sits inside the track's.
+- **Filter chip**: `rounded-[var(--r-chip)]`; active `bg-[var(--c-ink)] text-white`, inactive `bg-[var(--c-soft)] text-[var(--c-mid)]`.
+- **Primary CTA**: `bg-[var(--c-blue)] text-white rounded-[var(--r-btn)] px-5 py-[11px] text-[12.5px]/600`.
+- **Input / select**: `bg-[var(--c-soft)] border border-[var(--c-line)] rounded-[var(--r-btn)]`, focus swaps the border to `--c-blue`. Use `inputClass` from `console/controls.tsx`.
 - Every toggle carries `aria-pressed`. Every icon-only control carries `aria-label`.
 
 ### C. Lists (activity, signals)
@@ -95,7 +124,7 @@ Two tiers. There is no serif tier in the Console system.
 - Axes: no axis line, no tick line, `11px` `--c-mute` labels.
 - Strategy series: solid `#2563EB` 2px + top-down area gradient at `0.28 → 0` opacity.
 - Benchmark series: `#8FB6EC` 2px `strokeDasharray="7 7"`, no dots.
-- Tooltip: `--c-card`, `rounded-[14px]`, `0 8px 24px rgba(20,25,35,0.16)`, no border.
+- Tooltip: `--c-card`, `rounded-[var(--r-card)]`, `--sh-pop`, no border — it floats, so the shadow separates it and a hairline would double-draw.
 
 ## A5. Motion & Interaction
 
@@ -121,18 +150,22 @@ them rather than re-rolling a toggle or a range input per page.
 
 ## A6. Banned Patterns
 
-1. **NO sharp corners.** Nothing in the Console system is `rounded-none`.
-2. **NO hairline borders as the primary separator.** Use shadow and surface contrast; reserve `--c-line` for row rules.
-3. **NO monospace.** Use `tabular-nums`.
-4. **NO gradient fills on surfaces or buttons.** The blue→violet gradient is for identity marks only.
-5. **NO icon spam.** Solid geometric glyphs, one per card header.
-6. **NO fabricated data.** See §C.
+1. **NO sharp corners.** Nothing with a background or border in the Console system is `rounded-none`. (An unstyled `<a>` or icon `<button>` with no surface may compute to `0px`; that is not a violation.)
+2. **NO pills on padded controls.** `rounded-full` is for circular geometry only — dots, avatars, toggle tracks/thumbs, progress rails. A button, chip, input or tab uses the radius scale.
+3. **NO raw radius or shadow literals.** Use `--r-*` and `--sh-*`, never `rounded-[26px]` or a hand-written `rgba()` shadow.
+4. **NO serif on a number, and no weight class on the serif.** See §A3.
+5. **NO monospace.** Use `tabular-nums`.
+6. **NO gradient fills on surfaces or buttons.** The blue→violet gradient is for identity marks only. This includes decorative `repeating-linear-gradient` stripes on proportion bars — use flat token colours.
+7. **NO icon spam.** Solid geometric glyphs, one per card header.
+8. **NO fabricated data.** See §C.
 
 ## A7. Verification Checklist
 
 - [ ] Does every surface use a `--c-*` token rather than a raw hex?
 - [ ] Do all changing figures carry `tabular-nums`?
-- [ ] Are radii on the `20 / 26 / 34 / 999` scale?
+- [ ] Are radii drawn from `--r-chip / --r-btn / --r-inset / --r-card / --r-sheet`, with `rounded-full` only on circular geometry?
+- [ ] Does every card carry `border border-[var(--c-line)]`?
+- [ ] Is every number in `.console-figure` (Inter) and every serif heading free of weight classes?
 - [ ] Do toggles carry `aria-pressed`, and icon-only controls `aria-label`?
 - [ ] Does every displayed number trace to an API response? (§C)
 - [ ] Does the page avoid `rounded-none`, `font-mono`, and gradient button fills?

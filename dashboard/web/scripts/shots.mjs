@@ -22,15 +22,13 @@ const ROUTES = process.argv.slice(2).length
   ? process.argv.slice(2)
   : [
       "/console",
-      "/app",
-      "/app/portfolio",
-      "/app/universe",
-      "/app/activity",
-      "/app/compare",
-      "/app/day-trader",
-      "/app/learn",
-      "/app/settings",
-      "/app/profile",
+      "/performance",
+      "/universe",
+      "/ledger",
+      "/account",
+      "/day-trader",
+      "/learn",
+      "/notifications",
     ];
 
 const VIEWPORTS = [

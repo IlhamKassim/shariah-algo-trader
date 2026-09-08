@@ -190,7 +190,7 @@ function Accordion({ topic, ctx, open, onToggle }: {
   onToggle: () => void;
 }) {
   return (
-    <div className="bg-[var(--c-card)] rounded-[26px] overflow-hidden">
+    <div className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
@@ -248,9 +248,9 @@ export function Learn() {
 
   return (
     <ConsoleShell breadcrumb="Learn">
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
-        <section className="bg-[var(--c-card)] rounded-[26px] p-[26px] flex flex-col gap-4">
-          <h1 className="console-display text-[38px] font-light tracking-[-0.03em] leading-[1.1]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[26px] flex flex-col gap-4">
+          <h1 className="console-display text-[38px] tracking-[-0.005em] leading-[1.15]">
             How your engine decides
           </h1>
           <p className="text-[13.5px] text-[var(--c-mid)] leading-[1.6] max-w-[68ch]">
@@ -268,11 +268,11 @@ export function Learn() {
               { k: "Sector cap", v: `${ctx.maxPerSector} per sector`, s: `${(ctx.sectorCap * 100).toFixed(0)}% ceiling` },
               { k: "Drift trigger", v: `${(ctx.drift * 100).toFixed(1)}%`, s: "Early rebalance" },
             ].map((t) => (
-              <div key={t.k} className="bg-[var(--c-soft)] rounded-[16px] px-4 py-3 min-w-0">
+              <div key={t.k} className="bg-[var(--c-soft)] rounded-[var(--r-card)] px-4 py-3 min-w-0">
                 <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em]">
                   {t.k}
                 </div>
-                <div className="console-display text-[19px] mt-1 tracking-[-0.02em] truncate">
+                <div className="console-figure text-[19px] mt-1 tracking-[-0.02em] truncate">
                   {t.v}
                 </div>
                 <div className="text-[11.5px] text-[var(--c-mute)] mt-0.5">{t.s}</div>
@@ -281,15 +281,15 @@ export function Learn() {
           </div>
         </section>
 
-        <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
-            <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] block" />
+            <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
             <h2 className="text-[16px] font-semibold tracking-[-0.01em]">The four factors</h2>
             <span className="text-[12.5px] text-[var(--c-mute)]">equally weighted</span>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4">
             {FACTORS.map((f) => (
-              <div key={f.name} className="bg-[var(--c-soft)] rounded-[20px] p-5 min-w-0 flex flex-col gap-2">
+              <div key={f.name} className="bg-[var(--c-soft)] rounded-[var(--r-inset)] p-5 min-w-0 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"

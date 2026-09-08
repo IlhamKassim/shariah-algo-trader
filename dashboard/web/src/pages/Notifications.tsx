@@ -25,12 +25,12 @@ const relTime = (iso: string) => {
 
 function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) {
   return (
-    <div className="min-w-0 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+    <div className="min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
       <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
         {label}
       </div>
       <div
-        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums"
+        className="console-figure text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums"
         style={tone ? { color: tone } : undefined}
       >
         {value}
@@ -97,14 +97,14 @@ export function Notifications() {
             type="button"
             onClick={() => markAll.mutate()}
             disabled={unread === 0 || markAll.isPending}
-            className="border-0 rounded-full bg-[var(--c-card)] text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12.5px] font-semibold px-5 py-2.5 whitespace-nowrap cursor-pointer shadow-[0_1px_2px_rgba(20,25,35,0.06)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="border-0 rounded-[var(--r-btn)] bg-[var(--c-card)] text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12.5px] font-semibold px-5 py-2.5 whitespace-nowrap cursor-pointer shadow-[var(--sh-card)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {markAll.isPending ? "Marking…" : "Mark all read"}
           </button>
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3.5">
           <Tile label="Unread" value={String(unread)} sub={`${items.length} total`} tone={unread ? "var(--c-blue)" : undefined} />
           <Tile
@@ -121,10 +121,10 @@ export function Notifications() {
           />
         </div>
 
-        <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4 min-w-0">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
           <div className="flex items-center justify-between gap-3.5 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] block" />
+              <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
               <h2 className="text-[16px] font-semibold tracking-[-0.01em]">Notifications</h2>
               <span className="text-[12.5px] text-[var(--c-mute)] tabular-nums whitespace-nowrap">
                 {rows.length} of {items.length}
@@ -138,7 +138,7 @@ export function Notifications() {
                     type="button"
                     onClick={() => setCategory((cur) => (cur === c ? null : c))}
                     aria-pressed={category === c}
-                    className={`border-0 rounded-full cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
+                    className={`border-0 rounded-[var(--r-btn)] cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
                       category === c
                         ? "bg-[var(--c-ink)] text-white"
                         : "bg-[var(--c-soft)] text-[var(--c-mid)]"
@@ -193,13 +193,13 @@ export function Notifications() {
                             {n.title}
                           </span>
                           <span
-                            className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold whitespace-nowrap"
+                            className="px-2 py-0.5 rounded-[var(--r-chip)] text-[10.5px] font-semibold whitespace-nowrap"
                             style={{ background: sev.bg, color: sev.tone }}
                           >
                             {sev.label}
                           </span>
                           {n.category && (
-                            <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-[var(--c-soft)] text-[var(--c-mute)] whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-[var(--r-chip)] text-[10.5px] font-semibold bg-[var(--c-soft)] text-[var(--c-mute)] whitespace-nowrap">
                               {n.category}
                             </span>
                           )}
@@ -216,7 +216,7 @@ export function Notifications() {
                         <button
                           type="button"
                           onClick={() => markOne.mutate(n.id)}
-                          className="shrink-0 rounded-full border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
+                          className="shrink-0 rounded-[var(--r-btn)] border border-[var(--c-line)] bg-transparent text-[var(--c-mid)] hover:text-[var(--c-ink)] font-[inherit] text-[12px] font-semibold px-3.5 py-2 whitespace-nowrap cursor-pointer transition-colors"
                         >
                           Mark read
                         </button>

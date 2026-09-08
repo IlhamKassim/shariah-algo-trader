@@ -53,34 +53,63 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
- * Portfolio Console palette (see DESIGN.md §2 "Console" surface).
- * Scoped to .console-root so the legacy obsidian pages are unaffected until
- * they are migrated onto this system.
+ * Portfolio Console palette (see DESIGN.md §A "Console" surface).
+ * Scoped to .console-root so the legacy obsidian pages are unaffected.
+ *
+ * The ground is near-neutral rather than blue-grey, so surface contrast alone
+ * no longer separates a card from the page — the hairline in --c-line does
+ * that work. Cards therefore carry a border, not a shadow (DESIGN.md §A4a).
  * ------------------------------------------------------------------------ */
 .console-root {
-  --c-page: #dce3ec;
-  --c-sheet: #eff1f5;
+  --c-page: #f7f7f8;
+  --c-sheet: #fcfcfc;
   --c-card: #ffffff;
-  --c-soft: #f4f6f8;
-  --c-line: #e3e7ed;
-  --c-ink: #15181d;
-  --c-mid: #5c6472;
-  --c-mute: #8b93a1;
-  --c-blue: #2563eb;
+  --c-soft: #f4f4f5;
+  --c-line: #e4e4e7;
+  --c-ink: #1a1a1a;
+  --c-mid: #52525b;
+  --c-mute: #8e8e96;
+  --c-blue: #005eee;
   --c-sky: #93c0f5;
   --c-green: #1fa971;
   --c-red: #de4a4f;
   --c-amber: #f0be43;
   --c-violet: #7c5cfc;
 
+  /* Geometry. A tight, flat scale — buttons 8, chips 6, cards 14.
+     Only genuinely circular things (dots, pips, avatars, progress
+     tracks) use 999px, and they say so at the call site. */
+  --r-chip: 6px;
+  --r-btn: 8px;
+  --r-inset: 10px;
+  --r-card: 14px;
+  --r-sheet: 16px;
+
+  /* Elevation is near-flat; the hairline carries separation. --sh-pop is
+     reserved for things that genuinely float (tooltips, menus, modals). */
+  --sh-card: 0 1px 2px rgba(16, 17, 20, 0.04);
+  --sh-pop: 0 8px 24px rgba(16, 17, 20, 0.1);
+
   background: var(--c-page);
   color: var(--c-ink);
-  font-family: "Manrope", system-ui, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Tier 1a — display *words*: page titles, section headings. Serif.
+   Instrument Serif ships a single 400 weight, so never ask it for a
+   lighter or heavier one; the browser would synthesise it. */
 .console-display {
-  font-family: "Poppins", "Manrope", system-ui, sans-serif;
+  font-family: "Instrument Serif", "Newsreader", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Tier 1b — display *numbers*: every figure that can change. Inter, so
+   digits stay tabular and a refreshing value cannot reflow its row. */
+.console-figure {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes pip {

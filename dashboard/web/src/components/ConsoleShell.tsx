@@ -58,15 +58,15 @@ export function ConsoleShell({
           </Link>
 
           <div className="flex items-center gap-2 flex-1 justify-center flex-wrap">
-            <div className="flex gap-1 p-[5px] bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)] flex-wrap">
+            <div className="flex gap-1 p-[5px] bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] shadow-[var(--sh-card)] flex-wrap">
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `rounded-full text-[12.5px] px-4 py-2 whitespace-nowrap transition-colors ${
+                    `rounded-[var(--r-btn)] text-[12.5px] px-4 py-2 whitespace-nowrap transition-colors ${
                       isActive
-                        ? "bg-[var(--c-soft)] !text-[var(--c-ink)] font-semibold shadow-[0_1px_3px_rgba(20,25,35,0.12)]"
+                        ? "bg-[var(--c-soft)] !text-[var(--c-ink)] font-semibold shadow-[var(--sh-card)]"
                         : "!text-[var(--c-mid)] hover:!text-[var(--c-ink)] font-medium"
                     }`
                   }
@@ -79,7 +79,7 @@ export function ConsoleShell({
             {/* Universe is configured in Settings, so this reports rather than toggles. */}
             <Link
               to="/account"
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)] !text-[var(--c-mid)] hover:!text-[var(--c-ink)]"
+              className="flex items-center gap-2.5 px-4 py-2.5 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-btn)] shadow-[var(--sh-card)] !text-[var(--c-mid)] hover:!text-[var(--c-ink)]"
               title="Change the Eligible Universe ETF in Settings"
             >
               <span className="w-[15px] h-[15px] shrink-0 rounded-full border-[1.5px] border-[var(--c-mute)] block" />
@@ -112,7 +112,7 @@ export function ConsoleShell({
             <Link
               to="/console"
               aria-label="Back to Console"
-              className="w-11 h-11 shrink-0 rounded-full bg-[var(--c-card)] flex items-center justify-center shadow-[0_2px_6px_rgba(20,25,35,0.07)] !text-[var(--c-ink)] text-base"
+              className="w-11 h-11 shrink-0 rounded-full bg-[var(--c-card)] flex items-center justify-center shadow-[var(--sh-card)] !text-[var(--c-ink)] text-base"
             >
               ←
             </Link>

@@ -53,12 +53,12 @@ function Tile({
   tone?: string;
 }) {
   return (
-    <div className="min-w-0 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+    <div className="min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
       <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
         {label}
       </div>
       <div
-        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
+        className="console-figure text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
         style={tone ? { color: tone } : undefined}
       >
         {value}
@@ -148,20 +148,20 @@ export function Ledger() {
             onChange={(e) => setSymbol(e.target.value)}
             placeholder="Filter by symbol…"
             aria-label="Filter the ledger by symbol"
-            className="bg-[var(--c-card)] rounded-full px-4 py-2.5 text-[13px] w-[180px] text-[var(--c-ink)] placeholder:text-[var(--c-mute)] border-0 shadow-[0_1px_2px_rgba(20,25,35,0.06)] focus:outline-none focus:ring-2 focus:ring-[var(--c-blue)]/30"
+            className="bg-[var(--c-card)] rounded-[var(--r-btn)] px-4 py-2.5 text-[13px] w-[180px] text-[var(--c-ink)] placeholder:text-[var(--c-mute)] border-0 shadow-[var(--sh-card)] focus:outline-none focus:ring-2 focus:ring-[var(--c-blue)]/30"
           />
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             aria-label="Filter the ledger by date"
-            className="bg-[var(--c-card)] rounded-full px-4 py-2.5 text-[13px] text-[var(--c-ink)] border-0 shadow-[0_1px_2px_rgba(20,25,35,0.06)] focus:outline-none focus:ring-2 focus:ring-[var(--c-blue)]/30 cursor-pointer"
+            className="bg-[var(--c-card)] rounded-[var(--r-btn)] px-4 py-2.5 text-[13px] text-[var(--c-ink)] border-0 shadow-[var(--sh-card)] focus:outline-none focus:ring-2 focus:ring-[var(--c-blue)]/30 cursor-pointer"
           />
           {date && (
             <button
               type="button"
               onClick={() => setDate("")}
-              className="border-0 rounded-full bg-[var(--c-ink)] text-white font-[inherit] text-[12px] font-semibold px-4 py-2.5 cursor-pointer hover:opacity-85 transition-opacity"
+              className="border-0 rounded-[var(--r-btn)] bg-[var(--c-ink)] text-white font-[inherit] text-[12px] font-semibold px-4 py-2.5 cursor-pointer hover:opacity-85 transition-opacity"
             >
               Clear date ×
             </button>
@@ -169,7 +169,7 @@ export function Ledger() {
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3.5">
           <Tile
             label="Bought"
@@ -196,10 +196,10 @@ export function Ledger() {
           />
         </div>
 
-        <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4 min-w-0">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
           <div className="flex items-center justify-between gap-3.5 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] block" />
+              <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
               <h2 className="text-[16px] font-semibold tracking-[-0.01em]">Trade ledger</h2>
               <span className="text-[12.5px] text-[var(--c-mute)] tabular-nums whitespace-nowrap">
                 {rows.length} of {entries.length}
@@ -212,7 +212,7 @@ export function Ledger() {
                   type="button"
                   onClick={() => setSide(s)}
                   aria-pressed={side === s}
-                  className={`border-0 rounded-full cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
+                  className={`border-0 rounded-[var(--r-btn)] cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
                     side === s
                       ? "bg-[var(--c-ink)] text-white"
                       : "bg-[var(--c-soft)] text-[var(--c-mid)]"
@@ -260,7 +260,7 @@ export function Ledger() {
                         className="flex items-center gap-4 py-3 border-b border-[var(--c-line)] last:border-b-0"
                       >
                         <span
-                          className="w-[46px] shrink-0 text-[11px] font-bold text-center rounded-full py-1"
+                          className="w-[46px] shrink-0 text-[11px] font-bold text-center rounded-[var(--r-chip)] py-1"
                           style={{
                             color: tone,
                             background: buy ? "rgba(31,169,113,0.13)" : "rgba(222,74,79,0.12)",

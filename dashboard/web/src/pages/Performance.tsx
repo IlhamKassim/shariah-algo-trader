@@ -48,12 +48,12 @@ function Card({
 }) {
   return (
     <section
-      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] rounded-[26px] p-[22px] ${className}`}
+      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] ${className}`}
     >
       <div className="flex items-center justify-between gap-3.5 flex-wrap">
         <div className="flex items-center gap-2.5 min-w-0">
           <span
-            className="w-[22px] h-[22px] shrink-0 rounded-[6px] block"
+            className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] block"
             style={{ background: swatch }}
           />
           <h2 className="text-[16px] font-semibold tracking-[-0.01em]">{title}</h2>
@@ -79,9 +79,9 @@ function Pill({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border-0 font-[inherit] text-[12.5px] px-4 py-2 whitespace-nowrap cursor-pointer transition-colors ${
+      className={`rounded-[var(--r-btn)] border-0 font-[inherit] text-[12.5px] px-4 py-2 whitespace-nowrap cursor-pointer transition-colors ${
         active
-          ? "bg-[var(--c-soft)] text-[var(--c-ink)] font-semibold shadow-[0_1px_3px_rgba(20,25,35,0.12)]"
+          ? "bg-[var(--c-soft)] text-[var(--c-ink)] font-semibold shadow-[var(--sh-card)]"
           : "bg-transparent text-[var(--c-mid)] font-medium hover:text-[var(--c-ink)]"
       }`}
     >
@@ -105,7 +105,7 @@ function Metric({
     <div className="min-w-0">
       <div className="text-[12px] text-[var(--c-mid)] leading-[1.45]">{label}</div>
       <div
-        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums whitespace-nowrap"
+        className="console-figure text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums whitespace-nowrap"
         style={tone ? { color: tone } : undefined}
       >
         {value}
@@ -128,7 +128,7 @@ function ChartTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[var(--c-card)] rounded-[14px] px-3.5 py-2.5 shadow-[0_8px_24px_rgba(20,25,35,0.16)]">
+    <div className="bg-[var(--c-card)] rounded-[var(--r-card)] px-3.5 py-2.5 shadow-[var(--sh-pop)]">
       <div className="text-[11px] text-[var(--c-mute)] whitespace-nowrap">{label}</div>
       {payload.map((p) => (
         <div
@@ -259,7 +259,7 @@ export function Performance() {
     <ConsoleShell
       breadcrumb="Performance"
       aside={
-        <div className="flex items-center gap-1 p-[5px] bg-[var(--c-card)] rounded-full shadow-[0_1px_2px_rgba(20,25,35,0.06)]">
+        <div className="flex items-center gap-1 p-[5px] bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] shadow-[var(--sh-card)]">
           {PERIODS.map((p) => (
             <Pill key={p} active={period === p} onClick={() => setPeriod(p)}>
               {p}
@@ -268,10 +268,10 @@ export function Performance() {
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
         {/* headline return figures */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3.5">
-          <div className="bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+          <div className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
             <Metric
               label="Strategy return"
               value={signed(strat * 100)}
@@ -279,10 +279,10 @@ export function Performance() {
               sub={`Cumulative · ${period === "All" ? "since inception" : `last ${period}`}`}
             />
           </div>
-          <div className="bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+          <div className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
             <Metric label={`${benchKey} return`} value={signed(bench * 100)} sub="Benchmark ETF" />
           </div>
-          <div className="bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+          <div className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
             <Metric
               label="Alpha vs benchmark"
               value={`${alpha >= 0 ? "+" : ""}${(alpha * 100).toFixed(2)} pts`}
@@ -290,7 +290,7 @@ export function Performance() {
               sub="Strategy minus benchmark"
             />
           </div>
-          <div className="bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+          <div className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
             <Metric
               label="Worst drawdown"
               value={`${(worstDd * 100).toFixed(2)}%`}
@@ -436,7 +436,7 @@ export function Performance() {
           }
         >
           {!loadingCompare && compare && !compare.daytrader_available && (
-            <div className="bg-[var(--c-soft)] rounded-[16px] px-4 py-3 text-[12.5px] text-[var(--c-mid)] leading-[1.55]">
+            <div className="bg-[var(--c-soft)] rounded-[var(--r-card)] px-4 py-3 text-[12.5px] text-[var(--c-mid)] leading-[1.55]">
               Day Trader account is not configured. Add{" "}
               <code className="text-[11.5px]">DAY_ALPACA_API_KEY</code> and{" "}
               <code className="text-[11.5px]">DAY_ALPACA_API_SECRET</code> to enable the benchmark
@@ -529,7 +529,7 @@ function LegendKey({ color, label, dashed }: { color: string; label: string; das
 
 function Placeholder({ text }: { text: string }) {
   return (
-    <div className="h-full flex items-center justify-center border border-dashed border-[var(--c-line)] rounded-[14px] text-[13px] text-[var(--c-mute)]">
+    <div className="h-full flex items-center justify-center border border-dashed border-[var(--c-line)] rounded-[var(--r-card)] text-[13px] text-[var(--c-mute)]">
       {text}
     </div>
   );

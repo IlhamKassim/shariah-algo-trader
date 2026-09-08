@@ -42,10 +42,10 @@ function Card({
   accent?: string;
 }) {
   return (
-    <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-5 min-w-0">
+    <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-5 min-w-0">
       <div className="flex items-start gap-2.5 min-w-0">
         <span
-          className="w-[22px] h-[22px] shrink-0 rounded-[6px] block mt-0.5"
+          className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] block mt-0.5"
           style={{ background: accent ?? "var(--c-ink)" }}
         />
         <div className="min-w-0">
@@ -83,7 +83,7 @@ function StrategyImpact({ topN, sectorCap, drift, equity }: {
     {
       k: "cap",
       label: "Max stocks per sector",
-      value: <Ticker value={maxPerSector} className="console-display text-[26px] tabular-nums" />,
+      value: <Ticker value={maxPerSector} className="console-figure text-[26px] tabular-nums" />,
       sub: truncated ? (
         <span className="text-[var(--c-amber)]">
           Enforced {effectivePct.toFixed(1)}%, not the {requestedPct.toFixed(0)}% you set — the
@@ -96,7 +96,7 @@ function StrategyImpact({ topN, sectorCap, drift, equity }: {
     {
       k: "sectors",
       label: "Sectors needed to fill",
-      value: <Ticker value={minSectors} className="console-display text-[26px] tabular-nums" />,
+      value: <Ticker value={minSectors} className="console-figure text-[26px] tabular-nums" />,
       sub:
         minSectors > 8
           ? "More than most screens supply — the book may end up under-filled"
@@ -109,7 +109,7 @@ function StrategyImpact({ topN, sectorCap, drift, equity }: {
         <Ticker
           value={equalWeight}
           format={(v) => money(v)}
-          className="console-display text-[26px] tabular-nums"
+          className="console-figure text-[26px] tabular-nums"
         />
       ),
       sub: `Sizing is inverse-volatility, capped at 2× this (${money(equalWeight * 2)})`,
@@ -121,7 +121,7 @@ function StrategyImpact({ topN, sectorCap, drift, equity }: {
         <Ticker
           value={driftDollars}
           format={(v) => money(v)}
-          className="console-display text-[26px] tabular-nums"
+          className="console-figure text-[26px] tabular-nums"
         />
       ),
       sub: `A position drifting ${(drift * 100).toFixed(1)}% from target forces an early rebalance`,
@@ -129,7 +129,7 @@ function StrategyImpact({ topN, sectorCap, drift, equity }: {
   ];
 
   return (
-    <div className="bg-[var(--c-soft)] rounded-[20px] p-5 grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-5">
+    <div className="bg-[var(--c-soft)] rounded-[var(--r-inset)] p-5 grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-5">
       {rows.map((r) => (
         <div key={r.k} className="min-w-0">
           <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em]">
@@ -217,9 +217,9 @@ export function Account() {
         />
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh] pb-24">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh] pb-24">
         {isDemo && (
-          <div className="bg-[rgba(240,190,67,0.16)] text-[#8A6D0F] rounded-[20px] px-5 py-3.5 text-[12.5px] leading-[1.55]">
+          <div className="bg-[rgba(240,190,67,0.16)] text-[#8A6D0F] rounded-[var(--r-inset)] px-5 py-3.5 text-[12.5px] leading-[1.55]">
             <strong className="font-semibold">Demo mode.</strong> These are sample values and
             nothing here reaches a broker. Saving is disabled.
           </div>
@@ -246,7 +246,7 @@ export function Account() {
                       {fullName.slice(0, 1).toUpperCase()}
                     </span>
                     <div className="min-w-0">
-                      <div className="console-display text-[24px] tracking-[-0.02em] truncate">
+                      <div className="console-display text-[24px] tracking-[-0.005em] truncate">
                         {fullName}
                       </div>
                       <div className="text-[12.5px] text-[var(--c-mid)]">
@@ -409,7 +409,7 @@ export function Account() {
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="min-w-0">
                       <div
-                        className="console-display text-[26px] tracking-[-0.02em]"
+                        className="console-display text-[26px] tracking-[-0.005em]"
                         style={{ color: mode === "live" ? "var(--c-red)" : "var(--c-ink)" }}
                       >
                         {mode === "live" ? "Live — real money" : "Paper — simulated"}
@@ -424,7 +424,7 @@ export function Account() {
                       type="button"
                       onClick={() => setModeModal(true)}
                       disabled={isDemo}
-                      className="rounded-full bg-[var(--c-ink)] text-white text-[12.5px] font-semibold px-5 py-3 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="rounded-[var(--r-btn)] bg-[var(--c-ink)] text-white text-[12.5px] font-semibold px-5 py-3 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Switch environment…
                     </button>
@@ -497,7 +497,7 @@ export function Account() {
                           setTimeout(() => setToast(null), 5000);
                         }
                       }}
-                      className="shrink-0 rounded-full bg-[var(--c-ink)] text-white text-[12.5px] font-semibold px-5 py-3 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="shrink-0 rounded-[var(--r-btn)] bg-[var(--c-ink)] text-white text-[12.5px] font-semibold px-5 py-3 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {sendingReset ? "Sending…" : "Email reset link"}
                     </button>
@@ -560,7 +560,7 @@ export function Account() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-full px-5 py-3 text-[13px] font-semibold shadow-[0_10px_30px_rgba(20,25,35,0.2)]"
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-[var(--r-btn)] px-5 py-3 text-[13px] font-semibold shadow-[var(--sh-card)]"
             style={{
               background: toast.kind === "ok" ? "var(--c-green)" : "var(--c-red)",
               color: "#fff",

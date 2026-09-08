@@ -95,7 +95,7 @@ function Chip({
   };
   return (
     <span
-      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${tones[tone]}`}
+      className={`px-2.5 py-1 rounded-[var(--r-chip)] text-[11px] font-semibold whitespace-nowrap ${tones[tone]}`}
     >
       {children}
     </span>
@@ -251,20 +251,20 @@ export function Universe() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search symbol or name…"
             aria-label="Filter the Eligible Universe"
-            className="bg-[var(--c-card)] rounded-full px-4 py-2.5 text-[13px] w-[210px] text-[var(--c-ink)] placeholder:text-[var(--c-mute)] border-0 shadow-[0_1px_2px_rgba(20,25,35,0.06)] focus:outline-none focus:ring-2 focus:ring-[var(--c-blue)]/30"
+            className="bg-[var(--c-card)] rounded-[var(--r-btn)] px-4 py-2.5 text-[13px] w-[210px] text-[var(--c-ink)] placeholder:text-[var(--c-mute)] border-0 shadow-[var(--sh-card)] focus:outline-none focus:ring-2 focus:ring-[var(--c-blue)]/30"
           />
           <button
             type="button"
             onClick={() => refresh()}
             disabled={!!computing}
-            className="border-0 rounded-full bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] whitespace-nowrap cursor-pointer disabled:cursor-wait hover:opacity-90 transition-opacity"
+            className="border-0 rounded-[var(--r-btn)] bg-[var(--c-blue)] text-white font-[inherit] text-[12.5px] font-semibold px-5 py-[11px] whitespace-nowrap cursor-pointer disabled:cursor-wait hover:opacity-90 transition-opacity"
           >
             {computing ? "Computing…" : "Refresh scores"}
           </button>
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3.5">
           <Tile label="Scored stocks" value={String(stocks.length)} sub="Ranked this cycle" />
           <Tile
@@ -289,10 +289,10 @@ export function Universe() {
           />
         </div>
 
-        <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4 min-w-0">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
           <div className="flex items-center justify-between gap-3.5 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-[22px] h-[22px] shrink-0 rounded-[6px] bg-[var(--c-ink)] block" />
+              <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
               <h2 className="text-[16px] font-semibold tracking-[-0.01em]">Factor Score rankings</h2>
               <span className="text-[12.5px] text-[var(--c-mute)] tabular-nums whitespace-nowrap">
                 {rows.length} of {stocks.length}
@@ -305,7 +305,7 @@ export function Universe() {
                   type="button"
                   onClick={() => setFilter(f)}
                   aria-pressed={filter === f}
-                  className={`border-0 rounded-full cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
+                  className={`border-0 rounded-[var(--r-btn)] cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap transition-opacity hover:opacity-85 ${
                     filter === f
                       ? "bg-[var(--c-ink)] text-white"
                       : "bg-[var(--c-soft)] text-[var(--c-mid)]"
@@ -318,7 +318,7 @@ export function Universe() {
                 <button
                   type="button"
                   onClick={() => setSectorFilter(null)}
-                  className="border-0 rounded-full cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap bg-[var(--c-ink)] text-white hover:opacity-85 transition-opacity"
+                  className="border-0 rounded-[var(--r-btn)] cursor-pointer font-[inherit] text-[12px] font-semibold px-[15px] py-2 whitespace-nowrap bg-[var(--c-ink)] text-white hover:opacity-85 transition-opacity"
                 >
                   {sectorFilter} ×
                 </button>
@@ -413,7 +413,7 @@ export function Universe() {
                                 setSectorFilter((cur) => (cur === s.sector ? null : s.sector ?? null))
                               }
                               title={`Show only ${s.sector}`}
-                              className={`text-[12px] rounded-full px-2.5 py-1 whitespace-nowrap cursor-pointer transition-colors ${
+                              className={`text-[12px] rounded-[var(--r-chip)] px-2.5 py-1 whitespace-nowrap cursor-pointer transition-colors ${
                                 sectorFilter === s.sector
                                   ? "bg-[var(--c-ink)] text-white"
                                   : "bg-[var(--c-soft)] text-[var(--c-mid)] hover:text-[var(--c-ink)]"
@@ -490,12 +490,12 @@ function Tile({
   tone?: string;
 }) {
   return (
-    <div className="min-w-0 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+    <div className="min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
       <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
         {label}
       </div>
       <div
-        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums"
+        className="console-figure text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums"
         style={tone ? { color: tone } : undefined}
       >
         {value}

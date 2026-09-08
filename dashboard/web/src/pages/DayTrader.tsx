@@ -28,11 +28,11 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-[var(--c-card)] rounded-[26px] p-[22px] flex flex-col gap-4 min-w-0">
+    <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
       <div className="flex items-start justify-between gap-3.5 flex-wrap">
         <div className="flex items-start gap-2.5 min-w-0">
           <span
-            className="w-[22px] h-[22px] shrink-0 rounded-[6px] block mt-0.5"
+            className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] block mt-0.5"
             style={{ background: accent ?? "var(--c-violet)" }}
           />
           <div className="min-w-0">
@@ -49,12 +49,12 @@ function Card({
 
 function Tile({ label, value, sub, tone }: { label: string; value: React.ReactNode; sub?: string; tone?: string }) {
   return (
-    <div className="min-w-0 bg-[var(--c-card)] rounded-[20px] px-5 py-4">
+    <div className="min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">
       <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
         {label}
       </div>
       <div
-        className="console-display text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
+        className="console-figure text-[24px] font-medium tracking-[-0.02em] mt-1.5 tabular-nums truncate"
         style={tone ? { color: tone } : undefined}
       >
         {value}
@@ -124,10 +124,10 @@ export function DayTrader() {
 
   return (
     <ConsoleShell breadcrumb="Day Trader">
-      <div className="bg-[var(--c-sheet)] rounded-t-[34px] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
         {/* This bot exists purely as an unrestricted benchmark. Saying so once,
             prominently, is the point — it must never read as a Shariah product. */}
-        <div className="bg-[rgba(124,92,252,0.12)] text-[#5B3FD6] rounded-[20px] px-5 py-3.5 text-[12.5px] leading-[1.55]">
+        <div className="bg-[rgba(124,92,252,0.12)] text-[#5B3FD6] rounded-[var(--r-inset)] px-5 py-3.5 text-[12.5px] leading-[1.55]">
           <strong className="font-semibold">Benchmark strategy — not Shariah-screened.</strong> This
           Gap &amp; Go bot trades an unrestricted universe with stop losses and intraday exits. It
           exists only to give the Shariah Algo something honest to be measured against, and it does
@@ -212,7 +212,7 @@ export function DayTrader() {
                         className="flex items-center gap-4 py-3 border-b border-[var(--c-line)] last:border-b-0"
                       >
                         <span
-                          className="w-[46px] shrink-0 text-[11px] font-bold text-center rounded-full py-1"
+                          className="w-[46px] shrink-0 text-[11px] font-bold text-center rounded-[var(--r-chip)] py-1"
                           style={{
                             color: buy ? "var(--c-green)" : "var(--c-red)",
                             background: buy ? "rgba(31,169,113,0.13)" : "rgba(222,74,79,0.12)",
@@ -251,11 +251,11 @@ export function DayTrader() {
             >
               <div className="grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-4">
                 {scanner.map((s) => (
-                  <div key={s.label} className="bg-[var(--c-soft)] rounded-[16px] px-4 py-3 min-w-0">
+                  <div key={s.label} className="bg-[var(--c-soft)] rounded-[var(--r-card)] px-4 py-3 min-w-0">
                     <div className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] whitespace-nowrap">
                       {s.label}
                     </div>
-                    <div className="console-display text-[20px] tabular-nums mt-1 tracking-[-0.02em]">
+                    <div className="console-figure text-[20px] tabular-nums mt-1 tracking-[-0.02em]">
                       {s.value}
                     </div>
                   </div>

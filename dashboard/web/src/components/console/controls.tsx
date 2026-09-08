@@ -42,7 +42,7 @@ export function Segmented<T extends string>({
   return (
     <div
       role="tablist"
-      className="inline-flex gap-1 p-[5px] bg-[var(--c-soft)] rounded-full relative"
+      className="inline-flex gap-1 p-[5px] bg-[var(--c-soft)] rounded-[var(--r-inset)] relative"
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -54,7 +54,7 @@ export function Segmented<T extends string>({
             type="button"
             title={o.hint}
             onClick={() => onChange(o.value)}
-            className={`relative rounded-full text-[12.5px] px-4 py-2 whitespace-nowrap cursor-pointer transition-colors ${
+            className={`relative rounded-[var(--r-btn)] text-[12.5px] px-4 py-2 whitespace-nowrap cursor-pointer transition-colors ${
               active ? "text-[var(--c-ink)] font-semibold" : "text-[var(--c-mid)] font-medium hover:text-[var(--c-ink)]"
             }`}
           >
@@ -62,7 +62,7 @@ export function Segmented<T extends string>({
               <motion.span
                 layoutId={`${idPrefix}-seg`}
                 transition={reduced ? { duration: 0 } : SPRING}
-                className="absolute inset-0 bg-[var(--c-card)] rounded-full shadow-[0_1px_3px_rgba(20,25,35,0.14)]"
+                className="absolute inset-0 bg-[var(--c-card)] rounded-[var(--r-btn)] shadow-[var(--sh-card)]"
               />
             )}
             <span className="relative z-10">{o.label}</span>
@@ -108,7 +108,7 @@ export function Toggle({
         <motion.span
           layout
           transition={reduced ? { duration: 0 } : SPRING}
-          className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-[0_1px_3px_rgba(20,25,35,0.3)]"
+          className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-[var(--sh-card)]"
           style={{ left: checked ? 21 : 3 }}
         />
       </button>
@@ -153,7 +153,7 @@ export function Slider({
     <div className={`min-w-0 ${disabled ? "opacity-55" : ""}`}>
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[12.5px] font-semibold">{label}</span>
-        <span className="console-display text-[19px] tabular-nums tracking-[-0.02em]">
+        <span className="console-figure text-[19px] tabular-nums tracking-[-0.02em]">
           {format(value)}
         </span>
       </div>
@@ -179,7 +179,7 @@ export function Slider({
             focus-visible:[&::-moz-range-thumb]:ring-4 focus-visible:[&::-moz-range-thumb]:ring-[var(--c-blue)]/25
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:h-[18px]
             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-            [&::-webkit-slider-thumb]:shadow-[0_1px_4px_rgba(20,25,35,0.35)]
+            [&::-webkit-slider-thumb]:shadow-[var(--sh-card)]
             [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--c-blue)]
             [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:rounded-full
             [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--c-blue)]"
@@ -237,8 +237,8 @@ export function Field({
 }
 
 export const inputClass =
-  "w-full bg-[var(--c-soft)] rounded-[14px] px-4 py-3 text-[13.5px] text-[var(--c-ink)] " +
-  "placeholder:text-[var(--c-mute)] border border-transparent focus:border-[var(--c-blue)] " +
+  "w-full bg-[var(--c-soft)] rounded-[var(--r-btn)] px-4 py-3 text-[13.5px] text-[var(--c-ink)] " +
+  "placeholder:text-[var(--c-mute)] border border-[var(--c-line)] focus:border-[var(--c-blue)] " +
   "focus:outline-none focus:bg-[var(--c-card)] transition-colors disabled:opacity-60";
 
 /* -------------------------------------------------------------------------- */
@@ -298,8 +298,8 @@ export function SecretField({
           onKeyDown={(e) => e.key === "Enter" && setHeld(true)}
           onKeyUp={() => setHeld(false)}
           aria-label={`Hold to reveal ${label}`}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-[11px] font-semibold
-            bg-[var(--c-card)] text-[var(--c-mid)] hover:text-[var(--c-ink)] shadow-[0_1px_2px_rgba(20,25,35,0.1)]
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-[var(--r-chip)] px-3 py-1.5 text-[11px] font-semibold
+            bg-[var(--c-card)] text-[var(--c-mid)] hover:text-[var(--c-ink)] shadow-[var(--sh-card)]
             cursor-pointer select-none transition-colors disabled:opacity-50"
         >
           {held ? "Showing" : "Hold to show"}
@@ -339,7 +339,7 @@ export function SaveBar({
           className="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 w-[min(680px,calc(100vw-44px))]"
           role="status"
         >
-          <div className="flex items-center gap-3 bg-[var(--c-ink)] text-white rounded-full pl-6 pr-2 py-2 shadow-[0_12px_40px_rgba(20,25,35,0.32)]">
+          <div className="flex items-center gap-3 bg-[var(--c-ink)] text-white rounded-[var(--r-inset)] pl-6 pr-2 py-2 shadow-[var(--sh-card)]">
             <span className="flex-1 min-w-0 text-[13px]">
               {disabled && disabledReason ? (
                 disabledReason
@@ -353,7 +353,7 @@ export function SaveBar({
             <button
               type="button"
               onClick={onReset}
-              className="rounded-full px-4 py-2.5 text-[12.5px] font-semibold text-white/70 hover:text-white cursor-pointer transition-colors"
+              className="rounded-[var(--r-btn)] px-4 py-2.5 text-[12.5px] font-semibold text-white/70 hover:text-white cursor-pointer transition-colors"
             >
               Discard
             </button>
@@ -361,7 +361,7 @@ export function SaveBar({
               type="button"
               onClick={onSave}
               disabled={saving || disabled}
-              className="rounded-full bg-white text-[var(--c-ink)] px-5 py-2.5 text-[12.5px] font-semibold cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded-[var(--r-btn)] bg-white text-[var(--c-ink)] px-5 py-2.5 text-[12.5px] font-semibold cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
