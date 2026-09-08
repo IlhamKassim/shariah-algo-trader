@@ -398,7 +398,7 @@ export function Onboarding() {
                     </label>
                     <input
                       type="text"
-                      placeholder="PKI4MGJIDVVHHTZOG37RMREWGB"
+                      placeholder="PKXXXXXXXXXXXXXXXXXXXXXXXX"
                       value={formData.alpacaApiKey}
                       onChange={(e) => updateForm("alpacaApiKey", e.target.value.trim())}
                       className="w-full bg-[#050807] border border-divider focus:border-brand-gold px-4 py-3 text-xs font-mono text-primary placeholder-faint focus:outline-none transition-colors"

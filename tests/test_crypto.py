@@ -2,8 +2,13 @@ import pytest
 from dashboard.api.crypto import encrypt_credential, decrypt_credential
 
 
+# Shaped like an Alpaca key ID so the round-trip covers a realistic length and
+# character set. Must never be a real credential — this file is public.
+FAKE_ALPACA_KEY_ID = "PKTESTONLYNOTAREALKEY00000"
+
+
 def test_credential_encryption_roundtrip():
-    original_key = "PKI4MGJIDVVHHTZOG37RMREWGB"
+    original_key = FAKE_ALPACA_KEY_ID
     cipher_text = encrypt_credential(original_key)
     assert cipher_text is not None
     assert cipher_text != original_key
