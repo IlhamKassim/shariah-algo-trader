@@ -6,15 +6,26 @@ from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaErro
 _ET = ZoneInfo("America/New_York")
 
 
-def live_equity(client: AlpacaClient | None) -> float | None:
+def live_account(client: AlpacaClient | None) -> tuple[str | None, float | None]:
+    """Return ``(broker_account_id, equity)`` from a single /v2/account call.
+
+    The broker account id is what keys the NAV store (ADR-0010): equity from
+    two different Alpaca accounts must never merge into one curve, which is
+    what happens if the store is keyed by app user alone.
+    """
     if client is None:
-        return None
+        return None, None
     try:
         acct = client.get("/v2/account")
-        equity = float(acct.get("equity", 0))
-        return equity if equity > 0 else None
     except AlpacaError:
-        return None
+        return None, None
+    account_id = acct.get("id") or None
+    equity = float(acct.get("equity", 0))
+    return account_id, (equity if equity > 0 else None)
+
+
+def live_equity(client: AlpacaClient | None) -> float | None:
+    return live_account(client)[1]
 
 
 def patch_today(

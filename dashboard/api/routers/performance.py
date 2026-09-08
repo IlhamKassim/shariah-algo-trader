@@ -8,7 +8,7 @@ import yfinance as yf
 from fastapi import APIRouter, Depends, Request
 
 from dashboard.api.deps import get_alpaca, get_config
-from dashboard.api.live_equity import live_equity, patch_today, ts_to_date
+from dashboard.api.live_equity import live_account, patch_today, ts_to_date
 from dashboard.api.models import PerformanceResponse
 from dashboard.api.nav_store import load_nav, record_nav_many
 from shariah_algo_trader.config import Config
@@ -95,7 +95,9 @@ def _to_cumulative(raw: pd.Series, equity_index: pd.DatetimeIndex) -> list[float
     return ((aligned / base) - 1).round(6).tolist()
 
 
-def _apply_nav_history(account_id: str, equity_series: pd.Series) -> pd.Series:
+def _apply_nav_history(
+    account_id: str, broker_account_id: str, equity_series: pd.Series
+) -> pd.Series:
     """Overlay the persisted NAV store onto Alpaca's equity history (ADR-0010).
 
     Completed days already recorded in the store are frozen — their persisted
@@ -108,10 +110,13 @@ def _apply_nav_history(account_id: str, equity_series: pd.Series) -> pd.Series:
     oldest → newest, with the same DatetimeIndex shape the rest of this module
     expects.
     """
-    if equity_series.empty or not account_id:
+    # Without a broker account id the rows cannot be attributed, and merging
+    # them would risk splicing two accounts' equity — fall back to Alpaca's own
+    # history rather than persisting anything.
+    if equity_series.empty or not account_id or not broker_account_id:
         return equity_series
 
-    persisted = load_nav(account_id)  # {date_iso: frozen_equity}
+    persisted = load_nav(account_id, broker_account_id)  # {date_iso: frozen_equity}
     today = equity_series.index[-1].date().isoformat()
 
     # Build a merged {date_iso: equity} map: persisted wins, Alpaca backfills.
@@ -127,7 +132,7 @@ def _apply_nav_history(account_id: str, equity_series: pd.Series) -> pd.Series:
             missing.append((date_iso, eq))
 
     if missing:
-        record_nav_many(account_id, missing)
+        record_nav_many(account_id, broker_account_id, missing)
 
     sorted_dates = sorted(merged.keys())
     return pd.Series([merged[d] for d in sorted_dates], index=pd.to_datetime(sorted_dates))
@@ -152,9 +157,10 @@ def get_performance(request: Request, cfg: Config = Depends(get_config)) -> Perf
     if not timestamps or not equities:
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])
 
+    broker_account_id, equity_now = live_account(client)
     dates = [ts_to_date(ts) for ts in timestamps]
     equities_f = [float(e) if e is not None else float("nan") for e in equities]
-    dates, equities_f = patch_today(dates, equities_f, live_equity(client))
+    dates, equities_f = patch_today(dates, equities_f, equity_now)
     equity_series = pd.Series(equities_f, index=pd.to_datetime(dates)).dropna()
     equity_series = equity_series[equity_series > 0]
 
@@ -162,10 +168,11 @@ def get_performance(request: Request, cfg: Config = Depends(get_config)) -> Perf
         return PerformanceResponse(dates=[], portfolio_cumulative=[], benchmark_cumulative=[], sp500_cumulative=[])
 
     # Persist / overlay the self-owned NAV history so the curve survives an
-    # Alpaca history reset (ADR-0010). Keyed per authenticated user; the legacy
-    # single-tenant account falls back to "default".
+    # Alpaca history reset (ADR-0010). Keyed per authenticated user *and* per
+    # broker account — one user may point at several Alpaca accounts over time,
+    # and their equity must never be spliced into a single curve.
     account_id = getattr(request.state, "user_id", None) or "default"
-    equity_series = _apply_nav_history(account_id, equity_series)
+    equity_series = _apply_nav_history(account_id, broker_account_id or "", equity_series)
 
     port_cumulative = _anchor_cumulative(equity_series)
 

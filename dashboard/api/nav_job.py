@@ -16,7 +16,7 @@ import datetime
 import logging
 from zoneinfo import ZoneInfo
 
-from dashboard.api.live_equity import live_equity
+from dashboard.api.live_equity import live_account
 from dashboard.api.nav_store import record_nav
 from dashboard.api.user_store import get_user_settings, list_pilot_users
 from shariah_algo_trader.config import Config
@@ -28,11 +28,13 @@ _ET = ZoneInfo("America/New_York")
 
 
 def _snapshot_account(account_id: str, client: AlpacaClient) -> bool:
-    equity = live_equity(client)
-    if equity is None:
+    broker_account_id, equity = live_account(client)
+    # Both halves are required: an unattributed row would merge with whatever
+    # other Alpaca account this user has pointed at (ADR-0010).
+    if equity is None or not broker_account_id:
         return False
     today = datetime.datetime.now(_ET).date().isoformat()
-    return record_nav(account_id, today, equity)
+    return record_nav(account_id, broker_account_id, today, equity)
 
 
 def snapshot_all_accounts_nav(cfg: Config) -> dict[str, bool]:
