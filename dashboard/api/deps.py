@@ -5,7 +5,7 @@ import time
 import urllib.request
 from functools import lru_cache
 from fastapi import Request, HTTPException, Depends
-from jwt.algorithms import ECAlgorithm, RSAAlgorithm, HMACAlgorithm
+from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 
 
 from shariah_algo_trader.config import Config

@@ -6,7 +6,6 @@ No auth needed (internal tool), no external JS/CSS dependencies.
 
 import datetime
 import os
-import sqlite3
 import subprocess
 from pathlib import Path
 

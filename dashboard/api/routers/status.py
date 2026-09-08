@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request
 from dashboard.api.deps import get_alpaca, get_config
 from dashboard.api.models import StatusResponse
 from shariah_algo_trader.config import Config
-from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
+from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 from shariah_algo_trader.scheduling.trading_calendar import is_trading_day
 
 router = APIRouter()

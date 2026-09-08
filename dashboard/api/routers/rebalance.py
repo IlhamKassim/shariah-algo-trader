@@ -2,7 +2,7 @@ import datetime
 import logging
 import threading
 import time
-from typing import Any, Callable
+from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 

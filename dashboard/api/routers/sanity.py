@@ -4,7 +4,7 @@ from starlette.requests import Request
 from pydantic import BaseModel
 
 from dashboard.api.db import fetch_audit_logs
-from dashboard.api.deps import get_config, verify_auth
+from dashboard.api.deps import get_config
 from dashboard.api.sanity_check import run_performance_sanity_check
 from shariah_algo_trader.config import Config
 

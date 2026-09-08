@@ -101,7 +101,8 @@ _ADMIN_ONLY_FIELDS = (
 def get_settings(request: Request, cfg: Config = Depends(get_config)) -> SettingsResponse:
     user_id = getattr(request.state, "user_id", None) if hasattr(request, "state") else None
     admin = is_admin(request, cfg)
-    user_data = get_user_settings(user_id) if user_id else None
+    # (A second get_user_settings() call used to sit here and go unread; the one
+    # below, into `user_row`, is the one that is actually used.)
 
     first_name = None
     last_name = None

@@ -12,7 +12,7 @@ from dashboard.api.live_equity import live_account, patch_today, ts_to_date
 from dashboard.api.models import PerformanceResponse
 from dashboard.api.nav_store import load_nav, record_nav_many
 from shariah_algo_trader.config import Config
-from shariah_algo_trader.execution.alpaca_client import AlpacaClient, AlpacaError
+from shariah_algo_trader.execution.alpaca_client import AlpacaError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

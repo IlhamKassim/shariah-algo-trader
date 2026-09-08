@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 from dashboard.api.crypto import decrypt_credential
 from dashboard.api.db import insert_notification, log_audit_event
-from dashboard.api.user_store import _DB_PATH, _fetch_from_supabase
+from dashboard.api.user_store import _DB_PATH
 from shariah_algo_trader.config import Config
 from shariah_algo_trader.execution.alpaca_client import AlpacaClient
 from shariah_algo_trader.execution.order_executor import OrderExecutor

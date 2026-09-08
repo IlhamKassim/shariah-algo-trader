@@ -354,8 +354,12 @@ def send_daily_digest() -> bool:
         elif severity == "warning":
             color = "#f59e0b"
 
+        # `color` was computed per severity and then never rendered, so a
+        # critical alert and an info note arrived looking identical. It now
+        # carries a left rule — an inline style, because email clients strip
+        # <style> blocks and classes.
         items_html += f"""
-        <div style="padding: 20px 0; border-bottom: 1px dashed #1e2025; text-align: left;">
+        <div style="padding: 20px 0 20px 14px; border-bottom: 1px dashed #1e2025; border-left: 3px solid {color}; text-align: left;">
           <table border="0" cellpadding="0" cellspacing="0" width="100%">
             <tr>
               <td style="font-family: Georgia, serif; font-size: 15px; color: #f3f4f6;">{title}</td>

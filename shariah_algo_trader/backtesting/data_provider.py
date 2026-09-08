@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-import datetime
 import pandas as pd
 import yfinance as yf
 import requests

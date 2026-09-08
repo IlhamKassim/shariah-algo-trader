@@ -226,7 +226,6 @@ def seed_notifications() -> None:
                 # To be robust, let's look at standard time. Eastern 16:30 is 20:30 UTC (EDT) or 21:30 UTC (EST).
                 # We can check the local system time or calculate ET.
                 # A robust way is to read the time offset:
-                now_utc = datetime.now(timezone.utc)
                 # Simple ET offset calculation (approximate EDT/EST):
                 # EDT is from 2nd Sunday in March to 1st Sunday in November (UTC-4), otherwise EST (UTC-5).
                 # Let's compute offset:

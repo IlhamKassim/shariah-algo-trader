@@ -4,7 +4,6 @@ import logging
 import datetime
 import numpy as np
 import pandas as pd
-from typing import Optional
 
 from shariah_algo_trader.backtesting.data_provider import DataProvider
 from shariah_algo_trader.backtesting import edgar_parser
@@ -129,7 +128,6 @@ class BacktestEngine:
         # Loop through each day to track equity value
         # We process day by day to build a correct daily equity curve
         current_rebalance_idx = 0
-        active_target_weights: dict[str, float] = {}
         
         for today in trading_days:
             # Check if today is a rebalance day
