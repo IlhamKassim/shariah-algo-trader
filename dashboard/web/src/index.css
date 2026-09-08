@@ -1,13 +1,6 @@
-/* Three families, and only the three actually rendered:
-   Instrument Serif (display words), Inter (everything else + all figures),
-   Plus Jakarta Sans (the legacy obsidian body on the marketing routes).
-
-   Dropped: IBM Plex Mono and JetBrains Mono (no monospace tier — DESIGN.md
-   §A6.5), Poppins and Manrope (retired with the pre-Console type scale).
-   Newsreader and Playfair Display stay in the CSS stacks as fallbacks but are
-   no longer fetched: they sit behind Instrument Serif, and downloading a
-   fallback from the same CDN that would have to fail buys nothing. */
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
+/* Fonts are fetched by the <link> in index.html, not from here — an @import
+   cannot start until this stylesheet has been parsed, so it delayed the very
+   faces the first paint needs. See that tag for which families load and why. */
 
 @tailwind base;
 @tailwind components;

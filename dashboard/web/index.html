@@ -18,7 +18,17 @@
     <meta name="twitter:image" content="https://shariahtrading.my/og-image.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+    <!-- The single place fonts are fetched. Three families, and only the three
+         actually rendered: Instrument Serif (display words), Inter (interface
+         and every figure), Plus Jakarta Sans (legacy obsidian body on the
+         marketing routes). Newsreader and Playfair Display remain in the CSS
+         stacks as fallbacks but are not fetched — they sit behind Instrument
+         Serif, so downloading them from the same host that would have to fail
+         buys nothing. JetBrains Mono went with the monospace tier (DESIGN.md
+         §A6.5). Declared here rather than via @import in index.css: a <link>
+         beside the preconnects starts immediately, an @import waits for the
+         stylesheet to parse first. -->
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet" />
 
     <!-- Structured data -->
     <script type="application/ld+json">
