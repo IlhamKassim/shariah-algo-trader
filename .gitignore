@@ -30,6 +30,9 @@ data/
 # SSH keys / secrets
 *.key
 *.pem
+# Dated .env backups (.env.bak.20260820005052 held live Alpaca/Supabase/SMTP keys)
+.env.bak*
+.env.*.bak
 
 # Frontend build output is regenerated from source on every Render deploy
 # (dashboard/web/vite.config.ts sets build.outDir to dashboard/api/static).
@@ -39,3 +42,7 @@ data/
 dashboard/api/static/assets/
 dashboard/api/static/index.html
 dashboard/web/shots/
+
+# Generated analysis output — regenerate from the tools, never review in a diff
+graphify-out/
+docs/architecture/
