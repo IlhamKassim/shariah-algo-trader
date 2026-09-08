@@ -104,7 +104,7 @@ export function Notifications() {
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[70vh]">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3.5">
           <Tile label="Unread" value={String(unread)} sub={`${items.length} total`} tone={unread ? "var(--c-blue)" : undefined} />
           <Tile
@@ -121,8 +121,8 @@ export function Notifications() {
           />
         </div>
 
-        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
-          <div className="flex items-center justify-between gap-3.5 flex-wrap">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] flex flex-col gap-4 min-w-0">
+          <div className="flex items-center justify-between gap-x-3.5 gap-y-1 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
               <h2 className="text-[16px] font-semibold tracking-[-0.01em]">Notifications</h2>

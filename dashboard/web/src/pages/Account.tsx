@@ -42,7 +42,7 @@ function Card({
   accent?: string;
 }) {
   return (
-    <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-5 min-w-0">
+    <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] flex flex-col gap-5 min-w-0">
       <div className="flex items-start gap-2.5 min-w-0">
         <span
           className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] block mt-0.5"
@@ -217,7 +217,7 @@ export function Account() {
         />
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh] pb-24">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[70vh] pb-24">
         {isDemo && (
           <div className="bg-[rgba(240,190,67,0.16)] text-[#8A6D0F] rounded-[var(--r-inset)] px-5 py-3.5 text-[12.5px] leading-[1.55]">
             <strong className="font-semibold">Demo mode.</strong> These are sample values and

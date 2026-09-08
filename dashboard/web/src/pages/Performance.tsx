@@ -48,9 +48,9 @@ function Card({
 }) {
   return (
     <section
-      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] ${className}`}
+      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] ${className}`}
     >
-      <div className="flex items-center justify-between gap-3.5 flex-wrap">
+      <div className="flex items-center justify-between gap-x-3.5 gap-y-1 flex-wrap">
         <div className="flex items-center gap-2.5 min-w-0">
           <span
             className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] block"
@@ -268,7 +268,7 @@ export function Performance() {
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[70vh]">
         {/* headline return figures */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3.5">
           <div className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-inset)] px-5 py-4">

@@ -248,7 +248,7 @@ export function Learn() {
 
   return (
     <ConsoleShell breadcrumb="Learn">
-      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[70vh]">
         <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[26px] flex flex-col gap-4">
           <h1 className="console-display text-[38px] tracking-[-0.005em] leading-[1.15]">
             How your engine decides
@@ -281,7 +281,7 @@ export function Learn() {
           </div>
         </section>
 
-        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
             <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
             <h2 className="text-[16px] font-semibold tracking-[-0.01em]">The four factors</h2>

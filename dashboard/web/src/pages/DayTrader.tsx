@@ -28,7 +28,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
+    <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] flex flex-col gap-4 min-w-0">
       <div className="flex items-start justify-between gap-3.5 flex-wrap">
         <div className="flex items-start gap-2.5 min-w-0">
           <span
@@ -124,7 +124,7 @@ export function DayTrader() {
 
   return (
     <ConsoleShell breadcrumb="Day Trader">
-      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[70vh]">
         {/* This bot exists purely as an unrestricted benchmark. Saying so once,
             prominently, is the point — it must never read as a Shariah product. */}
         <div className="bg-[rgba(124,92,252,0.12)] text-[#5B3FD6] rounded-[var(--r-inset)] px-5 py-3.5 text-[12.5px] leading-[1.55]">

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ConnectionOverlay } from "../components/ConnectionOverlay";
 import { DevWarningModal } from "../components/DevWarningModal";
 import { InteractiveAlgoTerminal } from "../components/InteractiveAlgoTerminal";
@@ -23,6 +23,19 @@ interface LandingProps {
 }
 
 export function Landing({ onOpenGuide }: LandingProps = {}) {
+  // Scroll reveal for the long marketing sections. `once: true` so a section
+  // never re-animates on the way back up, and the whole thing collapses to
+  // nothing under prefers-reduced-motion — the page must read identically
+  // without it (DESIGN.md §A5 rule 3).
+  const reduceMotion = useReducedMotion();
+  const reveal = reduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 18 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, margin: "-80px" },
+        transition: { duration: 0.5, ease: "easeOut" as const },
+      };
 
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -239,7 +252,7 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
 
       {/* Top Navigation Bar */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-[#051F20]/90 backdrop-blur-md border-b border-[#235347]/60 shadow-xl">
-        <div className="max-w-screen-2xl mx-auto flex justify-between items-center px-4 sm:px-12 py-4">
+        <div className="w-full flex justify-between items-center px-4 sm:px-8 lg:px-14 py-4">
           <div className="flex items-center gap-12">
             <span className="text-[18px] font-serif tracking-wider text-[#DAF1DE] uppercase font-normal">
               SHARIAHTRADING
@@ -374,7 +387,7 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
 
       <main className="pt-40 md:pt-48">
         {/* Hero Section */}
-        <section id="overview" className="px-4 sm:px-12 max-w-screen-2xl mx-auto mb-16 relative z-10 scroll-mt-32">
+        <motion.section {...reveal} id="overview" className="px-4 sm:px-8 lg:px-14 w-full mb-16 relative z-10 scroll-mt-32">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 border-none">
             {/* Main Hero Text Block */}
             <div className="lg:col-span-8 bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between min-h-[520px] md:min-h-[600px] shadow-2xl">
@@ -478,10 +491,10 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
 
 
           </div>
-        </section>
+        </motion.section>
 
         {/* Platform Interface Showcase */}
-        <section id="terminal" className="scroll-mt-32">
+        <motion.section {...reveal} id="terminal" className="scroll-mt-32">
           <ContainerScroll
             titleComponent={
               <div className="flex flex-col items-center">
@@ -497,10 +510,10 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
           >
             <InteractiveAlgoTerminal />
           </ContainerScroll>
-        </section>
+        </motion.section>
 
         {/* Compliance Section (Grid Based) */}
-        <section id="compliance" className="scroll-mt-32 py-16 px-4 sm:px-12 max-w-screen-2xl mx-auto">
+        <motion.section {...reveal} id="compliance" className="scroll-mt-32 py-16 px-4 sm:px-8 lg:px-14 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 border-none">
             <div className="lg:col-span-5 bg-[#0B2B26]/80 backdrop-blur-xl border border-[#235347]/60 p-8 md:p-12 flex flex-col justify-between min-h-[480px] shadow-2xl">
               <div>
@@ -589,11 +602,11 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Universe Interactive Preview */}
-        <section id="universe" className="scroll-mt-32 py-16 border-y border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-12">
+        <motion.section {...reveal} id="universe" className="scroll-mt-32 py-16 border-y border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
+          <div className="w-full px-4 sm:px-8 lg:px-14">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-16 gap-8">
               <div className="max-w-2xl">
                 <div className="flex items-center gap-4 mb-4 flex-wrap">
@@ -710,10 +723,10 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               </span>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* FAQs Section */}
-        <section id="faqs" className="scroll-mt-32 py-16 px-4 sm:px-12 max-w-4xl mx-auto border-t border-[#235347]/60">
+        <motion.section {...reveal} id="faqs" className="scroll-mt-32 py-16 px-4 sm:px-8 lg:px-14 max-w-6xl mx-auto border-t border-[#235347]/60">
           <div className="text-center mb-16">
             <h2 className="font-serif text-[40px] sm:text-[48px] mb-2 font-normal text-[#DAF1DE]">Engine Mechanics & Compliance FAQs</h2>
             <p className="text-[#8EB69B] font-sans text-base">
@@ -755,11 +768,11 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               </div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* Final Call to Action */}
-        <section id="waitlist" className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-12 flex flex-col items-center text-center">
+        <motion.section {...reveal} id="waitlist" className="py-16 border-t border-[#235347]/60 bg-[#051F20]/90 backdrop-blur-md">
+          <div className="w-full px-4 sm:px-8 lg:px-14 flex flex-col items-center text-center">
             <h2 className="font-serif text-[56px] sm:text-[80px] md:text-[96px] mb-8 leading-none font-normal text-[#DAF1DE]">
               Ready to deploy.
             </h2>
@@ -809,12 +822,12 @@ export function Landing({ onOpenGuide }: LandingProps = {}) {
               </button>
             </div>
           </div>
-        </section>
+        </motion.section>
       </main>
 
       {/* Editorial Footer */}
       <footer className="border-t border-[#235347]/60 bg-[#051F20] pt-16">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-12 flex flex-col lg:flex-row justify-between items-start gap-12 pb-16">
+        <div className="w-full px-4 sm:px-8 lg:px-14 flex flex-col lg:flex-row justify-between items-start gap-12 pb-16">
           <div className="max-w-sm">
             <span className="font-serif text-[24px] text-[#DAF1DE] uppercase tracking-widest mb-6 block border-b border-[#235347]/60 pb-3">
               SHARIAHTRADING

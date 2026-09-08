@@ -24,12 +24,20 @@ function ScrollToTop() {
   return null;
 }
 
+/**
+ * Shown while the authenticated bundle loads. It is the first frame of the
+ * Console, so it wears the Console system (DESIGN.md §A) rather than the
+ * retired obsidian palette — otherwise the app flashes gold-on-black before
+ * settling into a light dashboard.
+ */
 function AuthLoadingFallback() {
   return (
-    <div className="min-h-screen bg-page flex items-center justify-center font-mono">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border border-brand-gold border-t-transparent animate-spin" />
-        <span className="text-xs text-muted tracking-wider">LOADING...</span>
+    <div className="console-root min-h-screen bg-[var(--c-page)] flex items-center justify-center p-6">
+      <div className="flex flex-col items-center gap-4">
+        <span className="w-[26px] h-[26px] flex items-center justify-center">
+          <span className="w-[15px] h-[15px] bg-[var(--c-ink)] rounded-[4px] rotate-45 block motion-safe:animate-pulse" />
+        </span>
+        <span className="text-[13px] text-[var(--c-mute)]">Loading your console…</span>
       </div>
     </div>
   );
