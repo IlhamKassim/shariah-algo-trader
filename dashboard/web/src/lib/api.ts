@@ -438,7 +438,7 @@ export const api = {
         buying_power: 9100.50,
         portfolio_value: 130507.75,
         dayl_pl: 1245.50,
-        dayl_pl_pct: 0.0096,
+        dayl_pl_pct: 0.964,
       });
     }
     return apiFetch<AccountResponse>("/api/account");
@@ -446,13 +446,17 @@ export const api = {
   portfolio: () => {
     if (isDemo()) {
       return Promise.resolve<PositionResponse[]>([
-        { symbol: "NVDA", qty: 150, current_price: 125.50, avg_entry_price: 118.20, market_value: 18825.00, unrealized_pl: 1095.00, unrealized_pl_pct: 0.0618 },
-        { symbol: "MSFT", qty: 45, current_price: 420.10, avg_entry_price: 410.50, market_value: 18904.50, unrealized_pl: 432.00, unrealized_pl_pct: 0.0234 },
-        { symbol: "AAPL", qty: 90, current_price: 210.30, avg_entry_price: 198.80, market_value: 18927.00, unrealized_pl: 1035.00, unrealized_pl_pct: 0.0579 },
-        { symbol: "AMZN", qty: 100, current_price: 185.40, avg_entry_price: 180.20, market_value: 18540.00, unrealized_pl: 520.00, unrealized_pl_pct: 0.0289 },
-        { symbol: "GOOGL", qty: 110, current_price: 175.20, avg_entry_price: 168.50, market_value: 19272.00, unrealized_pl: 737.00, unrealized_pl_pct: 0.0398 },
-        { symbol: "META", qty: 40, current_price: 490.50, avg_entry_price: 482.00, market_value: 19620.00, unrealized_pl: 340.00, unrealized_pl_pct: 0.0176 },
-        { symbol: "TSLA", qty: 55, current_price: 215.80, avg_entry_price: 220.40, market_value: 11869.00, unrealized_pl: -253.00, unrealized_pl_pct: -0.0209 },
+        // unrealized_pl_pct is in PERCENT units, matching the API — the routers
+        // multiply Alpaca's fractional `unrealized_plpc` by 100 before it ships
+        // (dashboard/api/routers/portfolio.py). Each value below is derived from
+        // this row's own prices, so demo can't drift from the real arithmetic.
+        { symbol: "NVDA", qty: 150, current_price: 125.50, avg_entry_price: 118.20, market_value: 18825.00, unrealized_pl: 1095.00, unrealized_pl_pct: 6.176 },
+        { symbol: "MSFT", qty: 45, current_price: 420.10, avg_entry_price: 410.50, market_value: 18904.50, unrealized_pl: 432.00, unrealized_pl_pct: 2.339 },
+        { symbol: "AAPL", qty: 90, current_price: 210.30, avg_entry_price: 198.80, market_value: 18927.00, unrealized_pl: 1035.00, unrealized_pl_pct: 5.785 },
+        { symbol: "AMZN", qty: 100, current_price: 185.40, avg_entry_price: 180.20, market_value: 18540.00, unrealized_pl: 520.00, unrealized_pl_pct: 2.886 },
+        { symbol: "GOOGL", qty: 110, current_price: 175.20, avg_entry_price: 168.50, market_value: 19272.00, unrealized_pl: 737.00, unrealized_pl_pct: 3.976 },
+        { symbol: "META", qty: 40, current_price: 490.50, avg_entry_price: 482.00, market_value: 19620.00, unrealized_pl: 340.00, unrealized_pl_pct: 1.763 },
+        { symbol: "TSLA", qty: 55, current_price: 215.80, avg_entry_price: 220.40, market_value: 11869.00, unrealized_pl: -253.00, unrealized_pl_pct: -2.087 },
       ]);
     }
     return apiFetch<PositionResponse[]>("/api/portfolio");
@@ -601,12 +605,13 @@ export const api = {
           cash: 12500.00,
           buying_power: 50000.00,
           dayl_pl: 450.00,
-          dayl_pl_pct: 0.0045,
+          dayl_pl_pct: 0.454,
           available: true,
         },
         positions: [
-          { symbol: "GME", qty: 300, market_value: 8400.00, avg_entry_price: 27.50, unrealized_pl: 150.00, unrealized_pl_pct: 0.0182, current_price: 28.00, side: "LONG" },
-          { symbol: "AMC", qty: 1000, market_value: 5200.00, avg_entry_price: 5.40, unrealized_pl: -200.00, unrealized_pl_pct: -0.0370, current_price: 5.20, side: "LONG" },
+          // Percent units, as day_trader.py emits them. See the portfolio note above.
+          { symbol: "GME", qty: 300, market_value: 8400.00, avg_entry_price: 27.50, unrealized_pl: 150.00, unrealized_pl_pct: 1.818, current_price: 28.00, side: "LONG" },
+          { symbol: "AMC", qty: 1000, market_value: 5200.00, avg_entry_price: 5.40, unrealized_pl: -200.00, unrealized_pl_pct: -3.704, current_price: 5.20, side: "LONG" },
         ],
         trades_today: [
           { timestamp: "10:14:22", symbol: "GME", side: "BUY", qty: 300, price: 27.50, notional: 8250.00 },

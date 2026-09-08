@@ -87,7 +87,7 @@ function PositionRow({ p, total }: { p: DayTraderPositionResponse; total: number
           style={{ color: up ? "var(--c-green)" : "var(--c-red)" }}
         >
           {up ? "+" : "−"}
-          {money(Math.abs(p.unrealized_pl), 0)} ({signed(p.unrealized_pl_pct * 100)})
+          {money(Math.abs(p.unrealized_pl), 0)} ({signed(p.unrealized_pl_pct)})
         </span>
       </span>
     </div>
@@ -154,7 +154,7 @@ export function DayTrader() {
                   />
                 }
                 tone={dayTone}
-                sub={`${signed((account?.dayl_pl_pct ?? 0) * 100)} vs prior close`}
+                sub={`${signed(account?.dayl_pl_pct ?? 0)} vs prior close`}
               />
               <Tile
                 label="Equity"

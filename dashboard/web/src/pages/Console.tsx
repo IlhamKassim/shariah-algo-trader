@@ -216,7 +216,7 @@ function HoldingRow({
           style={{ color: up ? "var(--c-green)" : "var(--c-red)" }}
         >
           {up ? "+" : ""}
-          {money(pos.unrealized_pl, 0).replace("-", "")} ({signed(pos.unrealized_pl_pct * 100)})
+          {money(pos.unrealized_pl, 0).replace("-", "")} ({signed(pos.unrealized_pl_pct)})
         </div>
       </div>
     </div>
@@ -467,7 +467,7 @@ export function Console() {
                       color: p.unrealized_pl_pct >= 0 ? "var(--c-green)" : "var(--c-red)",
                     }}
                   >
-                    {signed(p.unrealized_pl_pct * 100)}
+                    {signed(p.unrealized_pl_pct)}
                   </span>
                 </div>
               </div>
@@ -566,7 +566,7 @@ export function Console() {
                 style={{ color: dayTone }}
               >
                 {dayPl >= 0 ? "+" : "−"}
-                {money(Math.abs(dayPl), 2)} ({signed(dayPlPct * 100)}) today
+                {money(Math.abs(dayPl), 2)} ({signed(dayPlPct)}) today
               </span>
               <Link
                 to="/performance"
@@ -586,7 +586,7 @@ export function Console() {
             label="Daily P&L"
             value={`${dayPl >= 0 ? "+" : "−"}${money(Math.abs(dayPl), 2)}`}
             tone={dayTone}
-            sub={<span style={{ color: dayTone }}>{signed(dayPlPct * 100)} vs prior close</span>}
+            sub={<span style={{ color: dayTone }}>{signed(dayPlPct)} vs prior close</span>}
           />
           <StatTile
             label="Shariah screen"
