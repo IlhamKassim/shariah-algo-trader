@@ -68,6 +68,12 @@ export interface ActivityEntry {
   qty?: number | null;
   price?: number | null;
   notional?: number | null;
+  /** Realized P&L on a SELL, matched FIFO against earlier buys. `null` means
+   *  not derivable (a buy, or a lot opened before the fill window) — never 0. */
+  realized_pl?: number | null;
+  /** Percent units, matching every other *_pct the API returns. */
+  realized_pl_pct?: number | null;
+  cost_basis?: number | null;
 }
 
 export interface ActivityResponse {
@@ -500,6 +506,42 @@ export const api = {
   },
   activity: (type?: string, date?: string) => {
     if (isDemo()) {
+      // Mirrors annotate_realized_pl() in dashboard/api/routers/activity.py.
+      // The fixture derives realized P&L from its own fills rather than
+      // carrying hand-written numbers, so demo and production agree on both
+      // the values and their units.
+      const annotate = (list: ActivityEntry[]): ActivityEntry[] => {
+        const lots: Record<string, [number, number][]> = {};
+        for (const e of [...list].sort((a, b) => (a.timestamp < b.timestamp ? -1 : 1))) {
+          if (!e.symbol || e.qty == null || e.price == null || e.qty <= 0) continue;
+          const side = (e.side ?? "").toUpperCase();
+          if (side === "BUY") {
+            (lots[e.symbol] ??= []).push([e.qty, e.price]);
+            continue;
+          }
+          if (side !== "SELL") continue;
+          let remaining = e.qty;
+          let matchedQty = 0;
+          let matchedCost = 0;
+          const queue = lots[e.symbol] ?? [];
+          while (remaining > 1e-9 && queue.length) {
+            const lot = queue[0];
+            const take = Math.min(lot[0], remaining);
+            matchedQty += take;
+            matchedCost += take * lot[1];
+            lot[0] -= take;
+            remaining -= take;
+            if (lot[0] <= 1e-9) queue.shift();
+          }
+          // Opened before the window → not derivable, and never reported as 0.
+          if (remaining > 1e-9 || matchedQty <= 0) continue;
+          const avg = matchedCost / matchedQty;
+          e.cost_basis = Number(avg.toFixed(4));
+          e.realized_pl = Number(((e.price - avg) * matchedQty).toFixed(2));
+          e.realized_pl_pct = Number(((e.price / avg - 1) * 100).toFixed(4));
+        }
+        return list;
+      };
       const allEntries: ActivityEntry[] = [
         { timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY NVDA — 5 shares @ $125.5", tickers: ["NVDA"], symbol: "NVDA", side: "BUY", qty: 5, price: 125.5, notional: 627.5 },
         { timestamp: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "SELL AAPL — 12 shares @ $210.3", tickers: ["AAPL"], symbol: "AAPL", side: "SELL", qty: 12, price: 210.3, notional: 2523.6 },
@@ -509,7 +551,12 @@ export const api = {
         { timestamp: new Date(Date.now() - 122 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY AMZN — 22 shares @ $185.4", tickers: ["AMZN"], symbol: "AMZN", side: "BUY", qty: 22, price: 185.4, notional: 4078.8 },
         { timestamp: new Date(Date.now() - 123 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY TSLA — 9 shares @ $215.8", tickers: ["TSLA"], symbol: "TSLA", side: "BUY", qty: 9, price: 215.8, notional: 1942.2 },
         { timestamp: new Date(Date.now() - 170 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY NVDA — 30 shares @ $118.2", tickers: ["NVDA"], symbol: "NVDA", side: "BUY", qty: 30, price: 118.2, notional: 3546.0 },
+        // Opens the lot the AAPL sell above closes, so demo exercises a matched
+        // round trip. The META sell has no opening buy on purpose — that is the
+        // "basis outside the window" path the Ledger renders as "—".
+        { timestamp: new Date(Date.now() - 200 * 3600 * 1000).toISOString(), level: "INFO", type: "order", message: "BUY AAPL — 12 shares @ $198.8", tickers: ["AAPL"], symbol: "AAPL", side: "BUY", qty: 12, price: 198.8, notional: 2385.6 },
       ];
+      annotate(allEntries);
       const filtered = allEntries.filter(e => {
         if (type && e.type !== type) return false;
         if (date && !e.timestamp.startsWith(date)) return false;

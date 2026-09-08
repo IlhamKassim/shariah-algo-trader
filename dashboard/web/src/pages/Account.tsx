@@ -504,50 +504,10 @@ export function Account() {
                   </div>
                 </Card>
               )}
-              <Card title="Console access" sub="Credentials for signing in to this dashboard." accent="var(--c-red)">
-                <SecretField
-                  label="Dashboard password"
-                  value={(draft.dashboard_password as string) ?? ""}
-                  onChange={(v) => set({ dashboard_password: v })}
-                  placeholder={settings?.dashboard_password_masked || "Not set"}
-                  hint="Leave blank to keep the current password."
-                  disabled={isDemo}
-                />
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-4">
-                  <SecretField
-                    label="Google client ID"
-                    value={(draft.google_client_id as string) ?? ""}
-                    onChange={(v) => set({ google_client_id: v })}
-                    placeholder={settings?.google_client_id_masked || "Not configured"}
-                    disabled={isDemo}
-                  />
-                  <SecretField
-                    label="Google client secret"
-                    value={(draft.google_client_secret as string) ?? ""}
-                    onChange={(v) => set({ google_client_secret: v })}
-                    placeholder={settings?.google_client_secret_masked || "Not configured"}
-                    disabled={isDemo}
-                  />
-                </div>
-                <Field
-                  label="Allowed Google accounts"
-                  hint="Comma-separated. Only these addresses may sign in via Google."
-                >
-                  <input
-                    className={inputClass}
-                    value={(val("allowed_google_emails", []) as string[]).join(", ")}
-                    onChange={(e) =>
-                      set({
-                        allowed_google_emails: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    disabled={isDemo}
-                  />
-                </Field>
-              </Card>
+              {/* The "Console access" card (dashboard password, Google OAuth
+                  client ID/secret, allowed sign-in addresses) was removed: those
+                  are deployment-wide admin credentials, not per-user settings,
+                  and every signed-in user could read and rewrite them here. */}
               </>
             )}
           </motion.div>

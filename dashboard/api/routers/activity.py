@@ -65,6 +65,57 @@ def _fetch_activities(client: AlpacaClient | None) -> list[ActivityEntry]:
     return entries
 
 
+def annotate_realized_pl(entries: list[ActivityEntry]) -> list[ActivityEntry]:
+    """Match each SELL against earlier BUYs FIFO and attach realized P&L.
+
+    Cost basis is derivable from the fill stream itself, so this needs no
+    position or lot tracking elsewhere. The window is finite (``_PAGE_SIZE``
+    fills), so a sell can close shares that were bought before it starts. Those
+    keep ``realized_pl=None`` — "not derivable" — rather than being reported as
+    a profit measured from an imaginary zero-cost lot.
+
+    Entries are annotated in place order-independently: FIFO needs oldest-first,
+    but the returned list preserves the caller's ordering.
+    """
+    lots: dict[str, list[list[float]]] = {}  # symbol -> [[qty, price], ...]
+
+    for e in sorted(entries, key=lambda x: x.timestamp):
+        if not e.symbol or e.qty is None or e.price is None or e.qty <= 0:
+            continue
+        side = (e.side or "").upper()
+
+        if side == "BUY":
+            lots.setdefault(e.symbol, []).append([e.qty, e.price])
+            continue
+        if side != "SELL":
+            continue
+
+        remaining = e.qty
+        matched_qty = 0.0
+        matched_cost = 0.0
+        queue = lots.get(e.symbol, [])
+        while remaining > 1e-9 and queue:
+            lot = queue[0]
+            take = min(lot[0], remaining)
+            matched_qty += take
+            matched_cost += take * lot[1]
+            lot[0] -= take
+            remaining -= take
+            if lot[0] <= 1e-9:
+                queue.pop(0)
+
+        # Partially (or wholly) unmatched: the opening trade predates the window.
+        if remaining > 1e-9 or matched_qty <= 0:
+            continue
+
+        avg_cost = matched_cost / matched_qty
+        e.cost_basis = round(avg_cost, 4)
+        e.realized_pl = round((e.price - avg_cost) * matched_qty, 2)
+        e.realized_pl_pct = round((e.price / avg_cost - 1) * 100, 4) if avg_cost else None
+
+    return entries
+
+
 @router.get("/api/activity", response_model=ActivityResponse)
 def get_activity(
     type: Optional[str] = Query(default=None),
@@ -75,6 +126,9 @@ def get_activity(
     if type and type != "order":
         # All Alpaca activities are trade orders; other type filters return empty
         entries = []
+    # Match lots before any date filter: a sell's cost basis lives in earlier
+    # fills, which a single-day filter would otherwise hide.
+    entries = annotate_realized_pl(entries)
     if date:
         entries = [e for e in entries if e.timestamp.startswith(date)]
     return ActivityResponse(entries=entries)

@@ -118,7 +118,24 @@ export function Ledger() {
         sells++;
       }
     }
-    return { bought, sold, buys, sells, unpriced, net: bought - sold };
+    // Realized P&L totals only the sells whose basis was actually derivable;
+    // `unmatched` counts the rest so the figure is never read as complete.
+    let realized = 0;
+    let realizedSells = 0;
+    let unmatched = 0;
+    for (const e of rows) {
+      if (!isSell(e)) continue;
+      if (e.realized_pl == null) unmatched++;
+      else {
+        realized += e.realized_pl;
+        realizedSells++;
+      }
+    }
+    return {
+      bought, sold, buys, sells, unpriced,
+      net: bought - sold,
+      realized, realizedSells, unmatched,
+    };
   }, [rows]);
 
   // Group by calendar day so the ledger reads as a statement, not a flat list.
@@ -169,7 +186,7 @@ export function Ledger() {
         </div>
       }
     >
-      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[70vh]">
+      <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[70vh]">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3.5">
           <Tile
             label="Bought"
@@ -190,14 +207,38 @@ export function Ledger() {
             tone={totals.net >= 0 ? "var(--c-blue)" : "var(--c-amber)"}
           />
           <Tile
+            label="Realized P&L"
+            value={
+              totals.realizedSells > 0
+                ? `${totals.realized >= 0 ? "+" : "−"}${money(Math.abs(totals.realized))}`
+                : "—"
+            }
+            sub={
+              totals.realizedSells > 0
+                ? `${totals.realizedSells} closed lot${totals.realizedSells === 1 ? "" : "s"}${
+                    totals.unmatched > 0 ? ` · ${totals.unmatched} basis unknown` : ""
+                  }`
+                : totals.unmatched > 0
+                  ? `${totals.unmatched} sell${totals.unmatched === 1 ? "" : "s"} — basis outside window`
+                  : "No closed lots yet"
+            }
+            tone={
+              totals.realizedSells === 0
+                ? undefined
+                : totals.realized >= 0
+                  ? "var(--c-green)"
+                  : "var(--c-red)"
+            }
+          />
+          <Tile
             label="Fills"
             value={String(rows.length)}
             sub={date ? `On ${dayLabel(date)}` : "All recorded fills"}
           />
         </div>
 
-        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] flex flex-col gap-4 min-w-0">
-          <div className="flex items-center justify-between gap-3.5 flex-wrap">
+        <section className="bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] flex flex-col gap-4 min-w-0">
+          <div className="flex items-center justify-between gap-x-3.5 gap-y-1 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] bg-[var(--c-ink)] block" />
               <h2 className="text-[16px] font-semibold tracking-[-0.01em]">Trade ledger</h2>
@@ -288,6 +329,44 @@ export function Ledger() {
                           )}
                         </span>
 
+                        {/* Realized P&L: only a sell can have one, and only when
+                            its opening buys are inside the fetched window. A
+                            dash means not derivable — it never means break-even. */}
+                        <span className="w-[92px] shrink-0 text-right whitespace-nowrap hidden sm:block">
+                          {e.realized_pl != null ? (
+                            <>
+                              <span
+                                className="text-[13px] font-semibold tabular-nums"
+                                style={{
+                                  color:
+                                    e.realized_pl >= 0 ? "var(--c-green)" : "var(--c-red)",
+                                }}
+                              >
+                                {e.realized_pl >= 0 ? "+" : "−"}
+                                {money(Math.abs(e.realized_pl))}
+                              </span>
+                              <span className="block text-[11px] text-[var(--c-mute)] tabular-nums">
+                                {e.realized_pl_pct != null
+                                  ? `${e.realized_pl_pct >= 0 ? "+" : "−"}${Math.abs(
+                                      e.realized_pl_pct,
+                                    ).toFixed(2)}%`
+                                  : "realized"}
+                              </span>
+                            </>
+                          ) : (
+                            <span
+                              className="text-[12.5px] text-[var(--c-mute)]"
+                              title={
+                                isSell(e)
+                                  ? "Opening buy is outside the fetched fill window, so cost basis cannot be derived"
+                                  : "Realized P&L is recorded on the sell that closes a position"
+                              }
+                            >
+                              —
+                            </span>
+                          )}
+                        </span>
+
                         <span className="text-right whitespace-nowrap shrink-0">
                           {e.notional != null ? (
                             <>
@@ -317,13 +396,15 @@ export function Ledger() {
             </p>
           )}
 
-          {/* Realized P&L needs buys matched against sells; cash flows need a
-              transfer feed. Neither exists yet — see issue #19. */}
+          {/* Cost basis is derived FIFO from the fill stream itself. Cash flows
+              and dividends still need a transfer feed — see issue #19. */}
           <p className="text-[11.5px] text-[var(--c-mute)] leading-[1.55]">
             Every row is a settled fill from the broker. Amounts are quantity × fill price, so they
-            show cash moved, not profit — realized P&amp;L needs sells matched against their
-            original buys, which is not tracked yet. Deposits and withdrawals are not recorded
-            here either, so “net deployed” covers trading only.
+            show cash moved. Realized P&amp;L is derived by matching each sell FIFO against its
+            earlier buys; where the opening buy falls outside the fetched window the figure shows
+            “—”, meaning not derivable rather than break-even. Trading fees, deposits, withdrawals
+            and dividends are not recorded here, so “net deployed” covers trading only and realized
+            P&amp;L is gross of costs.
           </p>
         </section>
       </div>

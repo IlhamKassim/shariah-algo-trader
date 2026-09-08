@@ -110,9 +110,11 @@ function Card({
 }) {
   return (
     <section
-      className={`flex flex-col gap-4 min-w-0 bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-[22px] ${className}`}
+      className={`flex flex-col gap-4 min-w-0 h-full bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] p-4 sm:p-[22px] ${className}`}
     >
-      <div className="flex items-center justify-between gap-3.5">
+      {/* flex-wrap: on narrow widths the title and its right-aligned aside used
+          to overlap rather than stack. */}
+      <div className="flex items-center justify-between gap-x-3.5 gap-y-1 flex-wrap">
         <div className="flex items-center gap-2.5 min-w-0">
           {icon}
           <h2 className="text-[16px] font-semibold tracking-[-0.01em]">{title}</h2>
@@ -660,8 +662,10 @@ export function Console() {
         {/* ---------------------------------------------------------------- */}
         {/* sheet                                                            */}
         {/* ---------------------------------------------------------------- */}
-        <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-[26px] flex flex-col gap-[22px] min-h-[60vh]">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(430px,100%),1fr))] gap-[22px] items-start">
+        <div className="bg-[var(--c-sheet)] rounded-t-[var(--r-sheet)] p-3.5 sm:p-[26px] flex flex-col gap-4 sm:gap-[22px] min-h-[60vh]">
+          {/* items-stretch, not items-start: Performance and Engine Signals sit
+              side by side and read as one row only if they share a height. */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(430px,100%),1fr))] gap-[22px] items-stretch">
             {(
               <Card
                 title="Performance"
@@ -766,9 +770,9 @@ export function Console() {
                   Where should the engine focus this cycle?
                 </div>
 
-                {/* Capped so a long signal list doesn't stretch this card far
-                    past the Performance card beside it, leaving dead space. */}
-                <div className="flex flex-col gap-3.5 flex-1 max-h-[360px] overflow-y-auto pr-1">
+                {/* Fills the height the row shares with Performance and scrolls
+                    internally, so neither card dictates the other's size. */}
+                <div className="flex flex-col gap-3.5 flex-1 min-h-0 overflow-y-auto pr-1">
                   <div className="text-[13px] font-semibold">
                     Focus for top {topN}
                     {universe?.last_computed_at && (

@@ -2,7 +2,6 @@ import { NavLink, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { NotificationBell } from "./NotificationBell";
-import { UserAvatar } from "./UserAvatar";
 
 /**
  * Chrome shared by every authenticated page. All of them now sit on the
@@ -45,9 +44,11 @@ export function ConsoleShell({
   const etf = status?.etf_symbol ?? "SPUS";
 
   return (
-    <div className="console-root min-h-screen px-[22px] pt-[22px]">
-      <div className="max-w-[1420px] mx-auto flex flex-col gap-[26px]">
-        <nav className="flex items-center gap-[18px] flex-wrap">
+    // Chrome padding is tighter on phones: at 22px a card's own frame ate more
+    // width than the numbers inside it.
+    <div className="console-root min-h-screen px-3 pt-3 sm:px-[22px] sm:pt-[22px]">
+      <div className="max-w-[1420px] mx-auto flex flex-col gap-4 sm:gap-[26px]">
+        <nav className="flex items-center gap-2.5 sm:gap-[18px] flex-wrap">
           <Link to="/console" className="flex items-center gap-2.5 min-w-0 !text-[var(--c-ink)]">
             <span className="w-[26px] h-[26px] shrink-0 flex items-center justify-center">
               <span className="w-[15px] h-[15px] bg-[var(--c-ink)] rounded-[4px] rotate-45 block" />
@@ -95,19 +96,14 @@ export function ConsoleShell({
             </Link>
           </div>
 
+          {/* The avatar used to sit here linking to /account — the same target as
+              the Universe pill above, so the bar offered two ways into one page. */}
           <div className="flex items-center gap-2.5">
             <NotificationBell />
-            <Link
-              to="/account"
-              className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center"
-              title="Quant Operator Profile"
-            >
-              <UserAvatar />
-            </Link>
           </div>
         </nav>
 
-        <div className="flex items-center justify-between gap-[26px] flex-wrap">
+        <div className="flex items-center justify-between gap-3 sm:gap-[26px] flex-wrap">
           <div className="flex items-center gap-3.5 min-w-0">
             <Link
               to="/console"
@@ -116,8 +112,13 @@ export function ConsoleShell({
             >
               ←
             </Link>
-            <span className="text-[15px] text-[var(--c-mute)]">
-              Dashboard
+            <span className="text-[15px] text-[var(--c-mute)] min-w-0 truncate">
+              <Link
+                to="/console"
+                className="!text-[var(--c-mute)] hover:!text-[var(--c-ink)] transition-colors"
+              >
+                Dashboard
+              </Link>
               <span className="text-[var(--c-ink)] font-semibold">/{breadcrumb}</span>
             </span>
           </div>

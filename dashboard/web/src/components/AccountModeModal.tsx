@@ -1,8 +1,15 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Flame, AlertOctagon, CheckCircle2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+
+/**
+ * Trading environment switch, on the Console design system (DESIGN.md §A).
+ *
+ * Switching to live money is irreversible in the sense that matters — the next
+ * rebalance spends real capital — so per §A5 rule 4 the confirmation step is
+ * deliberate: live requires an explicit acknowledgement, not just a selection.
+ */
 
 interface AccountModeModalProps {
   isOpen: boolean;
@@ -10,28 +17,101 @@ interface AccountModeModalProps {
   currentMode: "paper" | "live";
 }
 
-export function AccountModeModal({
-  isOpen,
-  onClose,
-  currentMode,
-}: AccountModeModalProps) {
+const MODES = {
+  paper: {
+    label: "Paper",
+    blurb: "Simulated orders against Alpaca's paper endpoint. No real capital moves.",
+    endpoint: "paper-api.alpaca.markets",
+    accent: "var(--c-blue)",
+  },
+  live: {
+    label: "Live",
+    blurb: "Real orders on your live Alpaca brokerage account, with real capital.",
+    endpoint: "api.alpaca.markets",
+    accent: "var(--c-red)",
+  },
+} as const;
+
+function ModeOption({
+  mode,
+  selected,
+  current,
+  onSelect,
+}: {
+  mode: "paper" | "live";
+  selected: boolean;
+  current: boolean;
+  onSelect: () => void;
+}) {
+  const m = MODES[mode];
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className="text-left min-w-0 rounded-[var(--r-inset)] border p-4 transition-colors cursor-pointer"
+      style={{
+        borderColor: selected ? m.accent : "var(--c-line)",
+        background: selected ? "var(--c-soft)" : "var(--c-card)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className="w-[9px] h-[9px] shrink-0 rounded-full block"
+            style={{ background: selected ? m.accent : "var(--c-line)" }}
+          />
+          <span className="text-[13.5px] font-semibold tracking-[-0.01em]">{m.label}</span>
+        </div>
+        {current && (
+          <span className="text-[11px] text-[var(--c-mute)] whitespace-nowrap">Current</span>
+        )}
+      </div>
+      <p className="text-[12.5px] text-[var(--c-mid)] leading-[1.5] mt-2">{m.blurb}</p>
+      <div className="text-[11.5px] text-[var(--c-mute)] mt-2.5 truncate">{m.endpoint}</div>
+    </button>
+  );
+}
+
+export function AccountModeModal({ isOpen, onClose, currentMode }: AccountModeModalProps) {
   const [selectedMode, setSelectedMode] = useState<"paper" | "live">(currentMode);
+  const [acknowledged, setAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
+  const reduceMotion = useReducedMotion();
   const queryClient = useQueryClient();
 
-  if (!isOpen) return null;
+  // Reopening must not inherit a stale selection or a spent acknowledgement.
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedMode(currentMode);
+      setAcknowledged(false);
+      setErrorMsg(null);
+    }
+  }, [isOpen, currentMode]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
+  const goingLive = selectedMode === "live";
+  const unchanged = currentMode === selectedMode;
+  const blocked = unchanged || isSubmitting || (goingLive && !acknowledged);
 
   const handleConfirmSwitch = async () => {
     try {
       setIsSubmitting(true);
       setErrorMsg(null);
-      await api.switchTradingMode(selectedMode, selectedMode === "live");
+      await api.switchTradingMode(selectedMode, goingLive);
       await queryClient.invalidateQueries();
       onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to switch trading environment");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to switch trading environment");
     } finally {
       setIsSubmitting(false);
     }
@@ -39,164 +119,127 @@ export function AccountModeModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn select-none">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative w-full max-w-lg bg-[#0E0D0B] border border-divider rounded-xl shadow-2xl overflow-hidden font-sans text-primary"
-        >
-          {/* Header */}
-          <div className="border-b border-divider px-6 py-4 flex items-center justify-between bg-[#141310]">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center border ${
-                  selectedMode === "live"
-                    ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
-                    : "bg-brand-gold/10 border-brand-gold/30 text-brand-gold"
-                }`}
-              >
-                {selectedMode === "live" ? (
-                  <Flame size={20} className="animate-pulse" />
-                ) : (
-                  <Shield size={20} />
-                )}
-              </div>
-              <div>
-                <h3 className="font-mono text-xs uppercase tracking-[0.2em] font-bold text-primary">
-                  TRADING ENVIRONMENT SELECTOR
-                </h3>
-                <p className="text-[11px] text-muted font-mono">
-                  Switch between Simulated Paper and Real Money execution
+      {isOpen && (
+        <div className="console-root fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <motion.div
+            className="absolute inset-0 bg-[rgba(16,17,20,0.45)]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.15 }}
+            onClick={onClose}
+          />
+
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Trading environment"
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
+            className="relative w-full max-w-[520px] max-h-[90vh] overflow-y-auto bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] shadow-[var(--sh-pop)] p-5 sm:p-[22px] flex flex-col gap-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-[16px] font-semibold tracking-[-0.01em]">
+                  Trading environment
+                </h2>
+                <p className="text-[12.5px] text-[var(--c-mid)] leading-[1.5] mt-1">
+                  Chooses which Alpaca account the engine sends orders to.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="shrink-0 text-[var(--c-mute)] hover:text-[var(--c-ink)] transition-colors cursor-pointer text-[15px] leading-none p-1"
+              >
+                ✕
+              </button>
             </div>
 
-            <button
-              onClick={onClose}
-              className="text-muted hover:text-primary transition-colors p-1 rounded-md hover:bg-white/5 cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Modal Body */}
-          <div className="p-6 space-y-5">
             {errorMsg && (
-              <div className="p-3 bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs rounded">
+              <div
+                role="alert"
+                className="rounded-[var(--r-inset)] border px-4 py-3 text-[12.5px] leading-[1.5]"
+                style={{
+                  borderColor: "var(--c-red)",
+                  background: "var(--c-soft)",
+                  color: "var(--c-red)",
+                }}
+              >
                 {errorMsg}
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Paper Trading Card */}
-              <div
-                onClick={() => setSelectedMode("paper")}
-                className={`p-4 rounded-xl border transition-all cursor-pointer relative flex flex-col justify-between space-y-3 ${
-                  selectedMode === "paper"
-                    ? "border-brand-gold bg-brand-gold/5 shadow-[0_0_20px_rgba(209,169,46,0.1)]"
-                    : "border-divider bg-[#12110E] hover:border-brand-gold/40"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield size={16} className="text-brand-gold" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-primary">
-                      Paper Account
-                    </span>
-                  </div>
-                  {selectedMode === "paper" && (
-                    <CheckCircle2 size={16} className="text-brand-gold" />
-                  )}
-                </div>
-
-                <p className="text-[11px] text-muted leading-relaxed font-sans">
-                  Zero-risk simulated paper environment using Alpaca Paper API. Ideal for testing Shariah factor strategies.
-                </p>
-
-                <div className="pt-2 border-t border-divider/50 flex items-center justify-between text-[10px] font-mono text-faint">
-                  <span>ENDPOINT:</span>
-                  <span className="text-brand-gold">paper-api.alpaca</span>
-                </div>
-              </div>
-
-              {/* Live Real Money Card */}
-              <div
-                onClick={() => setSelectedMode("live")}
-                className={`p-4 rounded-xl border transition-all cursor-pointer relative flex flex-col justify-between space-y-3 ${
-                  selectedMode === "live"
-                    ? "border-rose-500 bg-rose-950/20 shadow-[0_0_20px_rgba(244,63,94,0.15)]"
-                    : "border-divider bg-[#12110E] hover:border-rose-500/40"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Flame size={16} className="text-rose-400 animate-pulse" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-400">
-                      Real Money
-                    </span>
-                  </div>
-                  {selectedMode === "live" && (
-                    <CheckCircle2 size={16} className="text-rose-400" />
-                  )}
-                </div>
-
-                <p className="text-[11px] text-muted leading-relaxed font-sans">
-                  Live real-money market execution connected directly to your institutional Alpaca Live Brokerage Account.
-                </p>
-
-                <div className="pt-2 border-t border-divider/50 flex items-center justify-between text-[10px] font-mono text-faint">
-                  <span>ENDPOINT:</span>
-                  <span className="text-rose-400">api.alpaca.markets</span>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(["paper", "live"] as const).map((m) => (
+                <ModeOption
+                  key={m}
+                  mode={m}
+                  selected={selectedMode === m}
+                  current={currentMode === m}
+                  onSelect={() => setSelectedMode(m)}
+                />
+              ))}
             </div>
 
-            {/* Live Mode Safety Warning */}
-            {selectedMode === "live" && (
-              <div className="bg-rose-950/30 border border-rose-500/40 rounded-lg p-3.5 space-y-2">
-                <div className="flex items-center gap-2 text-rose-300 font-mono text-xs font-bold uppercase tracking-wider">
-                  <AlertOctagon size={16} className="text-rose-400" />
-                  <span>Real Money Risk Disclosure</span>
-                </div>
-                <p className="text-xs text-rose-200/80 leading-relaxed font-sans">
-                  Switching to Live Real Money Mode means rebalances and trade orders will execute with real capital on your live Alpaca brokerage account. Ensure your Live API keys are configured in Settings.
-                </p>
-              </div>
+            {/* Switching accounts starts a new NAV series, because the
+                performance store is keyed per broker account (ADR-0010). Saying
+                so here is cheaper than a reader mistaking a reset for a loss. */}
+            {!unchanged && (
+              <p className="text-[12px] text-[var(--c-mute)] leading-[1.5]">
+                The performance curve tracks each brokerage account separately, so
+                switching starts a fresh history. The {MODES[currentMode].label.toLowerCase()}{" "}
+                account's record is kept and returns if you switch back.
+              </p>
             )}
 
-            {/* Action Buttons */}
-            <div className="pt-2 flex items-center justify-end gap-3">
+            {goingLive && !unchanged && (
+              <label
+                className="flex gap-3 items-start rounded-[var(--r-inset)] border p-4 cursor-pointer"
+                style={{ borderColor: "var(--c-red)", background: "var(--c-soft)" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={acknowledged}
+                  onChange={(e) => setAcknowledged(e.target.checked)}
+                  className="mt-0.5 shrink-0 accent-[var(--c-red)] w-4 h-4 cursor-pointer"
+                />
+                <span className="text-[12.5px] text-[var(--c-mid)] leading-[1.5]">
+                  I understand the next rebalance will place{" "}
+                  <span className="font-semibold text-[var(--c-ink)]">real orders with real money</span>{" "}
+                  on my live Alpaca account. Live API keys must already be configured.
+                </span>
+              </label>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-0.5">
               <button
+                type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 text-xs font-mono text-muted hover:text-primary transition-colors cursor-pointer uppercase tracking-wider"
+                className="rounded-[var(--r-btn)] px-4 py-2.5 text-[12.5px] font-medium text-[var(--c-mid)] hover:text-[var(--c-ink)] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleConfirmSwitch}
-                disabled={isSubmitting || currentMode === selectedMode}
-                className={`px-6 py-2.5 font-mono text-[11px] font-bold uppercase tracking-widest rounded transition-all cursor-pointer flex items-center gap-2 ${
-                  currentMode === selectedMode
-                    ? "bg-[#1f1d19] text-[#666] border border-divider cursor-not-allowed"
-                    : selectedMode === "live"
-                    ? "bg-rose-500 text-white hover:bg-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
-                    : "bg-brand-gold text-page hover:bg-brand-gold/90 shadow-[0_0_15px_rgba(209,169,46,0.3)]"
-                }`}
+                disabled={blocked}
+                className="rounded-[var(--r-btn)] px-5 py-2.5 text-[12.5px] font-semibold text-white transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: goingLive ? "var(--c-red)" : "var(--c-ink)" }}
               >
-                {isSubmitting ? (
-                  <span>Switching...</span>
-                ) : currentMode === selectedMode ? (
-                  <span>Currently Active</span>
-                ) : (
-                  <span>Switch to {selectedMode === "live" ? "Live Real Money" : "Paper Account"}</span>
-                )}
+                {isSubmitting
+                  ? "Switching…"
+                  : unchanged
+                    ? `Already on ${MODES[selectedMode].label.toLowerCase()}`
+                    : `Switch to ${MODES[selectedMode].label.toLowerCase()}`}
               </button>
             </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

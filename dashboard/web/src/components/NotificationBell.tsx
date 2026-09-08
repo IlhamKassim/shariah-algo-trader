@@ -73,35 +73,15 @@ function formatAbsoluteTime(ts: string): string {
   );
 }
 
+/** Severity styling in Console tokens (DESIGN.md §A) — colour carries meaning. */
 function severityConfig(severity: string) {
   switch (severity) {
     case "critical":
-      return {
-        borderLeftClass: "border-l-brand-red",
-        borderTopClass:  "border-t-brand-red",
-        Icon: AlertCircle,
-        iconClass: "text-brand-red",
-        badge: "bg-brand-red/10 text-brand-red",
-        label: "Critical",
-      };
+      return { accent: "var(--c-red)", Icon: AlertCircle, label: "Critical" };
     case "warning":
-      return {
-        borderLeftClass: "border-l-brand-gold",
-        borderTopClass:  "border-t-brand-gold",
-        Icon: AlertTriangle,
-        iconClass: "text-brand-gold",
-        badge: "bg-brand-gold/10 text-brand-gold",
-        label: "Warning",
-      };
+      return { accent: "var(--c-amber)", Icon: AlertTriangle, label: "Warning" };
     default:
-      return {
-        borderLeftClass: "border-l-brand-green",
-        borderTopClass:  "border-t-brand-green",
-        Icon: Info,
-        iconClass: "text-brand-green",
-        badge: "bg-brand-green/10 text-brand-green",
-        label: "Info",
-      };
+      return { accent: "var(--c-blue)", Icon: Info, label: "Info" };
   }
 }
 
@@ -117,14 +97,16 @@ const CATEGORY_LABEL: Record<string, string> = {
   platform:   "Platform Alert",
 };
 
+/** Current Console routes. The old /app/* paths still redirect, but linking
+ *  straight to the destination avoids a pointless bounce. */
 function getNavInfo(item: NotificationItem): { path: string; label: string } {
-  if (item.source === "day_trader") return { path: "/app/day-trader", label: "Day Trader" };
+  if (item.source === "day_trader") return { path: "/day-trader", label: "Day Trader" };
   if (item.source === "shariah_trader") {
-    if (item.category === "compliance") return { path: "/app/portfolio",  label: "Portfolio"    };
-    if (item.category === "trade")      return { path: "/app/activity",   label: "Activity Log" };
-    if (item.category === "platform")   return { path: "/app/universe",   label: "Universe"     };
+    if (item.category === "compliance") return { path: "/console",  label: "Console"  };
+    if (item.category === "trade")      return { path: "/ledger",   label: "Ledger"   };
+    if (item.category === "platform")   return { path: "/universe", label: "Universe" };
   }
-  return { path: "/app", label: "Overview" };
+  return { path: "/console", label: "Console" };
 }
 
 // ── Detail modal ──────────────────────────────────────────────────────────────
@@ -137,7 +119,7 @@ function NotificationModal({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const { borderTopClass, Icon, iconClass, badge, label } = severityConfig(item.severity);
+  const { accent, Icon, label } = severityConfig(item.severity);
   const { path, label: pageLabel } = getNavInfo(item);
 
   useEffect(() => {
@@ -146,63 +128,63 @@ function NotificationModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+  const chip =
+    "text-[11px] px-2 py-0.5 rounded-[var(--r-chip)] bg-[var(--c-soft)] text-[var(--c-mid)]";
 
-      {/* Card */}
+  return (
+    <div className="console-root fixed inset-0 z-[100] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-[rgba(16,17,20,0.45)]" onClick={onClose} />
+
       <div
-        className={`relative w-full max-w-sm bg-sidebar border border-divider shadow-2xl border-t-2 ${borderTopClass}`}
+        className="relative w-full max-w-[420px] max-h-[85vh] overflow-y-auto bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] shadow-[var(--sh-pop)]"
         role="dialog"
         aria-modal="true"
         aria-label={item.title}
       >
-        {/* Header */}
-        <div className="flex items-start gap-3 px-5 pt-5 pb-4">
-          <Icon size={16} strokeWidth={1.75} className={`${iconClass} mt-0.5 shrink-0`} />
+        <div className="flex items-start gap-3 px-5 pt-5 pb-3.5">
+          <span
+            className="w-[22px] h-[22px] shrink-0 rounded-[var(--r-chip)] flex items-center justify-center mt-0.5"
+            style={{ background: accent }}
+          >
+            <Icon size={13} strokeWidth={2} className="text-white" />
+          </span>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-primary leading-snug">{item.title}</p>
-            <p className="text-[10px] text-faint mt-0.5">{formatAbsoluteTime(item.created_at)}</p>
+            <p className="text-[14px] font-semibold tracking-[-0.01em] leading-snug">{item.title}</p>
+            <p className="text-[12px] text-[var(--c-mute)] mt-1">
+              {formatAbsoluteTime(item.created_at)}
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="text-muted hover:text-primary transition-colors cursor-pointer shrink-0 -mt-0.5"
+            className="text-[var(--c-mute)] hover:text-[var(--c-ink)] transition-colors cursor-pointer shrink-0 p-1"
             aria-label="Close"
           >
             <X size={14} strokeWidth={2} />
           </button>
         </div>
 
-        {/* Body */}
         <div className="px-5 pb-4">
-          <p className="text-[12px] text-muted leading-relaxed">{item.body}</p>
+          <p className="text-[12.5px] text-[var(--c-mid)] leading-[1.55]">{item.body}</p>
         </div>
 
-        {/* Meta badges */}
         <div className="flex flex-wrap gap-1.5 px-5 pb-5">
-          <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase ${badge}`}>
+          <span className={chip} style={{ color: accent }}>
             {label}
           </span>
-          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-card-border text-muted uppercase tracking-wide">
-            {SOURCE_LABEL[item.source] ?? item.source}
-          </span>
-          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-card-border text-muted uppercase tracking-wide">
-            {CATEGORY_LABEL[item.category] ?? item.category}
-          </span>
+          <span className={chip}>{SOURCE_LABEL[item.source] ?? item.source}</span>
+          <span className={chip}>{CATEGORY_LABEL[item.category] ?? item.category}</span>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-divider px-5 py-3 flex items-center justify-between">
+        <div className="border-t border-[var(--c-line)] px-5 py-3 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="text-[11px] text-muted hover:text-primary transition-colors cursor-pointer"
+            className="text-[12.5px] text-[var(--c-mid)] hover:text-[var(--c-ink)] transition-colors cursor-pointer"
           >
             Dismiss
           </button>
           <button
             onClick={() => { onClose(); navigate(path); }}
-            className="flex items-center gap-1.5 text-[11px] font-medium text-brand-gold hover:text-brand-gold/80 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--c-blue)] hover:opacity-80 transition-opacity cursor-pointer"
           >
             View in {pageLabel}
             <ArrowUpRight size={12} strokeWidth={2} />
@@ -228,7 +210,7 @@ function NotificationRow({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  const { borderLeftClass, Icon, iconClass } = severityConfig(item.severity);
+  const { accent, Icon } = severityConfig(item.severity);
 
   const handleClick = () => {
     if (!item.read) markOne.mutate();
@@ -239,21 +221,32 @@ function NotificationRow({
     <div
       role="button"
       tabIndex={0}
-      className={`flex gap-3 px-4 py-3 border-b border-divider border-l-2 ${borderLeftClass} transition-colors cursor-pointer select-none ${
-        item.read ? "opacity-50 hover:opacity-70" : "bg-white/[0.02] hover:bg-white/[0.04]"
+      className={`flex gap-2.5 px-4 py-3 border-b border-[var(--c-line)] last:border-b-0 transition-colors cursor-pointer select-none hover:bg-[var(--c-soft)] ${
+        item.read ? "opacity-60" : ""
       }`}
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === "Enter") handleClick(); }}
     >
-      <Icon size={13} strokeWidth={1.75} className={`${iconClass} mt-0.5 shrink-0`} />
+      <Icon size={13} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: accent }} />
       <div className="flex-1 min-w-0">
-        <p className={`text-[11px] font-semibold leading-tight truncate ${item.read ? "text-muted" : "text-primary"}`}>
+        <p
+          className={`text-[12.5px] leading-tight truncate ${
+            item.read ? "text-[var(--c-mid)] font-medium" : "font-semibold"
+          }`}
+        >
           {item.title}
         </p>
-        <p className="text-[10px] text-muted leading-snug mt-0.5 line-clamp-2">{item.body}</p>
-        <p className="text-[9px] text-faint mt-1 tabular-nums">{relativeTime(item.created_at)}</p>
+        <p className="text-[12px] text-[var(--c-mid)] leading-snug mt-1 line-clamp-2">{item.body}</p>
+        <p className="text-[11px] text-[var(--c-mute)] mt-1.5 tabular-nums">
+          {relativeTime(item.created_at)}
+        </p>
       </div>
-      {!item.read && <span className="w-1.5 h-1.5 rounded-full bg-brand-gold mt-1 shrink-0" />}
+      {!item.read && (
+        <span
+          className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+          style={{ background: accent }}
+        />
+      )}
     </div>
   );
 }
@@ -320,14 +313,14 @@ export function NotificationBell() {
         <button
           id="notification-bell-btn"
           onClick={() => { setOpen((o) => !o); setShowFilter(false); }}
-          className="relative p-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
+          className="relative w-[38px] h-[38px] flex items-center justify-center rounded-[var(--r-btn)] bg-[var(--c-card)] border border-[var(--c-line)] shadow-[var(--sh-card)] text-[var(--c-mid)] hover:text-[var(--c-ink)] transition-colors cursor-pointer"
           aria-label={`Notifications${unread > 0 ? ` — ${unread} unread` : ""}`}
           aria-haspopup="true"
           aria-expanded={open}
         >
           <Bell size={15} strokeWidth={1.75} />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center px-0.5 leading-none pointer-events-none">
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-[var(--c-red)] text-[10px] font-semibold text-white flex items-center justify-center px-1 leading-none tabular-nums pointer-events-none">
               {unread > 99 ? "99+" : unread}
             </span>
           )}
@@ -337,19 +330,19 @@ export function NotificationBell() {
         {open && (
           <div
             id="notification-dropdown"
-            className="absolute right-0 top-full mt-2 w-80 bg-sidebar border border-divider shadow-2xl z-50 flex flex-col"
+            className="absolute right-0 top-full mt-2 w-[min(320px,calc(100vw-24px))] bg-[var(--c-card)] border border-[var(--c-line)] rounded-[var(--r-card)] shadow-[var(--sh-pop)] z-50 flex flex-col overflow-hidden"
             style={{ maxHeight: "440px" }}
             role="dialog"
             aria-label="Notifications"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-divider shrink-0">
+            <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[var(--c-line)] shrink-0">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-primary tracking-wide">
+                <span className="text-[13.5px] font-semibold tracking-[-0.01em]">
                   Notifications
                 </span>
                 {unread > 0 && (
-                  <span className="text-[9px] font-bold bg-brand-red text-white rounded-full px-1.5 py-0.5 leading-none tabular-nums">
+                  <span className="text-[10px] font-semibold bg-[var(--c-red)] text-white rounded-full px-1.5 py-0.5 leading-none tabular-nums">
                     {unread}
                   </span>
                 )}
@@ -360,8 +353,8 @@ export function NotificationBell() {
                   onClick={() => setShowFilter((f) => !f)}
                   className={`transition-colors cursor-pointer ${
                     showFilter || muted.size > 0
-                      ? "text-brand-gold"
-                      : "text-muted hover:text-primary"
+                      ? "text-[var(--c-blue)]"
+                      : "text-[var(--c-mute)] hover:text-[var(--c-ink)]"
                   }`}
                   title="Notification filters"
                   aria-label="Toggle notification filters"
@@ -372,7 +365,7 @@ export function NotificationBell() {
                   <button
                     onClick={() => markAll.mutate()}
                     disabled={markAll.isPending}
-                    className="flex items-center gap-1 text-[10px] text-muted hover:text-primary transition-colors cursor-pointer disabled:opacity-40"
+                    className="flex items-center gap-1 text-[12px] text-[var(--c-mid)] hover:text-[var(--c-ink)] transition-colors cursor-pointer disabled:opacity-40 whitespace-nowrap"
                     title="Mark all as read"
                   >
                     <CheckCheck size={11} strokeWidth={2} />
@@ -383,13 +376,13 @@ export function NotificationBell() {
                 <NavLink
                   to="/notifications"
                   onClick={() => { setOpen(false); setShowFilter(false); }}
-                  className="text-[10px] font-medium text-brand-gold hover:text-brand-gold/80 transition-colors whitespace-nowrap"
+                  className="text-[12px] font-semibold text-[var(--c-blue)] hover:opacity-80 transition-opacity whitespace-nowrap"
                 >
                   See all
                 </NavLink>
                 <button
                   onClick={() => { setOpen(false); setShowFilter(false); }}
-                  className="text-muted hover:text-primary transition-colors cursor-pointer"
+                  className="text-[var(--c-mute)] hover:text-[var(--c-ink)] transition-colors cursor-pointer"
                   aria-label="Close notifications"
                 >
                   <X size={12} strokeWidth={2} />
@@ -399,8 +392,8 @@ export function NotificationBell() {
 
             {/* Filter panel */}
             {showFilter && (
-              <div className="px-4 py-3 border-b border-divider bg-card-border/20 shrink-0">
-                <p className="text-[9px] text-faint uppercase tracking-widest mb-2">
+              <div className="px-4 py-3 border-b border-[var(--c-line)] bg-[var(--c-soft)] shrink-0">
+                <p className="text-[11px] text-[var(--c-mute)] uppercase tracking-[0.06em] mb-2">
                   Show notifications from
                 </p>
                 <div className="flex flex-col gap-1.5">
@@ -410,13 +403,13 @@ export function NotificationBell() {
                       <button
                         key={id}
                         onClick={() => toggle(id)}
-                        className="flex items-center justify-between w-full px-2 py-1.5 hover:bg-white/[0.04] transition-colors cursor-pointer rounded-sm"
+                        className="flex items-center justify-between w-full px-2 py-1.5 hover:bg-[var(--c-card)] transition-colors cursor-pointer rounded-[var(--r-chip)]"
                       >
-                        <span className={`text-[11px] font-medium ${active ? "text-primary" : "text-muted"}`}>
+                        <span className={`text-[12.5px] font-medium ${active ? "text-[var(--c-ink)]" : "text-[var(--c-mute)]"}`}>
                           {label}
                         </span>
                         {/* Toggle pill */}
-                        <div className={`relative w-7 h-4 rounded-full transition-colors ${active ? "bg-brand-gold" : "bg-card-border"}`}>
+                        <div className={`relative w-7 h-4 rounded-full transition-colors ${active ? "bg-[var(--c-blue)]" : "bg-[var(--c-line)]"}`}>
                           <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all ${active ? "left-[calc(100%-14px)]" : "left-0.5"}`} />
                         </div>
                       </button>
@@ -430,8 +423,8 @@ export function NotificationBell() {
             <div className="overflow-y-auto flex-1 overscroll-contain">
               {visible.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2.5">
-                  <Bell size={22} strokeWidth={1.25} className="text-faint" />
-                  <span className="text-[11px] text-muted">
+                  <Bell size={22} strokeWidth={1.25} className="text-[var(--c-mute)]" />
+                  <span className="text-[12.5px] text-[var(--c-mid)]">
                     {muted.size > 0 ? "No notifications for selected sources" : "No notifications yet"}
                   </span>
                 </div>
@@ -444,10 +437,10 @@ export function NotificationBell() {
 
             {/* Footer */}
             {visible.length > 0 && (
-              <div className="px-4 py-2 border-t border-divider shrink-0">
-                <p className="text-[9px] text-faint text-center">
+              <div className="px-4 py-2.5 border-t border-[var(--c-line)] shrink-0">
+                <p className="text-[11px] text-[var(--c-mute)] text-center">
                   {muted.size > 0 && (
-                    <span className="text-brand-gold">
+                    <span className="text-[var(--c-blue)]">
                       {muted.size} source{muted.size !== 1 ? "s" : ""} muted ·{" "}
                     </span>
                   )}

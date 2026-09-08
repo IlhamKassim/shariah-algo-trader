@@ -357,7 +357,7 @@ export function Universe() {
                     <SortHead
                       label="Score"
                       sortKey="score"
-                      hint="Share of the scored universe this stock outranks, with its Factor Score z below"
+                      hint="Share of the scored universe this stock outranks — hover a value for its exact Factor Score z"
                       sort={sort}
                       desc={desc}
                       onSort={toggleSort}
@@ -431,14 +431,18 @@ export function Universe() {
                           </td>
                         ))}
                         <td className="py-3 pr-3 text-right whitespace-nowrap">
-                          {/* Percentile leads: a z-score is exact but means little
-                              to a reader; the percentile is computed from the same
-                              data with no distributional assumption. */}
-                          <div className="text-[13.5px] font-semibold tabular-nums">
-                            {s.percentile != null ? `${s.percentile.toFixed(0)}%` : z(s.factor_score)}
-                          </div>
-                          <div className="text-[11.5px] text-[var(--c-mute)] tabular-nums">
-                            {z(s.factor_score)} z
+                          {/* One value, not two: a z-score is exact but means
+                              little to a reader, so the percentile shows and the
+                              exact z stays in the title for anyone who wants it. */}
+                          <div
+                            className="text-[13.5px] font-semibold tabular-nums"
+                            title={`Factor Score ${z(s.factor_score)} z${
+                              s.percentile != null
+                                ? ` — outranks ${s.percentile.toFixed(0)}% of ${stocks.length} scored stocks`
+                                : ""
+                            }`}
+                          >
+                            {s.percentile != null ? `${s.percentile.toFixed(0)}%` : `${z(s.factor_score)} z`}
                           </div>
                         </td>
                         <td className="py-3 text-right whitespace-nowrap">

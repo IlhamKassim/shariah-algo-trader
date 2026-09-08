@@ -76,6 +76,14 @@ class ActivityEntry(BaseModel):
     qty: Optional[float] = None
     price: Optional[float] = None
     notional: Optional[float] = None
+    # Realized P&L on a SELL, matched FIFO against buys in the same fill window.
+    # None means "not derivable", not "zero": either this is a buy, or the lot
+    # was opened before the fetched window so no cost basis is available.
+    realized_pl: Optional[float] = None
+    # Percent units, matching every other *_pct the API returns.
+    realized_pl_pct: Optional[float] = None
+    # Weighted average cost of the shares this sell closed.
+    cost_basis: Optional[float] = None
 
 
 class ActivityResponse(BaseModel):
