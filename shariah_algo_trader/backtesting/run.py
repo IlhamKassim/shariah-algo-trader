@@ -171,9 +171,15 @@ def main() -> int:
 
     if not res_4f:
         logger.error(
-            "Backtest produced no result. If this is a missing-universe error, run:\n"
-            '  export SEC_USER_AGENT="Your Name your@email.com"\n'
-            "  uv run python -m shariah_algo_trader.backtesting.sync_universe"
+            "Backtest produced no result. The log above names the reason; the two "
+            "common ones are:\n"
+            "  1. No universe history, or a start date before the first N-PORT\n"
+            "     snapshot. Sync more filings:\n"
+            '       export SEC_USER_AGENT="Your Name your@email.com"\n'
+            "       uv run python -m shariah_algo_trader.backtesting.sync_universe\n"
+            "  2. No price data retrieved. If yfinance reported *every* ticker as\n"
+            "     'possibly delisted', that is a network or proxy block, not a data\n"
+            "     problem — real delistings never affect the whole universe at once."
         )
         return 1
 

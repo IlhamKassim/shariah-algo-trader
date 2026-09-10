@@ -38,3 +38,7 @@ data/
 # valid until the next deploy rebuilds them, then they become stale-untrusted.
 dashboard/api/static/assets/
 dashboard/api/static/index.html
+
+# Backtest output directory (scripts/run_backtest.py). results_*.json above
+# already covers the JSON written into the repo root.
+backtest-results/
