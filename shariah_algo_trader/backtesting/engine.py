@@ -7,12 +7,18 @@ import pandas as pd
 from typing import Optional
 
 from shariah_algo_trader.backtesting.data_provider import DataProvider
-from shariah_algo_trader.backtesting import edgar_parser
+from shariah_algo_trader.backtesting import benchmarks as benchmark_utils
+from shariah_algo_trader.backtesting import nport
 
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), ".cache")
 PROFILES_CACHE_FILE = os.path.join(CACHE_DIR, "profiles.json")
+
+# SPY is the broad market. SPUS is the Shariah-screened universe this strategy
+# picks from — the benchmark that isolates what the factor engine adds, rather
+# than what the Shariah Screen adds.
+DEFAULT_BENCHMARKS = ("SPY", "SPUS")
 
 def z_scores(raw: dict[str, float]) -> dict[str, float]:
     if not raw:
@@ -25,10 +31,14 @@ def z_scores(raw: dict[str, float]) -> dict[str, float]:
     return dict(zip(raw.keys(), zs.tolist()))
 
 class BacktestEngine:
-    def __init__(self, data_provider: DataProvider, initial_capital: float = 100000.0, transaction_cost_bps: float = 25.0):
+    def __init__(self, data_provider: DataProvider, initial_capital: float = 100000.0, transaction_cost_bps: float = 25.0, risk_free_rate: float = 0.0):
         self.data_provider = data_provider
         self.initial_capital = initial_capital
         self.transaction_cost_pct = transaction_cost_bps / 10000.0
+        # Annualised decimal (0.04 = 4%). Left at 0.0 by default so existing
+        # results stay comparable, but a Sharpe against 0% overstates every
+        # strategy while cash actually yields something.
+        self.risk_free_rate = risk_free_rate
         self.profiles = {}
         self._load_profiles()
 
@@ -77,13 +87,40 @@ class BacktestEngine:
                 
         return "Unknown"
 
-    def run(self, start_date: str, end_date: str, top_n: int = 20, sector_cap: float = 0.20, use_low_vol: bool = True) -> dict:
-        """Run the monthly walk-forward backtest simulation."""
+    def run(self, start_date: str, end_date: str, top_n: int = 20, sector_cap: float = 0.20, use_low_vol: bool = True, benchmarks: Optional[list[str]] = None) -> dict:
+        """Run the monthly walk-forward backtest simulation.
+
+        ``benchmarks`` names tickers to buy and hold over the same window for
+        comparison. SPUS is the honest one: beating SPY while holding a
+        Shariah-screened subset largely measures the screen, not the factor
+        engine. Pass an empty list to skip benchmarking entirely.
+        """
         logger.info("Starting backtest from %s to %s (top_n=%d, use_low_vol=%s)", start_date, end_date, top_n, use_low_vol)
-        
-        # 1. Load universe history
-        universe_history = edgar_parser.load_universe_history()
-        
+
+        benchmark_tickers = list(DEFAULT_BENCHMARKS if benchmarks is None else benchmarks)
+
+        # 1. Load point-in-time universe history from N-PORT filings.
+        universe_history = nport.load_universe_history()
+        if not universe_history:
+            logger.error(
+                "No N-PORT universe history found in %s. Run "
+                "`uv run python -m shariah_algo_trader.backtesting.sync_universe` to "
+                "download filings from SEC EDGAR. Refusing to backtest against the "
+                "current holdings snapshot, which would bake in survivorship bias.",
+                nport.FILINGS_DIR,
+            )
+            return {}
+
+        first_snapshot = min(universe_history)
+        if start_date < first_snapshot:
+            logger.error(
+                "Backtest starts %s but the earliest universe snapshot is %s. "
+                "Every date before that has no knowable universe — start on or "
+                "after %s, or sync more filings.",
+                start_date, first_snapshot, first_snapshot,
+            )
+            return {}
+
         # Collect all tickers that ever existed in the universe
         all_tickers = set()
         for t_list in universe_history.values():
@@ -94,13 +131,16 @@ class BacktestEngine:
         start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         lookback_start = (start_dt - datetime.timedelta(days=450)).strftime("%Y-%m-%d")
         
-        prices_df = self.data_provider.get_historical_prices(all_tickers, lookback_start, end_date)
+        # Benchmarks need prices too, but must never enter the tradable universe.
+        price_request = sorted(set(all_tickers) | set(benchmark_tickers))
+        prices_df = self.data_provider.get_historical_prices(price_request, lookback_start, end_date)
         if prices_df.empty:
             logger.error("No price data retrieved for backtest. Aborting.")
             return {}
             
-        # Re-verify tickers present in price data
-        valid_tickers = [t for t in all_tickers if t in prices_df.columns]
+        # Re-verify tickers present in price data. Benchmarks are excluded here:
+        # they are measuring sticks, not candidate holdings.
+        valid_tickers = [t for t in all_tickers if t in prices_df.columns and t not in benchmark_tickers]
         
         # 2. Identify monthly rebalance dates (first trading day of each month)
         trading_days = prices_df.loc[start_date:end_date].index
@@ -208,30 +248,70 @@ class BacktestEngine:
         # Calculate stats
         equity_series = pd.Series([d["value"] for d in daily_equity], index=pd.to_datetime([d["date"] for d in daily_equity]))
         stats = self._calculate_metrics(equity_series)
-        
+
+        benchmark_results = self._run_benchmarks(benchmark_tickers, prices_df, equity_series, stats)
+
         return {
             "daily_equity": daily_equity,
             "rebalance_log": rebalance_log,
-            "metrics": stats
+            "metrics": stats,
+            "benchmarks": benchmark_results,
+            "universe_coverage": nport.coverage(),
         }
 
+    def _run_benchmarks(self, tickers: list[str], prices_df: pd.DataFrame, equity_series: pd.Series, stats: Optional[dict] = None) -> dict:
+        """Buy-and-hold each benchmark over the same window and compare."""
+        results: dict[str, dict] = {}
+        stats = stats or {}
+        for ticker in tickers:
+            curve = benchmark_utils.buy_and_hold_curve(
+                prices_df, ticker, equity_series.index, self.initial_capital
+            )
+            if curve.empty:
+                continue
+
+            relative = benchmark_utils.relative_metrics(
+                equity_series, curve, risk_free_rate=self.risk_free_rate
+            )
+            results[ticker] = {
+                "metrics": self._calculate_metrics(curve),
+                "relative": relative,
+                "daily_equity": [
+                    {"date": index.strftime("%Y-%m-%d"), "value": float(value)}
+                    for index, value in curve.items()
+                ],
+            }
+            if relative:
+                logger.info(
+                    "vs %s: strategy CAGR %.2f%% vs benchmark %.2f%% (excess %+.2f%%), alpha %+.2f%%, beta %.2f, IR %.2f",
+                    ticker,
+                    stats.get("cagr_pct", float("nan")),
+                    relative.get("benchmark_cagr_pct", float("nan")),
+                    relative.get("excess_cagr_pct", float("nan")),
+                    relative.get("alpha_pct", float("nan")),
+                    relative.get("beta", float("nan")),
+                    relative.get("information_ratio", float("nan")),
+                )
+        return results
+
     def _get_active_universe(self, date_str: str, universe_history: dict[str, list[str]]) -> list[str]:
-        # If fallback is in history, use it
-        if "fallback" in universe_history:
-            return universe_history["fallback"]
-            
-        # Otherwise find closest historical snapshot end-date <= date_str
-        valid_dates = sorted([d for d in universe_history.keys() if d <= date_str])
-        if valid_dates:
-            target_date = valid_dates[-1]
-            return universe_history[target_date]
-            
-        # If no dates <= date_str, use first available date
-        all_dates = sorted(universe_history.keys())
-        if all_dates:
-            return universe_history[all_dates[0]]
-            
-        return []
+        """The universe as it was actually knowable on ``date_str``.
+
+        Only snapshots dated on or before ``date_str`` are eligible. Falling
+        back to the *earliest* snapshot when none precedes the date — as an
+        earlier version of this method did — leaks future membership into the
+        past, which is precisely the look-ahead bias this whole module exists
+        to eliminate. On such a date the honest answer is "nothing was known".
+        """
+        valid_dates = [d for d in universe_history if d <= date_str]
+        if not valid_dates:
+            logger.warning(
+                "No universe snapshot on or before %s; skipping this rebalance "
+                "rather than borrowing a future one.", date_str,
+            )
+            return []
+
+        return universe_history[max(valid_dates)]
 
     def _score_universe(self, date: pd.Timestamp, tickers: list[str], prices_df: pd.DataFrame, use_low_vol: bool) -> dict[str, float]:
         """Compute the 4 factors for active tickers up to date."""
@@ -423,7 +503,7 @@ class BacktestEngine:
 
         return dict(zip(tickers, weights))
 
-    def _calculate_metrics(self, equity_series: pd.Series) -> dict:
+    def _calculate_metrics(self, equity_series: pd.Series, risk_free_rate: Optional[float] = None) -> dict:
         if equity_series.empty or len(equity_series) < 2:
             return {}
             
@@ -439,8 +519,11 @@ class BacktestEngine:
         # Annualised Volatility
         vol = daily_returns.std() * (252 ** 0.5)
         
-        # Sharpe Ratio (Assuming 0% risk free rate)
-        sharpe = (cagr / vol) if vol > 0 else 0.0
+        # Sharpe Ratio, net of the risk-free rate. With cash yielding ~4%, a
+        # Sharpe measured against 0% flatters every strategy, and flatters the
+        # most volatile ones most.
+        rf = self.risk_free_rate if risk_free_rate is None else risk_free_rate
+        sharpe = ((cagr - rf) / vol) if vol > 0 else 0.0
         
         # Max Drawdown
         cum_returns = equity_series / equity_series.cummax() - 1

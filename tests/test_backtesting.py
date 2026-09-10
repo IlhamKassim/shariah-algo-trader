@@ -1,89 +1,99 @@
+"""Engine-level backtest tests.
+
+N-PORT parsing is covered in test_nport.py; benchmark maths in test_benchmarks.py.
+"""
+
 import pytest
 import pandas as pd
 import numpy as np
-from shariah_algo_trader.backtesting.edgar_parser import parse_nport_xml
-from shariah_algo_trader.backtesting.engine import z_scores, BacktestEngine
+from shariah_algo_trader.backtesting.engine import z_scores, BacktestEngine, DEFAULT_BENCHMARKS
 
-def test_parse_nport_xml():
-    # Valid N-PORT XML with correct seriesId S000067283 (SPUS)
-    xml_data = """<?xml version="1.0" encoding="UTF-8"?>
-    <nportFiling>
-        <seriesId>S000067283</seriesId>
-        <repPdEnd>2024-03-31</repPdEnd>
-        <formData>
-            <invstOrSecs>
-                <invstOrSec>
-                    <name>APPLE INC</name>
-                    <pctVal>7.43</pctVal>
-                    <identifiers>
-                        <ticker value="AAPL"/>
-                    </identifiers>
-                </invstOrSec>
-                <invstOrSec>
-                    <name>MICROSOFT CORP</name>
-                    <pctVal>8.50</pctVal>
-                    <identifiers>
-                        <ticker value="MSFT"/>
-                    </identifiers>
-                </invstOrSec>
-                <invstOrSec>
-                    <name>CASH COLLATERAL</name>
-                    <pctVal>0.50</pctVal>
-                    <identifiers>
-                        <ticker value="CASH_USD"/>
-                    </identifiers>
-                </invstOrSec>
-            </invstOrSecs>
-        </formData>
-    </nportFiling>
-    """
-    res = parse_nport_xml(xml_data)
-    assert res is not None
-    date, holdings = res
-    assert date == "2024-03-31"
-    assert "AAPL" in holdings
-    assert "MSFT" in holdings
-    assert "CASH_USD" not in holdings  # Should filter out Cash
-    assert holdings["AAPL"] == pytest.approx(0.0743)
-    assert holdings["MSFT"] == pytest.approx(0.0850)
 
-def test_parse_nport_xml_repPdDate():
-    # Valid N-PORT XML with correct seriesId S000067283 (SPUS) and repPdDate
-    xml_data = """<?xml version="1.0" encoding="UTF-8"?>
-    <nportFiling>
-        <seriesId>S000067283</seriesId>
-        <repPdDate>2024-08-31</repPdDate>
-        <repPdEnd>2024-11-30</repPdEnd>
-        <formData>
-            <invstOrSecs>
-                <invstOrSec>
-                    <name>APPLE INC</name>
-                    <pctVal>7.43</pctVal>
-                    <identifiers>
-                        <ticker value="AAPL"/>
-                    </identifiers>
-                </invstOrSec>
-            </invstOrSecs>
-        </formData>
-    </nportFiling>
-    """
-    res = parse_nport_xml(xml_data)
-    assert res is not None
-    date, holdings = res
-    assert date == "2024-08-31"  # repPdDate should take precedence over repPdEnd
-    assert "AAPL" in holdings
-    assert holdings["AAPL"] == pytest.approx(0.0743)
+UNIVERSE_HISTORY = {
+    "2024-08-31": ["AAPL", "MSFT"],
+    "2024-11-30": ["AAPL", "NVDA"],
+    "2025-02-28": ["NVDA", "AVGO"],
+}
 
-def test_parse_nport_xml_wrong_series():
-    # Invalid seriesId
-    xml_data = """<?xml version="1.0" encoding="UTF-8"?>
-    <nportFiling>
-        <seriesId>S000000000</seriesId>
-        <repPdEnd>2024-03-31</repPdEnd>
-    </nportFiling>
+
+def _engine(**kwargs) -> BacktestEngine:
+    return BacktestEngine(data_provider=None, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Point-in-time universe selection
+# ---------------------------------------------------------------------------
+
+
+def test_uses_most_recent_snapshot_on_or_before_the_date():
+    engine = _engine()
+    assert engine._get_active_universe("2024-12-15", UNIVERSE_HISTORY) == ["AAPL", "NVDA"]
+
+
+def test_uses_a_snapshot_dated_exactly_today():
+    engine = _engine()
+    assert engine._get_active_universe("2024-11-30", UNIVERSE_HISTORY) == ["AAPL", "NVDA"]
+
+
+def test_never_borrows_a_future_snapshot():
+    """Regression guard against look-ahead bias.
+
+    An earlier version fell back to the *earliest* snapshot when no snapshot
+    preceded the date, which leaks future universe membership into the past —
+    the exact bias the N-PORT history exists to remove. The honest answer for a
+    date before any snapshot is an empty universe.
     """
-    res = parse_nport_xml(xml_data)
-    assert res is None
+    engine = _engine()
+    assert engine._get_active_universe("2024-01-01", UNIVERSE_HISTORY) == []
+
+
+def test_empty_history_yields_empty_universe():
+    engine = _engine()
+    assert engine._get_active_universe("2025-01-01", {}) == []
+
+
+def test_does_not_carry_forward_across_the_latest_snapshot_incorrectly():
+    engine = _engine()
+    assert engine._get_active_universe("2026-01-01", UNIVERSE_HISTORY) == ["NVDA", "AVGO"]
+
+
+# ---------------------------------------------------------------------------
+# Benchmarks
+# ---------------------------------------------------------------------------
+
+
+def test_default_benchmarks_include_the_screened_universe():
+    """SPY alone measures the Shariah Screen as much as the factor engine."""
+    assert "SPUS" in DEFAULT_BENCHMARKS
+    assert "SPY" in DEFAULT_BENCHMARKS
+
+
+def test_run_benchmarks_skips_tickers_with_no_price_data():
+    engine = _engine()
+    dates = pd.date_range("2024-01-01", periods=30, freq="B")
+    equity = pd.Series([100.0 * (1.001 ** i) for i in range(30)], index=dates)
+    prices = pd.DataFrame({"SPY": [50.0 * (1.0005 ** i) for i in range(30)]}, index=dates)
+
+    results = engine._run_benchmarks(["SPY", "MISSING"], prices, equity, {})
+    assert set(results) == {"SPY"}
+    assert results["SPY"]["relative"]["overlap_days"] == 30
+
+
+def test_run_benchmarks_reports_beating_the_benchmark():
+    engine = _engine(initial_capital=1000.0)
+    dates = pd.date_range("2024-01-01", periods=250, freq="B")
+    equity = pd.Series([1000.0 * (1.0008 ** i) for i in range(250)], index=dates)
+    prices = pd.DataFrame({"SPY": [400.0 * (1.0002 ** i) for i in range(250)]}, index=dates)
+
+    results = engine._run_benchmarks(["SPY"], prices, equity, {})
+    assert results["SPY"]["relative"]["beat_benchmark"] is True
+    assert results["SPY"]["metrics"]["cagr_pct"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+
 
 def test_z_scores():
     raw = {"A": 1.0, "B": 2.0, "C": 3.0}
@@ -111,3 +121,37 @@ def test_calculate_metrics():
     assert metrics["total_return_pct"] == pytest.approx(9.0)
     assert metrics["win_rate_pct"] == 100.0  # Daily increase every day
     assert metrics["max_drawdown_pct"] == 0.0  # No drawdowns
+
+
+def test_sharpe_defaults_to_zero_risk_free_rate():
+    dates = pd.date_range("2024-01-01", periods=260, freq="B")
+    equity = pd.Series([100.0 * (1.0005 ** i) for i in range(260)], index=dates)
+
+    engine = _engine()
+    assert engine.risk_free_rate == 0.0
+    metrics = engine._calculate_metrics(equity)
+    assert metrics["sharpe_ratio"] == pytest.approx(
+        metrics["cagr_pct"] / 100.0 / (metrics["annualised_vol_pct"] / 100.0)
+    )
+
+
+def test_risk_free_rate_lowers_sharpe():
+    """A Sharpe measured against 0% flatters every strategy while cash yields more."""
+    dates = pd.date_range("2024-01-01", periods=260, freq="B")
+    returns = np.random.default_rng(5).normal(0.0006, 0.008, 260)
+    equity = pd.Series(100.0 * np.cumprod(1 + returns), index=dates)
+
+    sharpe_zero = _engine()._calculate_metrics(equity)["sharpe_ratio"]
+    sharpe_real = _engine(risk_free_rate=0.04)._calculate_metrics(equity)["sharpe_ratio"]
+    assert sharpe_real < sharpe_zero
+
+
+def test_calculate_metrics_accepts_an_explicit_override():
+    dates = pd.date_range("2024-01-01", periods=260, freq="B")
+    equity = pd.Series([100.0 * (1.0005 ** i) for i in range(260)], index=dates)
+
+    engine = _engine(risk_free_rate=0.04)
+    assert (
+        engine._calculate_metrics(equity, risk_free_rate=0.0)["sharpe_ratio"]
+        > engine._calculate_metrics(equity)["sharpe_ratio"]
+    )

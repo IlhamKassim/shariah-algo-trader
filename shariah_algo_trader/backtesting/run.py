@@ -7,13 +7,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from shariah_algo_trader.backtesting.data_provider import DataProvider
-from shariah_algo_trader.backtesting.engine import BacktestEngine
+from shariah_algo_trader.backtesting.engine import BacktestEngine, DEFAULT_BENCHMARKS
+from shariah_algo_trader.backtesting import nport
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s — %(message)s",
 )
 logger = logging.getLogger("backtest_runner")
+
 
 def print_metrics_table(metrics: dict, title: str):
     print("\n" + "=" * 50)
@@ -27,6 +29,60 @@ def print_metrics_table(metrics: dict, title: str):
             print(f"{label:<30}: {v:.2f}")
     print("=" * 50 + "\n")
 
+
+def print_benchmark_table(result: dict, title: str):
+    """Print the strategy against each benchmark — the question that matters."""
+    benchmarks = result.get("benchmarks") or {}
+    if not benchmarks:
+        print("\nNo benchmark comparison available (no benchmark price data).\n")
+        return
+
+    strategy_cagr = result.get("metrics", {}).get("cagr_pct", float("nan"))
+
+    print("\n" + "=" * 78)
+    print(f" {title.upper()} — VS BENCHMARKS ".center(78, "="))
+    print("=" * 78)
+    header = f"{'Benchmark':<10}{'Bench CAGR':>12}{'Excess':>10}{'Alpha':>10}{'Beta':>8}{'IR':>8}{'Verdict':>16}"
+    print(header)
+    print("-" * 78)
+    for ticker, payload in benchmarks.items():
+        rel = payload.get("relative") or {}
+        if not rel:
+            print(f"{ticker:<10}{'insufficient overlap':>68}")
+            continue
+        verdict = "BEATS IT" if rel.get("beat_benchmark") else "loses to it"
+        print(
+            f"{ticker:<10}"
+            f"{rel.get('benchmark_cagr_pct', float('nan')):>11.2f}%"
+            f"{rel.get('excess_cagr_pct', float('nan')):>+9.2f}%"
+            f"{rel.get('alpha_pct', float('nan')):>+9.2f}%"
+            f"{rel.get('beta', float('nan')):>8.2f}"
+            f"{rel.get('information_ratio', float('nan')):>8.2f}"
+            f"{verdict:>16}"
+        )
+    print("-" * 78)
+    print(f"Strategy CAGR: {strategy_cagr:.2f}%")
+    print("=" * 78 + "\n")
+
+
+def print_coverage_warning(result: dict):
+    coverage = result.get("universe_coverage") or {}
+    snapshots = coverage.get("snapshots", 0)
+    if not snapshots:
+        return
+    years = coverage.get("span_days", 0) / 365.25
+    print(
+        f"Universe history: {snapshots} point-in-time snapshots covering "
+        f"{coverage.get('first_date')} to {coverage.get('last_date')} ({years:.1f} years)."
+    )
+    if years < 3:
+        print(
+            "WARNING: under 3 years of point-in-time universe history. Factor\n"
+            "         premia go negative for longer than that. Treat this as a\n"
+            "         smoke test of the machinery, not evidence about the strategy.\n"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Isolated Shariah Algo Strategy Backtester")
     parser.add_argument("--start-date", type=str, default="2024-01-01", help="Backtest start date (YYYY-MM-DD)")
@@ -35,6 +91,11 @@ def main():
     parser.add_argument("--sector-cap", type=float, default=0.20, help="Sector cap percentage (0.20 = 20%%)")
     parser.add_argument("--initial-capital", type=float, default=100000.0, help="Initial cash allocation")
     parser.add_argument("--tx-cost", type=float, default=25.0, help="Transaction cost in basis points (bps)")
+    parser.add_argument("--risk-free-rate", type=float, default=0.0,
+                        help="Annualised risk-free rate as a decimal (0.04 = 4%%) used for Sharpe and alpha")
+    parser.add_argument("--benchmark", action="append", default=None,
+                        help=f"Benchmark ticker to compare against; repeatable. Default: {', '.join(DEFAULT_BENCHMARKS)}")
+    parser.add_argument("--no-benchmark", action="store_true", help="Skip benchmark comparison entirely")
     parser.add_argument("--compare", action="store_true", help="Compare 4-factor vs 3-factor strategy")
     parser.add_argument("--tickers", type=str, default="", help="Comma-separated list of tickers to restrict the backtest (recommended for free FMP keys)")
     parser.add_argument("--output-dir", type=str, default=".", help="Directory to save backtest result JSON files")
@@ -42,13 +103,24 @@ def main():
     args = parser.parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
 
+    if args.no_benchmark:
+        benchmarks = []
+    elif args.benchmark:
+        benchmarks = [t.strip().upper() for t in args.benchmark if t.strip()]
+    else:
+        benchmarks = list(DEFAULT_BENCHMARKS)
+
     # Override universe if custom tickers are provided
     if args.tickers:
         custom_list = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
-        logger.info("Restricting backtest universe to custom ticker list: %s", custom_list)
-        # Mock load_universe_history in edgar_parser
-        from shariah_algo_trader.backtesting import edgar_parser
-        edgar_parser.load_universe_history = lambda: {"fallback": custom_list}
+        logger.warning(
+            "Restricting the universe to a fixed ticker list: %s. This list does not "
+            "change over time, so it carries full survivorship bias — every name in it "
+            "is one that still exists today. Use it to smoke-test the machinery, never "
+            "to judge the strategy.", custom_list,
+        )
+        # Dated far in the past so it is the active snapshot on every backtest date.
+        nport.load_universe_history = lambda *a, **k: {"1900-01-01": custom_list}
 
     # Verify FMP key is set or ask user
     fmp_key = os.environ.get("FMP_API_KEY")
@@ -59,7 +131,8 @@ def main():
     engine = BacktestEngine(
         data_provider=provider,
         initial_capital=args.initial_capital,
-        transaction_cost_bps=args.tx_cost
+        transaction_cost_bps=args.tx_cost,
+        risk_free_rate=args.risk_free_rate,
     )
 
     # 1. Run 4-Factor Strategy (Standard)
@@ -68,20 +141,32 @@ def main():
         end_date=args.end_date,
         top_n=args.top_n,
         sector_cap=args.sector_cap,
-        use_low_vol=True
+        use_low_vol=True,
+        benchmarks=benchmarks,
     )
-    
-    if res_4f:
-        print_metrics_table(res_4f["metrics"], "4-Factor Strategy (Standard)")
-        
-        # Save results
-        out_path = os.path.join(args.output_dir, "results_4f.json")
-        with open(out_path, "w") as f:
-            json.dump({
-                "metrics": res_4f["metrics"],
-                "daily_equity": res_4f["daily_equity"]
-            }, f, indent=2)
-            logger.info("Saved 4-factor backtest results to %s", out_path)
+
+    if not res_4f:
+        logger.error(
+            "Backtest produced no result. If this is a missing-universe error, run:\n"
+            '  export SEC_USER_AGENT="Your Name your@email.com"\n'
+            "  uv run python -m shariah_algo_trader.backtesting.sync_universe"
+        )
+        return
+
+    print_metrics_table(res_4f["metrics"], "4-Factor Strategy (Standard)")
+    print_benchmark_table(res_4f, "4-Factor Strategy")
+    print_coverage_warning(res_4f)
+
+    # Save results
+    out_path = os.path.join(args.output_dir, "results_4f.json")
+    with open(out_path, "w") as f:
+        json.dump({
+            "metrics": res_4f["metrics"],
+            "benchmarks": {t: p["relative"] for t, p in (res_4f.get("benchmarks") or {}).items()},
+            "universe_coverage": res_4f.get("universe_coverage"),
+            "daily_equity": res_4f["daily_equity"],
+        }, f, indent=2)
+        logger.info("Saved 4-factor backtest results to %s", out_path)
 
     # 2. Run 3-Factor Strategy (If requested)
     if args.compare:
@@ -91,19 +176,23 @@ def main():
             end_date=args.end_date,
             top_n=args.top_n,
             sector_cap=args.sector_cap,
-            use_low_vol=False
+            use_low_vol=False,
+            benchmarks=benchmarks,
         )
         if res_3f:
             print_metrics_table(res_3f["metrics"], "3-Factor Strategy (No Low-Vol)")
-            
+            print_benchmark_table(res_3f, "3-Factor Strategy")
+
             # Save results
             out_path = os.path.join(args.output_dir, "results_3f.json")
             with open(out_path, "w") as f:
                 json.dump({
                     "metrics": res_3f["metrics"],
-                    "daily_equity": res_3f["daily_equity"]
+                    "benchmarks": {t: p["relative"] for t, p in (res_3f.get("benchmarks") or {}).items()},
+                    "daily_equity": res_3f["daily_equity"],
                 }, f, indent=2)
                 logger.info("Saved 3-factor backtest results to %s", out_path)
+
 
 if __name__ == "__main__":
     main()
