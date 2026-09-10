@@ -57,6 +57,21 @@ export function Login() {
 
   const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
 
+  // Public registration is closed unless the server explicitly says otherwise.
+  // Absent or still-loading auth status is treated as closed, so a slow or
+  // failed status call can never briefly expose a signup form.
+  const signupsEnabled = auth?.signups_enabled === true;
+
+  // If someone lands on /login?mode=signup while registration is closed, or the
+  // status arrives after the component mounted, drop back to sign-in.
+  useEffect(() => {
+    if (!signupsEnabled && isSignUpMode) {
+      setIsSignUpMode(false);
+      setError(null);
+      setSupabaseSuccessMsg(null);
+    }
+  }, [signupsEnabled, isSignUpMode]);
+
   // Claim the invite once the user is actually signed in with an active user account
   useEffect(() => {
     if (!inviteCode || inviteClaimedRef.current) return;
@@ -193,6 +208,11 @@ export function Login() {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email.trim())) {
       setError("Please enter a valid email address (e.g. user@example.com).");
+      return;
+    }
+
+    if (isSignUpMode && !signupsEnabled) {
+      setError("Registration is closed. This platform is no longer accepting new accounts.");
       return;
     }
 
@@ -795,22 +815,30 @@ export function Login() {
 
           {/* Mode Switcher */}
           <div className="text-center pt-2">
-            <span className="text-xs text-[#8EB69B]">
-              {isSignUpMode
-                ? "Already have an account? "
-                : "Don't have an account? "}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUpMode(!isSignUpMode);
-                setError(null);
-                setSupabaseSuccessMsg(null);
-              }}
-              className="text-xs font-semibold text-[#DAF1DE] hover:underline cursor-pointer"
-            >
-              {isSignUpMode ? "Log in" : "Sign up"}
-            </button>
+            {signupsEnabled ? (
+              <>
+                <span className="text-xs text-[#8EB69B]">
+                  {isSignUpMode
+                    ? "Already have an account? "
+                    : "Don't have an account? "}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUpMode(!isSignUpMode);
+                    setError(null);
+                    setSupabaseSuccessMsg(null);
+                  }}
+                  className="text-xs font-semibold text-[#DAF1DE] hover:underline cursor-pointer"
+                >
+                  {isSignUpMode ? "Log in" : "Sign up"}
+                </button>
+              </>
+            ) : (
+              <span className="text-xs text-[#8EB69B]/75">
+                Registration is closed — this console is not accepting new accounts.
+              </span>
+            )}
           </div>
         </div>
 

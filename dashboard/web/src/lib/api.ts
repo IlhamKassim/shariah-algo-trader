@@ -145,6 +145,8 @@ export interface AuthStatus {
   supabase_enabled?: boolean;
   mfa_required?: boolean;
   mfa_verified?: boolean;
+  /** When false the app must not offer account creation. Defaults to closed. */
+  signups_enabled?: boolean;
   authenticated: boolean;
   user_id?: string;
   user_email?: string;
@@ -616,6 +618,7 @@ export const api = {
         password_auth_enabled: true,
         google_auth_enabled: false,
         clerk_enabled: false,
+        signups_enabled: false,
         authenticated: true,
       });
     }

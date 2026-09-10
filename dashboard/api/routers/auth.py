@@ -106,6 +106,10 @@ class AuthStatusResponse(BaseModel):
     mfa_required: bool = False
     mfa_verified: bool = False
     authenticated: bool
+    # False means the app must not offer account creation. Enforcement also
+    # requires signups being disabled in the Supabase/Clerk consoles, since
+    # those endpoints are reachable without going through this API.
+    signups_enabled: bool = False
 
 
 router = APIRouter()
@@ -143,6 +147,7 @@ def get_auth_status(
             mfa_required=getattr(cfg, "enforce_mfa", False),
             mfa_verified=mfa_verified,
             authenticated=authenticated,
+            signups_enabled=getattr(cfg, "signups_enabled", False),
         )
 
     if getattr(cfg, "clerk_enabled", False):
@@ -170,6 +175,7 @@ def get_auth_status(
             clerk_enabled=True,
             supabase_enabled=False,
             authenticated=authenticated,
+            signups_enabled=getattr(cfg, "signups_enabled", False),
         )
 
     password_auth_enabled = bool(cfg.dashboard_password)
@@ -189,6 +195,7 @@ def get_auth_status(
             clerk_enabled=False,
             supabase_enabled=False,
             authenticated=True,
+            signups_enabled=getattr(cfg, "signups_enabled", False),
         )
 
     token = request.cookies.get("session_token")
@@ -200,6 +207,7 @@ def get_auth_status(
         clerk_enabled=False,
         supabase_enabled=False,
         authenticated=authenticated,
+        signups_enabled=getattr(cfg, "signups_enabled", False),
     )
 
 

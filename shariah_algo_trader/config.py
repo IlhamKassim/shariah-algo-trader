@@ -77,6 +77,17 @@ class Config:
         self.supabase_enabled: bool = bool(self.supabase_jwt_secret or self.supabase_url)
         self.enforce_mfa: bool = os.environ.get("ENFORCE_MFA", "false").lower() in ("true", "1", "yes")
 
+        # Public registration is CLOSED by default. The platform no longer
+        # onboards new self-service accounts; existing users keep signing in.
+        # Set SIGNUPS_ENABLED=true to reopen.
+        #
+        # NOTE: this flag controls this application only. Supabase's
+        # /auth/v1/signup endpoint is reachable directly with the anon key,
+        # which ships in the browser bundle, so this is not by itself
+        # enforcement — signups must also be disabled in the Supabase console
+        # (Authentication -> Sign In / Providers -> "Allow new users to sign up").
+        self.signups_enabled: bool = os.environ.get("SIGNUPS_ENABLED", "false").lower() in ("true", "1", "yes")
+
 
 
 

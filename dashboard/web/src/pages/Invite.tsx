@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   CheckCircle2,
@@ -20,6 +21,14 @@ export function Invite() {
   const { code: paramCode } = useParams<{ code?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: authStatus } = useQuery({
+    queryKey: ["authStatus"],
+    queryFn: api.authStatus,
+    refetchOnWindowFocus: false,
+  });
+  // Closed unless the server says otherwise, so an unresolved query never
+  // advertises account creation that would fail at the next step.
+  const signupsEnabled = authStatus?.signups_enabled === true;
 
   // Support both /invite/:code and /invite?code=XYZ
   const queryCode = new URLSearchParams(location.search).get("code") || "";
@@ -242,14 +251,21 @@ export function Invite() {
 
               {/* Action Buttons */}
               <div className="space-y-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => handleProceed("signup")}
-                  className="w-full bg-[#DAF1DE] hover:bg-[#c2e8c8] text-[#051F20] font-semibold py-3.5 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-[#DAF1DE]/10 flex items-center justify-center gap-2"
-                >
-                  <span>Claim &amp; Create Account</span>
-                  <ArrowRight size={14} />
-                </button>
+                {signupsEnabled ? (
+                  <button
+                    type="button"
+                    onClick={() => handleProceed("signup")}
+                    className="w-full bg-[#DAF1DE] hover:bg-[#c2e8c8] text-[#051F20] font-semibold py-3.5 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-[#DAF1DE]/10 flex items-center justify-center gap-2"
+                  >
+                    <span>Claim &amp; Create Account</span>
+                    <ArrowRight size={14} />
+                  </button>
+                ) : (
+                  <div className="w-full border border-[#235347]/60 bg-[#163832]/40 py-3.5 px-4 font-mono text-xs text-[#8EB69B] text-center">
+                    Registration is closed. Existing accounts can still sign in
+                    and attach this code.
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2 text-xs font-mono text-[#8EB69B]">
                   <button
