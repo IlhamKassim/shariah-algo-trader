@@ -141,6 +141,22 @@ class BacktestEngine:
         # Re-verify tickers present in price data. Benchmarks are excluded here:
         # they are measuring sticks, not candidate holdings.
         valid_tickers = [t for t in all_tickers if t in prices_df.columns and t not in benchmark_tickers]
+
+        # A point-in-time universe removes survivorship bias from the *universe*,
+        # but the price feed can put it straight back: providers routinely have
+        # no history for delisted or acquired tickers, and those are exactly the
+        # names that left the ETF badly. Silently dropping them would re-flatter
+        # the results, so account for them explicitly.
+        missing_price_tickers = sorted(set(all_tickers) - set(valid_tickers) - set(benchmark_tickers))
+        if missing_price_tickers:
+            logger.warning(
+                "%d of %d universe tickers have no price history and are excluded: %s%s. "
+                "These are disproportionately delisted/acquired names, so results are "
+                "biased upward by their absence.",
+                len(missing_price_tickers), len(all_tickers),
+                ", ".join(missing_price_tickers[:15]),
+                "..." if len(missing_price_tickers) > 15 else "",
+            )
         
         # 2. Identify monthly rebalance dates (first trading day of each month)
         trading_days = prices_df.loc[start_date:end_date].index
@@ -257,6 +273,11 @@ class BacktestEngine:
             "metrics": stats,
             "benchmarks": benchmark_results,
             "universe_coverage": nport.coverage(),
+            "price_coverage": {
+                "universe_tickers": len(all_tickers),
+                "priced_tickers": len(valid_tickers),
+                "missing_tickers": missing_price_tickers,
+            },
         }
 
     def _run_benchmarks(self, tickers: list[str], prices_df: pd.DataFrame, equity_series: pd.Series, stats: Optional[dict] = None) -> dict:

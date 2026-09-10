@@ -155,3 +155,100 @@ def test_calculate_metrics_accepts_an_explicit_override():
         engine._calculate_metrics(equity, risk_free_rate=0.0)["sharpe_ratio"]
         > engine._calculate_metrics(equity)["sharpe_ratio"]
     )
+
+
+# ---------------------------------------------------------------------------
+# End-to-end run(), with stubbed data
+# ---------------------------------------------------------------------------
+
+
+class _StubProvider:
+    """Serves a fixed price frame, standing in for yfinance/FMP."""
+
+    def __init__(self, prices: pd.DataFrame):
+        self.fmp_api_key = ""
+        self._prices = prices
+
+    def get_historical_prices(self, tickers, start_date, end_date):
+        available = [t for t in tickers if t in self._prices.columns]
+        return self._prices[available]
+
+    def get_fundamentals(self, ticker):
+        # No fundamentals: Quality and Value fall back to flat scores, exactly
+        # as they do in a real run without an FMP key.
+        return [], []
+
+
+def _price_frame(days: int = 500) -> pd.DataFrame:
+    """Trending series long enough to satisfy the 200-day factor lookback."""
+    dates = pd.date_range("2023-01-02", periods=days, freq="B")
+    rng = np.random.default_rng(42)
+    frame = {}
+    for i, ticker in enumerate(["AAA", "BBB", "SPY"]):
+        drift = 0.0004 + i * 0.0001
+        returns = rng.normal(drift, 0.009, days)
+        frame[ticker] = 100.0 * np.cumprod(1 + returns)
+    return pd.DataFrame(frame, index=dates)
+
+
+def _run_with(monkeypatch, universe, prices, **kwargs):
+    from shariah_algo_trader.backtesting import nport
+
+    monkeypatch.setattr(nport, "load_universe_history", lambda *a, **k: universe)
+    monkeypatch.setattr(nport, "coverage", lambda *a, **k: {"snapshots": len(universe)})
+    engine = BacktestEngine(data_provider=_StubProvider(prices), initial_capital=100_000.0)
+    return engine.run(start_date="2024-01-02", end_date="2024-06-28", **kwargs)
+
+
+def test_run_produces_an_equity_curve_and_benchmark_comparison(monkeypatch):
+    result = _run_with(
+        monkeypatch,
+        {"2023-12-01": ["AAA", "BBB"]},
+        _price_frame(),
+        top_n=2,
+        benchmarks=["SPY"],
+    )
+    assert result["daily_equity"]
+    assert result["rebalance_log"]
+    assert "SPY" in result["benchmarks"]
+    assert result["benchmarks"]["SPY"]["relative"]["overlap_days"] > 100
+
+
+def test_run_accounts_for_universe_tickers_with_no_price_history(monkeypatch):
+    """Delisted names absent from the price feed must be counted, not dropped."""
+    result = _run_with(
+        monkeypatch,
+        {"2023-12-01": ["AAA", "BBB", "DELISTED"]},
+        _price_frame(),
+        top_n=2,
+        benchmarks=["SPY"],
+    )
+    coverage = result["price_coverage"]
+    assert coverage["universe_tickers"] == 3
+    assert coverage["priced_tickers"] == 2
+    assert coverage["missing_tickers"] == ["DELISTED"]
+
+
+def test_run_keeps_benchmarks_out_of_the_investable_universe(monkeypatch):
+    """SPY is a measuring stick; it must never be bought as a holding."""
+    result = _run_with(
+        monkeypatch,
+        {"2023-12-01": ["AAA", "BBB", "SPY"]},
+        _price_frame(),
+        top_n=3,
+        benchmarks=["SPY"],
+    )
+    held = {t for entry in result["rebalance_log"] for t in entry["holdings"]}
+    assert "SPY" not in held
+    assert result["price_coverage"]["priced_tickers"] == 2
+
+
+def test_run_refuses_without_a_universe_history(monkeypatch):
+    assert _run_with(monkeypatch, {}, _price_frame(), top_n=2, benchmarks=[]) == {}
+
+
+def test_run_refuses_to_start_before_the_first_snapshot(monkeypatch):
+    """Guards against silently backtesting dates with no knowable universe."""
+    assert _run_with(
+        monkeypatch, {"2025-01-01": ["AAA", "BBB"]}, _price_frame(), top_n=2, benchmarks=[]
+    ) == {}

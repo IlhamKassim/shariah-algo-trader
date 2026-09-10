@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import logging
 import json
@@ -65,6 +66,29 @@ def print_benchmark_table(result: dict, title: str):
     print("=" * 78 + "\n")
 
 
+def print_price_coverage(result: dict):
+    """Report universe names the price feed could not cover.
+
+    A point-in-time universe removes survivorship bias from the universe; a
+    price feed with no history for delisted names puts it back. Say so.
+    """
+    coverage = result.get("price_coverage") or {}
+    total = coverage.get("universe_tickers", 0)
+    priced = coverage.get("priced_tickers", 0)
+    missing = coverage.get("missing_tickers") or []
+    if not total:
+        return
+
+    print(f"Price coverage: {priced}/{total} universe tickers had price history.")
+    if missing:
+        shown = ", ".join(missing[:20]) + ("..." if len(missing) > 20 else "")
+        print(
+            f"WARNING: {len(missing)} ticker(s) excluded for want of price data: {shown}\n"
+            "         These skew toward delisted and acquired names — the ones that\n"
+            "         usually left the universe badly — so results are biased upward.\n"
+        )
+
+
 def print_coverage_warning(result: dict):
     coverage = result.get("universe_coverage") or {}
     snapshots = coverage.get("snapshots", 0)
@@ -83,7 +107,7 @@ def print_coverage_warning(result: dict):
         )
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description="Isolated Shariah Algo Strategy Backtester")
     parser.add_argument("--start-date", type=str, default="2024-01-01", help="Backtest start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", type=str, default="2026-06-01", help="Backtest end date (YYYY-MM-DD)")
@@ -151,11 +175,12 @@ def main():
             '  export SEC_USER_AGENT="Your Name your@email.com"\n'
             "  uv run python -m shariah_algo_trader.backtesting.sync_universe"
         )
-        return
+        return 1
 
     print_metrics_table(res_4f["metrics"], "4-Factor Strategy (Standard)")
     print_benchmark_table(res_4f, "4-Factor Strategy")
     print_coverage_warning(res_4f)
+    print_price_coverage(res_4f)
 
     # Save results
     out_path = os.path.join(args.output_dir, "results_4f.json")
@@ -164,6 +189,7 @@ def main():
             "metrics": res_4f["metrics"],
             "benchmarks": {t: p["relative"] for t, p in (res_4f.get("benchmarks") or {}).items()},
             "universe_coverage": res_4f.get("universe_coverage"),
+            "price_coverage": res_4f.get("price_coverage"),
             "daily_equity": res_4f["daily_equity"],
         }, f, indent=2)
         logger.info("Saved 4-factor backtest results to %s", out_path)
@@ -193,6 +219,8 @@ def main():
                 }, f, indent=2)
                 logger.info("Saved 3-factor backtest results to %s", out_path)
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -86,6 +86,18 @@ risk-free rate, which flatters every strategy and flatters volatile ones most.
   judge a factor strategy. Factor premia go negative for a decade at a time.
   `sync_universe` must be run against EDGAR before any result is meaningful,
   and the tooling says so rather than letting a short window pass unremarked.
+- **Running it:** `.github/workflows/backtest.yml` runs the whole thing on a
+  GitHub runner (`workflow_dispatch`), because SEC EDGAR and the price provider
+  are unreachable from some development environments — restricted agent
+  sandboxes and corporate proxies included. It needs a `SEC_USER_AGENT`
+  repository *variable*; `FMP_API_KEY` is an optional secret, and without it
+  Quality and Value score flat, reducing the run to momentum + low-volatility.
+  The job summary says so rather than presenting it as a 4-factor result.
+- **Price-side survivorship:** a point-in-time universe fixes the universe, not
+  the price feed. Providers often have no history for delisted or acquired
+  tickers — precisely the names that left the ETF badly — and dropping them
+  silently would re-flatter results. `run()` now reports `price_coverage` and
+  the CLI prints how many names were excluded and why.
 - **Open:** only SPUS is in `FUND_REGISTRY`, because only its CIK (1742912) and
   series ID (S000067283) were verified against filings in this repo. Other funds
   need their identifiers confirmed on EDGAR, or passed via `--cik`/`--series`.

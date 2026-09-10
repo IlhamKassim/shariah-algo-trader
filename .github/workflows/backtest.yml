@@ -1,0 +1,166 @@
+name: backtest
+
+# Runs a real point-in-time backtest on a GitHub runner.
+#
+# Why this exists: syncing N-PORT filings needs SEC EDGAR and pricing needs a
+# market data provider, and neither is reachable from every development
+# environment (corporate proxies, restricted agent sandboxes, offline laptops).
+# GitHub runners have unrestricted outbound internet, so this workflow is the
+# reliable way to get an actual answer without depending on anyone's local setup.
+#
+# Trigger it from the Actions tab -> "backtest" -> "Run workflow".
+# Results land in the job summary and as a downloadable artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Backtest start date (YYYY-MM-DD). Must be on/after the first N-PORT snapshot."
+        required: true
+        default: "2020-01-01"
+      end_date:
+        description: "Backtest end date (YYYY-MM-DD)"
+        required: true
+        default: "2026-09-01"
+      top_n:
+        description: "Number of holdings in the Portfolio"
+        required: false
+        default: "20"
+      risk_free_rate:
+        description: "Annualised risk-free rate as a decimal (0.04 = 4%)"
+        required: false
+        default: "0.04"
+      benchmarks:
+        description: "Comma-separated benchmark tickers"
+        required: false
+        default: "SPY,SPUS"
+      compare_3f:
+        description: "Also run the 3-factor variant (no low-vol)"
+        type: boolean
+        required: false
+        default: false
+      sync_filings:
+        description: "Sync N-PORT filings from SEC EDGAR before running"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    name: Point-in-time backtest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check required configuration
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+        run: |
+          if [ "${{ inputs.sync_filings }}" = "true" ] && [ -z "$SEC_USER_AGENT" ]; then
+            echo "::error::SEC_USER_AGENT repository variable is not set."
+            echo "SEC EDGAR rejects requests that do not name a real contact."
+            echo "Set it under Settings -> Secrets and variables -> Actions -> Variables,"
+            echo 'e.g. SEC_USER_AGENT = "Ilham Kassim ilham@example.com"'
+            exit 1
+          fi
+
+      - name: Sync N-PORT filings from SEC EDGAR
+        if: ${{ inputs.sync_filings }}
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+        run: uv run python -m shariah_algo_trader.backtesting.sync_universe
+
+      - name: Report universe coverage
+        run: |
+          uv run python -m shariah_algo_trader.backtesting.sync_universe --status \
+            | tee coverage.txt
+
+      - name: Run backtest
+        env:
+          # Optional. Without it the Quality and Value factors score flat, which
+          # reduces the strategy to momentum + low-volatility. The summary says so.
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+        run: |
+          set -o pipefail
+          BENCH_ARGS=""
+          IFS=',' read -ra TICKERS <<< "${{ inputs.benchmarks }}"
+          for t in "${TICKERS[@]}"; do
+            t="$(echo "$t" | xargs)"
+            [ -n "$t" ] && BENCH_ARGS="$BENCH_ARGS --benchmark $t"
+          done
+
+          COMPARE_ARG=""
+          if [ "${{ inputs.compare_3f }}" = "true" ]; then
+            COMPARE_ARG="--compare"
+          fi
+
+          mkdir -p results
+          uv run python -m shariah_algo_trader.backtesting.run \
+            --start-date "${{ inputs.start_date }}" \
+            --end-date "${{ inputs.end_date }}" \
+            --top-n "${{ inputs.top_n }}" \
+            --risk-free-rate "${{ inputs.risk_free_rate }}" \
+            --output-dir results \
+            $BENCH_ARGS $COMPARE_ARG 2>&1 | tee results/backtest.log
+
+      - name: Build job summary
+        if: always()
+        env:
+          FMP_KEY_PRESENT: ${{ secrets.FMP_API_KEY != '' }}
+        run: |
+          {
+            echo "# Backtest result"
+            echo
+            echo "**Window:** ${{ inputs.start_date }} → ${{ inputs.end_date }}"
+            echo "**Top N:** ${{ inputs.top_n }} · **Risk-free rate:** ${{ inputs.risk_free_rate }}"
+            echo "**Benchmarks:** ${{ inputs.benchmarks }}"
+            echo
+            if [ "$FMP_KEY_PRESENT" != "true" ]; then
+              echo "> [!WARNING]"
+              echo "> \`FMP_API_KEY\` is not configured, so the Quality and Value factors"
+              echo "> scored flat. This is a **momentum + low-volatility** backtest, not a"
+              echo "> 4-factor one. Add the secret to test the real strategy."
+              echo
+            fi
+            echo '## Universe coverage'
+            echo '```'
+            cat coverage.txt 2>/dev/null || echo "(unavailable)"
+            echo '```'
+            echo
+            echo '## Verdict'
+            echo '```'
+            # The comparison table and the two bias warnings are the part worth reading.
+            sed -n '/VS BENCHMARKS/,/^Strategy CAGR/p' results/backtest.log 2>/dev/null || echo "(no benchmark table produced)"
+            grep -A3 -E "^(Price coverage|Universe history|WARNING)" results/backtest.log 2>/dev/null | head -40
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-results
+          path: |
+            results/
+            coverage.txt
+          retention-days: 30
+
+      - name: Upload synced filings
+        if: ${{ inputs.sync_filings }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nport-filings
+          path: shariah_algo_trader/backtesting/data/filings/
+          retention-days: 30
