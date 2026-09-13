@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">Shariah Algo Trader</title>
+  <desc id="desc">A long-only trading system that filters an ETF-defined universe, scores stocks across four factors, and sends paper or live Alpaca orders.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e1117"/>
+      <stop offset="1" stop-color="#171b24"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f2c46d"/>
+      <stop offset="1" stop-color="#d59a3b"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.045"/>
+    </pattern>
+    <clipPath id="frame"><rect width="1200" height="430" rx="28"/></clipPath>
+  </defs>
+
+  <rect width="1200" height="430" rx="28" fill="url(#bg)"/>
+  <rect width="1200" height="430" rx="28" fill="url(#grid)"/>
+  <g clip-path="url(#frame)">
+    <path d="M700 0V430" stroke="#ffffff" stroke-opacity="0.08"/>
+    <path d="M56 348H650" stroke="#f2c46d" stroke-opacity="0.55"/>
+    <circle cx="650" cy="348" r="4" fill="#f2c46d"/>
+  </g>
+
+  <g transform="translate(58 52)" fill="#ffffff">
+    <text x="0" y="0" fill="#f2c46d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="2">RULES-FIRST TRADING SYSTEM</text>
+    <text x="0" y="78" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="56" font-weight="750" letter-spacing="-1.5">Shariah Algo</text>
+    <text x="0" y="142" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="56" font-weight="750" letter-spacing="-1.5">Trader</text>
+    <text x="0" y="194" fill="#c6ccd7" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22">Ranks an ETF-defined universe, checks eligibility daily,</text>
+    <text x="0" y="226" fill="#c6ccd7" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22">and rebalances a long-only spot portfolio.</text>
+
+    <g transform="translate(0 274)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700">
+      <rect width="130" height="42" rx="21" fill="#252b35" stroke="#3a424f"/>
+      <text x="65" y="27" text-anchor="middle" fill="#f2c46d">MOMENTUM</text>
+      <rect x="142" width="120" height="42" rx="21" fill="#252b35" stroke="#3a424f"/>
+      <text x="202" y="27" text-anchor="middle" fill="#f2c46d">QUALITY</text>
+      <rect x="274" width="154" height="42" rx="21" fill="#252b35" stroke="#3a424f"/>
+      <text x="351" y="27" text-anchor="middle" fill="#f2c46d">LOW VOL</text>
+      <rect x="440" width="102" height="42" rx="21" fill="#252b35" stroke="#3a424f"/>
+      <text x="491" y="27" text-anchor="middle" fill="#f2c46d">VALUE</text>
+    </g>
+  </g>
+
+  <g transform="translate(750 56)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <text x="0" y="0" fill="#9ba5b4" font-size="16" letter-spacing="2">EXECUTION PATH</text>
+    <g transform="translate(0 28)">
+      <rect width="370" height="78" rx="16" fill="#202630" stroke="#3a424f"/>
+      <circle cx="34" cy="39" r="18" fill="#f2c46d" fill-opacity="0.16" stroke="#f2c46d"/>
+      <text x="34" y="45" text-anchor="middle" fill="#f2c46d" font-size="17" font-weight="700">01</text>
+      <text x="70" y="34" fill="#ffffff" font-size="20" font-weight="700">ETF holdings</text>
+      <text x="70" y="57" fill="#9ba5b4" font-size="16">SPUS · HLAL · configurable</text>
+    </g>
+    <path d="M185 112V138" stroke="#f2c46d" stroke-width="2"/>
+    <path d="M180 132L185 142L190 132" fill="none" stroke="#f2c46d" stroke-width="2"/>
+    <g transform="translate(0 148)">
+      <rect width="370" height="78" rx="16" fill="#202630" stroke="#3a424f"/>
+      <circle cx="34" cy="39" r="18" fill="#f2c46d" fill-opacity="0.16" stroke="#f2c46d"/>
+      <text x="34" y="45" text-anchor="middle" fill="#f2c46d" font-size="17" font-weight="700">02</text>
+      <text x="70" y="34" fill="#ffffff" font-size="20" font-weight="700">Factor score</text>
+      <text x="70" y="57" fill="#9ba5b4" font-size="16">Equal-weighted z-scores</text>
+    </g>
+    <path d="M185 232V258" stroke="#f2c46d" stroke-width="2"/>
+    <path d="M180 252L185 262L190 252" fill="none" stroke="#f2c46d" stroke-width="2"/>
+    <g transform="translate(0 268)">
+      <rect width="370" height="78" rx="16" fill="#202630" stroke="#f2c46d" stroke-opacity="0.7"/>
+      <circle cx="34" cy="39" r="18" fill="#f2c46d"/>
+      <text x="34" y="45" text-anchor="middle" fill="#171b24" font-size="17" font-weight="700">03</text>
+      <text x="70" y="34" fill="#ffffff" font-size="20" font-weight="700">Portfolio</text>
+      <text x="70" y="57" fill="#f2c46d" font-size="16">Top-N · inverse-vol weights</text>
+    </g>
+  </g>
+
+  <text x="58" y="400" fill="#9ba5b4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">DAILY COMPLIANCE CHECK  /  MONTHLY REBALANCE  /  ALPACA EXECUTION</text>
+</svg>
